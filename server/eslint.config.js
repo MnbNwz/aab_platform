@@ -5,12 +5,7 @@ import eslintConfigPrettier from "eslint-config-prettier";
 
 export default [
   {
-    ignores: [
-      "*.json",
-      "package-lock.json",
-      "node_modules/**",
-      "dist/**"
-    ]
+    ignores: ["*.json", "package-lock.json", "node_modules/**", "dist/**"],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -33,10 +28,13 @@ export default [
     },
     rules: {
       "no-console": "off",
-      "no-unused-vars": ["warn", {
-        "argsIgnorePattern": "^_",
-        "varsIgnorePattern": "^_"
-      }],
+      "no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+        },
+      ],
       "no-undef": "error",
       "prettier/prettier": [
         "error",
@@ -48,10 +46,13 @@ export default [
           tabWidth: 2,
         },
       ],
-      "@typescript-eslint/no-unused-vars": ["warn", {
-        "argsIgnorePattern": "^_",
-        "varsIgnorePattern": "^_"
-      }],
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+        },
+      ],
       "@typescript-eslint/no-unused-expressions": [
         "error",
         {
@@ -68,7 +69,6 @@ export default [
           allowTypedFunctionExpressions: true,
         },
       ],
-      "@typescript-eslint/explicit-module-boundary-types": "error",
       "@typescript-eslint/no-explicit-any": "error",
     },
   },
