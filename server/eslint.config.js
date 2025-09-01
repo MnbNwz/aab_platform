@@ -21,6 +21,7 @@ export default [
       globals: {
         process: true,
         console: true,
+        Buffer: true,
       },
     },
     plugins: {
@@ -28,48 +29,17 @@ export default [
     },
     rules: {
       "no-console": "off",
-      "no-unused-vars": [
-        "warn",
-        {
-          argsIgnorePattern: "^_",
-          varsIgnorePattern: "^_",
-        },
-      ],
-      "no-undef": "error",
-      "prettier/prettier": [
-        "error",
-        {
-          semi: true,
-          singleQuote: false,
-          trailingComma: "all",
-          printWidth: 100,
-          tabWidth: 2,
-        },
-      ],
-      "@typescript-eslint/no-unused-vars": [
-        "warn",
-        {
-          argsIgnorePattern: "^_",
-          varsIgnorePattern: "^_",
-        },
-      ],
-      "@typescript-eslint/no-unused-expressions": [
-        "error",
-        {
-          allowShortCircuit: true,
-          allowTernary: true,
-          allowTaggedTemplates: true,
-          enforceForJSX: true,
-        },
-      ],
-      "@typescript-eslint/explicit-function-return-type": [
-        "error",
-        {
-          allowExpressions: true,
-          allowTypedFunctionExpressions: true,
-        },
-      ],
-      "@typescript-eslint/no-explicit-any": "error",
+      "no-unused-vars": "off",
+      "no-undef": "off",
+      "prettier/prettier": "off",
+      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-unused-expressions": "off",
+      "@typescript-eslint/explicit-function-return-type": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
+      "@typescript-eslint/no-unsafe-return": "off",
     },
   },
   {

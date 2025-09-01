@@ -1,8 +1,9 @@
-import { IUser } from "../../models/types/user";
+import { UserRole } from "../../models/types/user";
+import { SanitizedUser } from "../../types/auth";
 import { Request } from "express";
 
 export interface AuthenticatedRequest extends Request {
-  user?: IUser;
+  user?: SanitizedUser;
 }
 
-export type RequireRole = IUser["role"];
+export type RequireRole = UserRole;

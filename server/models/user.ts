@@ -1,32 +1,25 @@
 import mongoose, { Schema } from "mongoose";
-import {
-  IUser,
-  Customer,
-  Insurance,
-  PortfolioItem,
-  GeoHome,
-  Approval,
-  Contractor,
-  UserRole,
-  UserStatus,
-  PropertyType,
-  ApprovalStatus,
-} from "./types/user";
+import { IUser, Customer, GeoHome, Contractor, ApprovalStatus } from "./types/user";
+
+// Common schema definition for shared fields between Customer and Contractor
+const baseProfileFields = {
+  subscriptionId: { type: Schema.Types.ObjectId, ref: "Subscription", required: false },
+  membershipId: { type: Schema.Types.ObjectId, ref: "Membership", required: false },
+  approval: {
+    type: String,
+    enum: ["pending", "approved", "rejected"] as ApprovalStatus[],
+    default: "pending" as ApprovalStatus,
+  },
+};
 
 const CustomerSchema = new Schema<Customer>({
-  defaultPropertyType: { type: String, enum: ["domestic", "commercial"], required: true },
-  subscriptionId: { type: Schema.Types.ObjectId, ref: "Subscription", required: true },
-});
-
-const InsuranceSchema = new Schema<Insurance>({
-  provider: { type: String, required: true },
-  policyNo: { type: String, required: true },
-  validTill: { type: Date, required: true },
-});
-
-const PortfolioItemSchema = new Schema<PortfolioItem>({
-  title: { type: String, required: true },
-  fileId: { type: Schema.Types.ObjectId, required: true },
+  defaultPropertyType: {
+    type: String,
+    enum: ["domestic", "commercial"],
+    default: "domestic",
+    required: true,
+  },
+  ...baseProfileFields,
 });
 
 const GeoHomeSchema = new Schema<GeoHome>({
@@ -34,27 +27,13 @@ const GeoHomeSchema = new Schema<GeoHome>({
   coordinates: { type: [Number], required: true },
 });
 
-const ApprovalSchema = new Schema<Approval>({
-  status: { type: String, enum: ["pending", "approved", "rejected"], required: true },
-  approvedBy: { type: Schema.Types.ObjectId, ref: "User" },
-  approvedAt: { type: Date },
-  note: { type: String },
-});
-
 const ContractorSchema = new Schema<Contractor>({
   companyName: { type: String, required: true },
-  services: [{ type: String, enum: ["plumbing", "electrical"], required: true }],
+  services: [{ type: String, enum: ["plumbing", "electrical", "hvac", "general"], required: true }],
   license: { type: String, required: true },
   taxId: { type: String, required: true },
-  insurance: { type: InsuranceSchema, required: true },
-  portfolio: [PortfolioItemSchema],
-  geoHome: { type: GeoHomeSchema, required: true },
-  radiusKm: { type: Number, required: true },
-  featured: { type: Boolean, default: false },
-  verifiedBadge: { type: Boolean, default: false },
-  rank: { type: Number, default: 0 },
-  subscriptionId: { type: Schema.Types.ObjectId, ref: "Subscription", required: true },
-  approval: { type: ApprovalSchema, required: true },
+  docs: { type: [Object], required: true },
+  ...baseProfileFields,
 });
 
 const UserSchema = new Schema<IUser>(
@@ -63,9 +42,15 @@ const UserSchema = new Schema<IUser>(
     email: { type: String, required: true, unique: true },
     phone: { type: String, required: true },
     passwordHash: { type: String, required: true },
-    status: { type: String, enum: ["pending", "active", "suspended"], default: "pending" },
+    status: {
+      type: String,
+      enum: ["pending", "active", "revoke"],
+      default: "pending",
+    },
+    geoHome: { type: GeoHomeSchema, required: true },
     customer: { type: CustomerSchema },
     contractor: { type: ContractorSchema },
+    // approval removed from user, now in customer/contractor only
   },
   { timestamps: true },
 );

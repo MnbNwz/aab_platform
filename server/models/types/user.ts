@@ -1,24 +1,20 @@
 import { Types, Document } from "mongoose";
 
 export type UserRole = "admin" | "customer" | "contractor";
-export type UserStatus = "pending" | "active" | "suspended";
+export type UserStatus = "pending" | "active" | "revoke";
 export type PropertyType = "domestic" | "commercial";
 export type ApprovalStatus = "pending" | "approved" | "rejected";
+export type MembershipType = "standard" | "premium" | "platinum";
 
-export interface Customer {
+// Base interface for shared profile fields
+export interface BaseProfile {
+  subscriptionId?: Types.ObjectId;
+  membershipId?: Types.ObjectId;
+  approval: ApprovalStatus;
+}
+
+export interface Customer extends BaseProfile {
   defaultPropertyType: PropertyType;
-  subscriptionId: Types.ObjectId;
-}
-
-export interface Insurance {
-  provider: string;
-  policyNo: string;
-  validTill: Date;
-}
-
-export interface PortfolioItem {
-  title: string;
-  fileId: Types.ObjectId;
 }
 
 export interface GeoHome {
@@ -26,27 +22,12 @@ export interface GeoHome {
   coordinates: [number, number];
 }
 
-export interface Approval {
-  status: ApprovalStatus;
-  approvedBy: Types.ObjectId;
-  approvedAt: Date;
-  note: string;
-}
-
-export interface Contractor {
+export interface Contractor extends BaseProfile {
   companyName: string;
   services: string[];
   license: string;
   taxId: string;
-  insurance: Insurance;
-  portfolio: PortfolioItem[];
-  geoHome: GeoHome;
-  radiusKm: number;
-  featured: boolean;
-  verifiedBadge: boolean;
-  rank: number;
-  subscriptionId: Types.ObjectId;
-  approval: Approval;
+  docs: { type: [object]; required: true };
 }
 
 export interface IUser extends Document {
@@ -57,4 +38,5 @@ export interface IUser extends Document {
   status: UserStatus;
   customer?: Customer;
   contractor?: Contractor;
+  geoHome: GeoHome;
 }

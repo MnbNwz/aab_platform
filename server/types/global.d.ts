@@ -1,5 +1,3 @@
-import { IUser } from "../models/types/user";
-
 declare global {
   namespace NodeJS {
     interface ProcessEnv {
@@ -12,7 +10,7 @@ declare global {
   }
   namespace Express {
     interface Request {
-      user?: IUser;
+      user?: import("../types/auth").SanitizedUser;
     }
   }
 }
