@@ -10,7 +10,9 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{ts,js,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,js,json,md}\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "seed:admin": "npx ts-node -r tsconfig-paths/register scripts/seedAdmin.ts",
+    "postman:setup": "./postman/setup.sh"
   },
   "keywords": [],
   "author": "",

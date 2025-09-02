@@ -1,0 +1,578 @@
+{
+  "info": {
+    "name": "AAS Platform API",
+    "description": "Complete API collection for AAS Platform with authentication and admin management",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Admin Signin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.token) {",
+                  "        pm.collectionVariables.set('authToken', response.token);",
+                  "        console.log('Auth token saved:', response.token);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@aasplatform.com\",\n  \"password\": \"Admin@2025!Secure\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/signin",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "signin"]
+            },
+            "description": "Admin login to get JWT token"
+          }
+        },
+        {
+          "name": "Customer Signup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"customer1@test.com\",\n  \"password\": \"Customer@123\",\n  \"phone\": \"+1234567890\",\n  \"role\": \"customer\",\n  \"geoHome\": {\n    \"type\": \"Point\",\n    \"coordinates\": [-73.935242, 40.730610]\n  },\n  \"customer\": {\n    \"defaultPropertyType\": \"domestic\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/signup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "signup"]
+            },
+            "description": "Customer registration"
+          }
+        },
+        {
+          "name": "Contractor Signup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"contractor1@test.com\",\n  \"password\": \"Contractor@123\",\n  \"phone\": \"+1234567891\",\n  \"role\": \"contractor\",\n  \"geoHome\": {\n    \"type\": \"Point\",\n    \"coordinates\": [-74.006, 40.7128]\n  },\n  \"contractor\": {\n    \"companyName\": \"TestCorp Contracting LLC\",\n    \"services\": [\"plumbing\", \"electrical\", \"hvac\"],\n    \"license\": \"LIC789456\",\n    \"taxId\": \"TAX789456\",\n    \"docs\": [\"license.pdf\", \"insurance.pdf\"]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/signup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "signup"]
+            },
+            "description": "Contractor registration with company details"
+          }
+        },
+        {
+          "name": "Customer Signin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"customer1@test.com\",\n  \"password\": \"Customer@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/signin",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "signin"]
+            },
+            "description": "Customer login"
+          }
+        },
+        {
+          "name": "Contractor Signin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"contractor1@test.com\",\n  \"password\": \"Contractor@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/signin",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "signin"]
+            },
+            "description": "Contractor login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Management",
+      "item": [
+        {
+          "name": "Get User Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users", "stats"]
+            },
+            "description": "Get user statistics overview"
+          }
+        },
+        {
+          "name": "Get Users with Advanced Filtering",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users?page=1&limit=10&role=customer&status=pending&approval=pending&email=&phone=&companyName=&services=&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number for pagination"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page (5, 10, 20, 50)"
+                },
+                {
+                  "key": "role",
+                  "value": "customer",
+                  "description": "Filter by role: customer, contractor, admin",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "description": "Filter by status: pending, active, revoke",
+                  "disabled": true
+                },
+                {
+                  "key": "approval",
+                  "value": "pending",
+                  "description": "Filter by approval: pending, approved, rejected",
+                  "disabled": true
+                },
+                {
+                  "key": "email",
+                  "value": "",
+                  "description": "Search by email pattern (e.g., 'customer', '@test.com')",
+                  "disabled": true
+                },
+                {
+                  "key": "phone",
+                  "value": "",
+                  "description": "Search by phone pattern (e.g., '+1234', '567')",
+                  "disabled": true
+                },
+                {
+                  "key": "companyName",
+                  "value": "",
+                  "description": "Search contractor company names (e.g., 'TestCorp')",
+                  "disabled": true
+                },
+                {
+                  "key": "services",
+                  "value": "",
+                  "description": "Filter by services: plumbing,electrical,hvac (comma-separated)",
+                  "disabled": true
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt",
+                  "description": "Sort field: createdAt, updatedAt, email"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc",
+                  "description": "Sort order: asc, desc"
+                }
+              ]
+            },
+            "description": "**Primary filtering endpoint with comprehensive parameter options**\n\nThis request provides all available filtering, sorting, and pagination parameters for user management. Enable/disable parameters as needed by checking/unchecking them in the Params tab.\n\n**Available Filters:**\n• Role-based filtering (customer, contractor, admin)\n• Status filtering (pending, active, revoke)\n• Approval status filtering (pending, approved, rejected)\n• Text search (email, phone, company name)\n• Service-based filtering for contractors\n• Sorting and pagination controls\n\n**Usage Examples:**\n• Pending customer approvals: Enable 'role'='customer' + 'status'='pending'\n• Email search: Enable 'email'='@company.com'\n• Active contractors: Enable 'role'='contractor' + 'status'='active'\n\n**Default:** Returns latest 10 users with standard pagination."
+          }
+        },
+        {
+          "name": "Get Pending Approvals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users?status=pending&approval=pending&sortBy=createdAt&sortOrder=asc&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "description": "Users with pending status"
+                },
+                {
+                  "key": "approval",
+                  "value": "pending",
+                  "description": "Users with pending approval"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "asc",
+                  "description": "Oldest first (FIFO processing)"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "role",
+                  "value": "customer",
+                  "description": "🔧 Enable this to filter only customers",
+                  "disabled": true
+                },
+                {
+                  "key": "role",
+                  "value": "contractor",
+                  "description": "🔧 Or enable this to filter only contractors",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Retrieve all users with pending approval status. Optimized for administrator approval workflows with FIFO processing order."
+          }
+        },
+        {
+          "name": "Get Active Users Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users?status=active&approval=approved&sortBy=updatedAt&sortOrder=desc&page=1&limit=15",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "active"
+                },
+                {
+                  "key": "approval",
+                  "value": "approved"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "updatedAt",
+                  "description": "Recently active users first"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "15"
+                },
+                {
+                  "key": "role",
+                  "value": "customer",
+                  "description": "🔧 Enable to see only active customers",
+                  "disabled": true
+                },
+                {
+                  "key": "role",
+                  "value": "contractor",
+                  "description": "🔧 Enable to see only active contractors",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Retrieve active users with approved status for dashboard and reporting purposes. Sorted by most recent activity."
+          }
+        },
+        {
+          "name": "Search Users by Text",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users?page=1&limit=10&email=&phone=&companyName=&services=&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "email",
+                  "value": "",
+                  "description": "🔍 Type email pattern here (e.g., 'customer', '@test.com')"
+                },
+                {
+                  "key": "phone",
+                  "value": "",
+                  "description": "🔍 Type phone pattern here (e.g., '+1234', '567')"
+                },
+                {
+                  "key": "companyName",
+                  "value": "",
+                  "description": "🔍 Type company name here (e.g., 'TestCorp')"
+                },
+                {
+                  "key": "services",
+                  "value": "",
+                  "description": "🔍 Type services here (e.g., 'plumbing,electrical')"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc"
+                },
+                {
+                  "key": "role",
+                  "value": "customer",
+                  "description": "🔧 Enable to search only customers",
+                  "disabled": true
+                },
+                {
+                  "key": "role",
+                  "value": "contractor",
+                  "description": "🔧 Enable to search only contractors",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "active",
+                  "description": "🔧 Enable to search only active users",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Search users by email, phone, or company name. Configure search parameters by enabling relevant filters in the Params tab."
+          }
+        },
+        {
+          "name": "Get Users with Pagination",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users?page=1&limit=5&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc"
+                }
+              ]
+            },
+            "description": "Get users with pagination and sorting"
+          }
+        },
+        {
+          "name": "Get Single User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users", "{{userId}}"]
+            },
+            "description": "Get single user by ID (set userId variable)"
+          }
+        },
+        {
+          "name": "Approve Customer",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\",\n  \"customer\": {\n    \"approval\": \"approved\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users", "{{userId}}"]
+            },
+            "description": "Approve a customer user"
+          }
+        },
+        {
+          "name": "Approve Contractor",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\",\n  \"contractor\": {\n    \"approval\": \"approved\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users", "{{userId}}"]
+            },
+            "description": "Approve a contractor user"
+          }
+        },
+        {
+          "name": "Reject Customer",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer\": {\n    \"approval\": \"rejected\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users", "{{userId}}"]
+            },
+            "description": "Reject a customer user"
+          }
+        },
+        {
+          "name": "Reject Contractor",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contractor\": {\n    \"approval\": \"rejected\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users", "{{userId}}"]
+            },
+            "description": "Reject a contractor user"
+          }
+        },
+        {
+          "name": "Revoke User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users", "{{userId}}"]
+            },
+            "description": "Revoke (soft delete) a user"
+          }
+        }
+      ]
+    }
+  ]
+}

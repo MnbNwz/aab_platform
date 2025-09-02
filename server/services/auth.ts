@@ -1,34 +1,22 @@
-import crypto from "crypto";
 import { User } from "../models/user";
+import { 
+  hashPassword, 
+  generateToken, 
+  verifyToken as utilVerifyToken, 
+  validateEmail, 
+  validatePhone, 
+  sanitizeUser 
+} from "../utils/auth";
 
-// Hash password
-function hashPassword(password: string) {
-  return crypto.createHash("sha256").update(password).digest("hex");
-}
+// Export the utility function with the same name for backward compatibility
+export const verifyToken = utilVerifyToken;
 
-// Generate token
-function generateToken(userId: string, role: string) {
-  const payload = JSON.stringify({ userId, role, timestamp: Date.now() });
-  return Buffer.from(payload).toString("base64");
-}
-
-// Verify token
-export function verifyToken(token: string) {
-  try {
-    const payload = JSON.parse(Buffer.from(token, "base64").toString());
-    return { userId: payload.userId, role: payload.role };
-  } catch {
-    throw new Error("Invalid token");
-  }
-}
-
-// Clean user data (remove password)
+// Clean user data (remove password) - now using sanitizeUser utility
 function cleanUserData(user: any) {
-  const userObj = user.toObject();
-  delete userObj.passwordHash;
+  const sanitized = sanitizeUser(user);
   return {
-    ...userObj,
-    _id: userObj._id.toString(),
+    ...sanitized,
+    _id: sanitized._id.toString(),
   };
 }
 
