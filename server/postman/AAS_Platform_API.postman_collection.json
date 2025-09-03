@@ -32,18 +32,15 @@
       "name": "Authentication",
       "item": [
         {
-          "name": "Admin Signin",
+          "name": "Generic Signin",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "if (pm.response.code === 200) {",
-                  "    const response = pm.response.json();",
-                  "    if (response.token) {",
-                  "        pm.collectionVariables.set('authToken', response.token);",
-                  "        console.log('Auth token saved:', response.token);",
-                  "    }",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.environment.set(\"authToken\", jsonData.token);",
                   "}"
                 ]
               }
@@ -59,14 +56,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@aasplatform.com\",\n  \"password\": \"Admin@2025!Secure\"\n}"
+              "raw": "{\n  \"email\": \"contractor3@test.com\",\n  \"password\": \"Contractor@123\"\n}\n\n// Other login credentials:\n// Admin:\n// {\n//   \"email\": \"admin@aasplatform.com\",\n//   \"password\": \"Admin@2025!Secure\"\n// }\n\n// Customer:\n// {\n//   \"email\": \"customer1@test.com\",\n//   \"password\": \"Customer@123\"\n// }"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/signin",
               "host": ["{{baseUrl}}"],
               "path": ["api", "auth", "signin"]
             },
-            "description": "Admin login to get JWT token"
+            "description": "Generic signin endpoint - change email/password in body as needed. Sets authToken automatically."
           }
         },
         {
@@ -112,31 +109,66 @@
             },
             "description": "Contractor registration with company details"
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "Membership Management", 
+      "item": [
         {
-          "name": "Customer Signin",
+          "name": "Get All Membership Plans",
           "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"customer1@test.com\",\n  \"password\": \"Customer@123\"\n}"
-            },
+            "method": "GET",
+            "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/auth/signin",
+              "raw": "{{baseUrl}}/api/membership/plans",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "signin"]
+              "path": ["api", "membership", "plans"]
             },
-            "description": "Customer login"
+            "description": "Get all available membership plans (public endpoint)"
           }
         },
         {
-          "name": "Contractor Signin",
+          "name": "Get Customer Plans",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/membership/plans/customer",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "membership", "plans", "customer"]
+            },
+            "description": "Get membership plans for customers only"
+          }
+        },
+        {
+          "name": "Get Contractor Plans",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/membership/plans/contractor",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "membership", "plans", "contractor"]
+            },
+            "description": "Get membership plans for contractors only"
+          }
+        },
+        {
+          "name": "Get Current Membership",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/membership/current",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "membership", "current"]
+            },
+            "description": "Get current user's active membership"
+          }
+        },
+        {
+          "name": "Purchase Membership",
           "request": {
             "method": "POST",
             "header": [
@@ -147,14 +179,53 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"contractor1@test.com\",\n  \"password\": \"Contractor@123\"\n}"
+              "raw": "{\n  \"planId\": \"PLAN_ID_HERE\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/auth/signin",
+              "raw": "{{baseUrl}}/api/membership/purchase",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "signin"]
+              "path": ["api", "membership", "purchase"]
             },
-            "description": "Contractor login"
+            "description": "Purchase a membership plan (replaces any existing active membership)"
+          }
+        },
+        {
+          "name": "Cancel Membership",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/membership/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "membership", "cancel"]
+            },
+            "description": "Cancel current active membership"
+          }
+        },
+        {
+          "name": "Get Membership History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/membership/history",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "membership", "history"]
+            },
+            "description": "Get user's complete membership history"
+          }
+        },
+        {
+          "name": "Get Membership Stats (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/membership/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "membership", "stats"]
+            },
+            "description": "Admin only - Get membership statistics and analytics"
           }
         }
       ]
