@@ -9,7 +9,7 @@ import LoginForm from './components/auth/LoginForm';
 import SignUpForm from './components/auth/SignUpForm';
 import AuthGuard from './components/auth/AuthGuard';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import { Dashboard } from './components/Dashboard';
+import Dashboard from './components/Dashboard';
 import type { RootState, AppDispatch } from './store';
 
 // App Content Component (needs to be inside Provider)

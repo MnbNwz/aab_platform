@@ -754,7 +754,7 @@
           }
         },
         {
-          "name": "Approve Customer",
+          "name": "Approve User",
           "request": {
             "method": "PUT",
             "header": [
@@ -765,18 +765,18 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"active\",\n  \"customer\": {\n    \"approval\": \"approved\"\n  }\n}"
+              "raw": "{\n  \"status\": \"active\",\n  \"approval\": \"approved\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/admin/users/{{userId}}",
               "host": ["{{baseUrl}}"],
               "path": ["api", "admin", "users", "{{userId}}"]
             },
-            "description": "Approve a customer user"
+            "description": "Approve a user - sets status to active and approval to approved"
           }
         },
         {
-          "name": "Approve Contractor",
+          "name": "Approve User (Alternative)",
           "request": {
             "method": "PUT",
             "header": [
@@ -787,18 +787,18 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"active\",\n  \"contractor\": {\n    \"approval\": \"approved\"\n  }\n}"
+              "raw": "{\n  \"status\": \"active\",\n  \"approval\": \"approved\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/admin/users/{{userId}}",
               "host": ["{{baseUrl}}"],
               "path": ["api", "admin", "users", "{{userId}}"]
             },
-            "description": "Approve a contractor user"
+            "description": "Approve a user - sets status to active and approval to approved"
           }
         },
         {
-          "name": "Reject Customer",
+          "name": "Reject User",
           "request": {
             "method": "PUT",
             "header": [
@@ -809,18 +809,18 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"customer\": {\n    \"approval\": \"rejected\"\n  }\n}"
+              "raw": "{\n  \"approval\": \"rejected\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/admin/users/{{userId}}",
               "host": ["{{baseUrl}}"],
               "path": ["api", "admin", "users", "{{userId}}"]
             },
-            "description": "Reject a customer user"
+            "description": "Reject a user - sets approval to rejected"
           }
         },
         {
-          "name": "Reject Contractor",
+          "name": "Reject User (Alternative)",
           "request": {
             "method": "PUT",
             "header": [
@@ -831,14 +831,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"contractor\": {\n    \"approval\": \"rejected\"\n  }\n}"
+              "raw": "{\n  \"approval\": \"rejected\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/admin/users/{{userId}}",
               "host": ["{{baseUrl}}"],
               "path": ["api", "admin", "users", "{{userId}}"]
             },
-            "description": "Reject a contractor user"
+            "description": "Reject a user - sets approval to rejected"
           }
         },
         {

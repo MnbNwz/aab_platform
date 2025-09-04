@@ -9,6 +9,7 @@ import { clearError } from "../../store/slices/authSlice";
 import type { RootState, AppDispatch } from "../../store";
 import type { UserRole } from "../../types";
 import LocationSelector from "../LocationSelector";
+import Loader from "../ui/Loader";
 import {
   customerRegistrationSchema,
   contractorRegistrationSchema,
@@ -481,7 +482,7 @@ const SignUpForm: React.FC = () => {
                   </label>
                   {servicesLoading ? (
                     <div className="flex items-center justify-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" />
+                      <Loader size="medium" color="white" />
                       <span className="ml-3 text-white">
                         Loading services...
                       </span>
@@ -615,8 +616,8 @@ const SignUpForm: React.FC = () => {
             >
               {isLoading ? (
                 <span className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" />
-                  Creating Account...
+                  <Loader size="small" color="white" />
+                  <span className="ml-2">Creating Account...</span>
                 </span>
               ) : (
                 "Create Account"

@@ -1,12 +1,25 @@
-import { useSelector, useDispatch } from 'react-redux';
-import { Users, DollarSign, Calendar, Settings, LogOut, Home, FileText, User, Briefcase, TrendingUp, ShoppingCart } from 'lucide-react';
-import type { RootState, AppDispatch } from '../store';
-import { logoutThunk } from '../store/thunks/authThunks';
+import React, { useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import {
+  Users,
+  DollarSign,
+  Calendar,
+  TrendingUp,
+  ShoppingCart,
+  Briefcase,
+} from "lucide-react";
+import type { RootState, AppDispatch } from "../store";
+import { logoutThunk } from "../store/thunks/authThunks";
+import PendingApproval from "./PendingApproval";
+import AdminSidebar from "./dashboard/AdminSidebar";
+import UserStatsCards from "./dashboard/UserStatsCards";
+import UserManagementTable from "./dashboard/UserManagementTable";
 
-export const Dashboard: React.FC = () => {
+const Dashboard: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((state: RootState) => state.auth);
-  
+  const [activeTab, setActiveTab] = useState("dashboard");
+
   const handleLogout = () => {
     dispatch(logoutThunk());
   };
@@ -21,283 +34,213 @@ export const Dashboard: React.FC = () => {
     );
   }
 
-  // Admin Dashboard Content
-  const AdminDashboard = () => (
-    <div className="space-y-6">
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex items-center">
-            <Users className="h-8 w-8 text-blue-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Users</p>
-              <p className="text-2xl font-bold text-gray-900">1,234</p>
-            </div>
-          </div>
+  // Check if user needs approval (non-admin users)
+  if (user.role !== "admin" && user.status === "pending") {
+    return <PendingApproval user={user} />;
+  }
+
+  // If user is approved, redirect to dashboard
+  if (
+    user.role !== "admin" &&
+    user.approval === "approved" &&
+    user.status === "active"
+  ) {
+    // For now, show a simple dashboard for approved customers/contractors
+    return <CustomerContractorDashboard user={user} onLogout={handleLogout} />;
+  }
+
+  // Admin Dashboard
+  if (user.role === "admin") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex">
+        {/* Sidebar */}
+        <div className="w-80 flex-shrink-0">
+          <AdminSidebar activeTab={activeTab} onTabChange={setActiveTab} />
         </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex items-center">
-            <DollarSign className="h-8 w-8 text-green-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Revenue</p>
-              <p className="text-2xl font-bold text-gray-900">$45,231</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex items-center">
-            <Calendar className="h-8 w-8 text-purple-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Active Bookings</p>
-              <p className="text-2xl font-bold text-gray-900">89</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex items-center">
-            <TrendingUp className="h-8 w-8 text-indigo-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Growth</p>
-              <p className="text-2xl font-bold text-gray-900">+12%</p>
-            </div>
-          </div>
+
+        {/* Main Content */}
+        <div className="flex-1 p-8">
+          {activeTab === "dashboard" && <AdminDashboardContent />}
+          {activeTab === "users" && <UserManagementContent />}
+          {activeTab === "analytics" && <ComingSoonContent title="Analytics" />}
+          {activeTab === "settings" && <ComingSoonContent title="Settings" />}
         </div>
       </div>
+    );
+  }
 
-      {/* Recent Activity */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Recent Activity</h3>
-        </div>
-        <div className="p-6">
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-              <p className="text-sm text-gray-600">New contractor John Doe registered</p>
-              <span className="text-xs text-gray-400">2 mins ago</span>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-              <p className="text-sm text-gray-600">Payment of $150 processed successfully</p>
-              <span className="text-xs text-gray-400">5 mins ago</span>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
-              <p className="text-sm text-gray-600">Service booking updated by customer</p>
-              <span className="text-xs text-gray-400">10 mins ago</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Customer Dashboard Content
-  const CustomerDashboard = () => (
-    <div className="space-y-6">
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex items-center">
-            <Calendar className="h-8 w-8 text-blue-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Active Bookings</p>
-              <p className="text-2xl font-bold text-gray-900">3</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex items-center">
-            <DollarSign className="h-8 w-8 text-green-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Spent</p>
-              <p className="text-2xl font-bold text-gray-900">$1,250</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex items-center">
-            <ShoppingCart className="h-8 w-8 text-purple-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Services Used</p>
-              <p className="text-2xl font-bold text-gray-900">12</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Quick Actions</h3>
-        </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <button className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-              <Calendar className="h-5 w-5 text-blue-600 mr-3" />
-              <span className="text-sm font-medium">Book New Service</span>
-            </button>
-            <button className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-              <FileText className="h-5 w-5 text-green-600 mr-3" />
-              <span className="text-sm font-medium">View Service History</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Bookings */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Recent Bookings</h3>
-        </div>
-        <div className="p-6">
-          <div className="space-y-4">
-            <div className="flex justify-between items-center py-3 border-b border-gray-100">
-              <div>
-                <p className="font-medium text-gray-900">Plumbing Service</p>
-                <p className="text-sm text-gray-600">Scheduled for Dec 15, 2024</p>
-              </div>
-              <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-sm rounded-full">Pending</span>
-            </div>
-            <div className="flex justify-between items-center py-3 border-b border-gray-100">
-              <div>
-                <p className="font-medium text-gray-900">House Cleaning</p>
-                <p className="text-sm text-gray-600">Completed on Dec 10, 2024</p>
-              </div>
-              <span className="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full">Completed</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Contractor Dashboard Content
-  const ContractorDashboard = () => (
-    <div className="space-y-6">
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex items-center">
-            <Briefcase className="h-8 w-8 text-blue-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Active Jobs</p>
-              <p className="text-2xl font-bold text-gray-900">8</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex items-center">
-            <DollarSign className="h-8 w-8 text-green-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Earnings (This Month)</p>
-              <p className="text-2xl font-bold text-gray-900">$2,850</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="flex items-center">
-            <TrendingUp className="h-8 w-8 text-purple-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Rating</p>
-              <p className="text-2xl font-bold text-gray-900">4.8/5</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Upcoming Jobs */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Upcoming Jobs</h3>
-        </div>
-        <div className="p-6">
-          <div className="space-y-4">
-            <div className="flex justify-between items-center py-3 border-b border-gray-100">
-              <div>
-                <p className="font-medium text-gray-900">Kitchen Renovation</p>
-                <p className="text-sm text-gray-600">Customer: Sarah Johnson</p>
-                <p className="text-sm text-gray-600">Dec 16, 2024 at 9:00 AM</p>
-              </div>
-              <div className="text-right">
-                <p className="font-medium text-green-600">$450</p>
-                <button className="text-sm text-blue-600 hover:text-blue-800">View Details</button>
-              </div>
-            </div>
-            <div className="flex justify-between items-center py-3 border-b border-gray-100">
-              <div>
-                <p className="font-medium text-gray-900">Bathroom Plumbing</p>
-                <p className="text-sm text-gray-600">Customer: Mike Davis</p>
-                <p className="text-sm text-gray-600">Dec 18, 2024 at 2:00 PM</p>
-              </div>
-              <div className="text-right">
-                <p className="font-medium text-green-600">$280</p>
-                <button className="text-sm text-blue-600 hover:text-blue-800">View Details</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderDashboardContent = () => {
-    switch (user.role) {
-      case 'admin':
-        return <AdminDashboard />;
-      case 'customer':
-        return <CustomerDashboard />;
-      case 'contractor':
-        return <ContractorDashboard />;
-      default:
-        return <CustomerDashboard />;
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <Home className="h-8 w-8 text-blue-600 mr-3" />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  {user.role === 'admin' ? 'Admin Dashboard' : 
-                   user.role === 'contractor' ? 'Contractor Dashboard' : 
-                   'Customer Dashboard'}
-                </h1>
-                <p className="text-sm text-gray-600">Welcome back, {user.firstName || user.email}!</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <User className="h-5 w-5 text-gray-400" />
-                <span className="text-sm text-gray-700 capitalize">{user.role}</span>
-              </div>
-              <button className="flex items-center space-x-2 text-gray-600 hover:text-gray-800">
-                <Settings className="h-5 w-5" />
-                <span className="text-sm">Settings</span>
-              </button>
-              <button 
-                onClick={handleLogout}
-                className="flex items-center space-x-2 text-red-600 hover:text-red-800"
-              >
-                <LogOut className="h-5 w-5" />
-                <span className="text-sm">Logout</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          {renderDashboardContent()}
-        </div>
-      </main>
-    </div>
-  );
+  // Fallback for other cases
+  return <PendingApproval user={user} />;
 };
+
+// Admin Dashboard Content Component
+const AdminDashboardContent: React.FC = () => (
+  <div className="space-y-8">
+    <div>
+      <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+      <p className="text-gray-600 mt-2">
+        Overview of system statistics and user management
+      </p>
+    </div>
+
+    {/* Statistics Cards */}
+    <UserStatsCards />
+
+    {/* Quick Actions */}
+    <div className="bg-white rounded-lg shadow p-6">
+      <h2 className="text-xl font-semibold text-gray-900 mb-4">
+        Quick Actions
+      </h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer">
+          <Users className="h-8 w-8 text-blue-600 mb-2" />
+          <h3 className="font-medium text-gray-900">Pending Approvals</h3>
+          <p className="text-sm text-gray-500">Review user registrations</p>
+        </div>
+        <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer opacity-50">
+          <DollarSign className="h-8 w-8 text-green-600 mb-2" />
+          <h3 className="font-medium text-gray-900">Revenue Reports</h3>
+          <p className="text-sm text-gray-500">Coming soon</p>
+        </div>
+        <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer opacity-50">
+          <TrendingUp className="h-8 w-8 text-purple-600 mb-2" />
+          <h3 className="font-medium text-gray-900">Analytics</h3>
+          <p className="text-sm text-gray-500">Coming soon</p>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// User Management Content Component
+const UserManagementContent: React.FC = () => (
+  <div className="space-y-8">
+    <div>
+      <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
+      <p className="text-gray-600 mt-2">
+        Manage all users, approvals, and permissions
+      </p>
+    </div>
+
+    <UserManagementTable />
+  </div>
+);
+
+// Coming Soon Content Component
+const ComingSoonContent: React.FC<{ title: string }> = ({ title }) => (
+  <div className="space-y-8">
+    <div>
+      <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
+      <p className="text-gray-600 mt-2">This feature is coming soon</p>
+    </div>
+
+    <div className="bg-white rounded-lg shadow p-12 text-center">
+      <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+        <TrendingUp className="h-12 w-12 text-gray-400" />
+      </div>
+      <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+        {title} Coming Soon
+      </h2>
+      <p className="text-gray-600 max-w-md mx-auto">
+        We're working hard to bring you this feature. Stay tuned for updates!
+      </p>
+    </div>
+  </div>
+);
+
+// Customer/Contractor Dashboard Component
+const CustomerContractorDashboard: React.FC<{
+  user: any;
+  onLogout: () => void;
+}> = ({ user, onLogout }) => (
+  <div className="min-h-screen bg-gray-50">
+    {/* Header */}
+    <div className="bg-white shadow">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center py-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Welcome, {user.firstName}!
+            </h1>
+            <p className="text-gray-600 mt-1">
+              {user.role === "customer" ? "Customer" : "Contractor"} Dashboard
+            </p>
+          </div>
+          <button
+            onClick={onLogout}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
+          >
+            Sign Out
+          </button>
+        </div>
+      </div>
+    </div>
+
+    {/* Content */}
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Profile Card */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center space-x-4">
+            <div className="bg-blue-100 p-3 rounded-full">
+              {user.role === "customer" ? (
+                <ShoppingCart className="h-6 w-6 text-blue-600" />
+              ) : (
+                <Briefcase className="h-6 w-6 text-blue-600" />
+              )}
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Profile</h3>
+              <p className="text-sm text-gray-500">Manage your account</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Services Card (Contractor only) */}
+        {user.role === "contractor" && (
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center space-x-4">
+              <div className="bg-green-100 p-3 rounded-full">
+                <Briefcase className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Services
+                </h3>
+                <p className="text-sm text-gray-500">Manage your services</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Bookings Card */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center space-x-4">
+            <div className="bg-purple-100 p-3 rounded-full">
+              <Calendar className="h-6 w-6 text-purple-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                {user.role === "customer" ? "My Bookings" : "Appointments"}
+              </h3>
+              <p className="text-sm text-gray-500">View and manage bookings</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Coming Soon Message */}
+      <div className="mt-8 bg-white rounded-lg shadow p-8 text-center">
+        <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+          Full Dashboard Coming Soon
+        </h2>
+        <p className="text-gray-600">
+          We're working on building a comprehensive dashboard with all the
+          features you need. Stay tuned for updates!
+        </p>
+      </div>
+    </div>
+  </div>
+);
+
+export default Dashboard;

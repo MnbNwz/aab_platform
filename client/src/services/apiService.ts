@@ -3,6 +3,10 @@ import type {
   LoginCredentials,
   AuthResponse,
   User,
+  UserStats,
+  UsersResponse,
+  UserFilters,
+  UserUpdateData,
 } from "../types";
 
 // Simple error messages
@@ -184,10 +188,69 @@ const servicesApi = {
   },
 } as const;
 
+// User Management API (Admin only)
+const userManagementApi = {
+  // Get user statistics for dashboard
+  getStats: async (): Promise<UserStats> => {
+    const response = await get<{ stats: UserStats }>("/api/admin/users/stats");
+    return response.data.stats;
+  },
+
+  // Get users with filtering and pagination
+  getUsers: async (filters: UserFilters = {}): Promise<UsersResponse> => {
+    const params = new URLSearchParams();
+    
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        params.append(key, value.toString());
+      }
+    });
+
+    const queryString = params.toString();
+    const endpoint = `/api/admin/users${queryString ? `?${queryString}` : ''}`;
+    
+    const response = await get<UsersResponse>(endpoint);
+    return response.data;
+  },
+
+  // Get single user details
+  getUser: async (userId: string): Promise<User> => {
+    const response = await get<{ user: User }>(`/api/admin/users/${userId}`);
+    return response.data.user;
+  },
+
+  // Update user status/approval
+  updateUser: async (userId: string, updateData: UserUpdateData): Promise<User> => {
+    const response = await put<{ user: User }>(`/api/admin/users/${userId}`, updateData);
+    return response.data.user;
+  },
+
+  // Revoke user (soft delete)
+  revokeUser: async (userId: string): Promise<void> => {
+    await del(`/api/admin/users/${userId}`);
+  },
+
+  // Quick approval action
+  approveUser: async (userId: string): Promise<User> => {
+    return userManagementApi.updateUser(userId, {
+      status: 'active',
+      approval: 'approved'
+    });
+  },
+
+  // Quick rejection action
+  rejectUser: async (userId: string): Promise<User> => {
+    return userManagementApi.updateUser(userId, {
+      approval: 'rejected'
+    });
+  },
+} as const;
+
 // Export API functions
 export const api = {
   auth: authApi,
   services: servicesApi,
+  userManagement: userManagementApi,
   get,
   post,
   put,
