@@ -14,11 +14,12 @@ import {
   ShoppingCart,
   Briefcase,
 } from "lucide-react";
-import type { RootState, AppDispatch } from "../store";
+import ProfileModal from "./ProfileModal";
 // ProfileMenu component for top right profile icon and dropdown
-const ProfileMenu: React.FC<{ user: any; onLogout: () => void }> = ({
+const ProfileMenu: React.FC<{ user: any; onLogout: () => void; onProfile: () => void }> = ({
   user,
   onLogout,
+  onProfile,
 }) => {
   const [open, setOpen] = useState(false);
   return (
@@ -36,7 +37,7 @@ const ProfileMenu: React.FC<{ user: any; onLogout: () => void }> = ({
         <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-20">
           <button
             className="w-full flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100"
-            onClick={() => setOpen(false)}
+            onClick={() => { setOpen(false); onProfile(); }}
           >
             <UserIcon className="h-5 w-5 mr-2" /> Profile
           </button>
@@ -67,6 +68,7 @@ const Dashboard: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((state: RootState) => state.auth);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const handleLogout = () => {
     dispatch(logoutThunk());
@@ -99,22 +101,29 @@ const Dashboard: React.FC = () => {
   // Admins with status 'active' always see the dashboard, regardless of approval
   if (user.role === "admin" && user.status === "active") {
     return (
-      <div className="min-h-screen bg-gray-50 flex">
+      <div className="min-h-screen bg-primary-800 flex">
         {/* Sidebar */}
-        <div className="w-80 flex-shrink-0">
+        <div className="w-80 flex-shrink-0 bg-primary-900">
           <AdminSidebar activeTab={activeTab} onTabChange={setActiveTab} />
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 p-8 relative xl:px-16 lg:px-12 md:px-8 px-4">
+        <div className="flex-1 p-8 relative xl:px-16 lg:px-12 md:px-8 px-4 bg-primary-50">
           {/* Profile Icon Top Right */}
           {activeTab === "dashboard" && (
-            <AdminDashboardContent user={user} handleLogout={handleLogout} />
+            <AdminDashboardContent user={user} handleLogout={handleLogout} profileOpen={profileOpen} setProfileOpen={setProfileOpen} />
           )}
           {activeTab === "users" && <UserManagementContent />}
           {activeTab === "analytics" && <ComingSoonContent title="Analytics" />}
           {activeTab === "settings" && <ComingSoonContent title="Settings" />}
         </div>
+        {/* Profile Modal */}
+        <ProfileModal
+          user={user}
+          isOpen={profileOpen}
+          onClose={() => setProfileOpen(false)}
+          onSave={updated => {/* TODO: implement save logic */}}
+        />
       </div>
     );
   }
@@ -124,10 +133,10 @@ const Dashboard: React.FC = () => {
     return <PendingApproval user={user} />;
   }
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-primary-800">
       <div className="text-center">
-        <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p className="text-gray-600 mt-2">
+        <h1 className="text-2xl font-bold text-primary-100">Admin Dashboard</h1>
+        <p className="text-primary-300 mt-2">
           Welcome, admin. If you see this, something is wrong with your account
           status.
         </p>
@@ -140,21 +149,21 @@ const Dashboard: React.FC = () => {
 const AdminDashboardContent: React.FC<{
   user: any;
   handleLogout: () => void;
-}> = ({ user, handleLogout }) => (
+  profileOpen: boolean;
+  setProfileOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}> = ({ user, handleLogout, profileOpen, setProfileOpen }) => (
   <div className="space-y-8">
     <div className="flex items-center justify-between pt-4 pb-2">
       {/* Dashboard Title (center) */}
-
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p className="text-gray-600 mt-2">
+        <h1 className="text-3xl font-bold text-accent-500 ">Admin Dashboard</h1>
+        <p className="text-lg font-semibold  text-accent-400 mt-2">
           Overview of system statistics and user management
         </p>
       </div>
-
       {/* Profile Icon (right) */}
       <div className="ml-4">
-        <ProfileMenu user={user} onLogout={handleLogout} />
+        <ProfileMenu user={user} onLogout={handleLogout} onProfile={() => setProfileOpen(true)} />
       </div>
     </div>
 
