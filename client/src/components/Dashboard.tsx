@@ -1,4 +1,10 @@
 import React, { useState } from "react";
+import {
+  User as UserIcon,
+  Settings as SettingsIcon,
+  LogOut as LogOutIcon,
+} from "lucide-react";
+
 import { useSelector, useDispatch } from "react-redux";
 import {
   Users,
@@ -9,6 +15,48 @@ import {
   Briefcase,
 } from "lucide-react";
 import type { RootState, AppDispatch } from "../store";
+// ProfileMenu component for top right profile icon and dropdown
+const ProfileMenu: React.FC<{ user: any; onLogout: () => void }> = ({
+  user,
+  onLogout,
+}) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        className="flex items-center space-x-2 bg-white border border-gray-200 rounded-full px-3 py-2 shadow hover:bg-gray-50 focus:outline-none"
+        onClick={() => setOpen((o) => !o)}
+      >
+        <UserIcon className="h-6 w-6 text-blue-600" />
+        <span className="hidden md:inline text-sm font-medium text-gray-900">
+          {user?.firstName}
+        </span>
+      </button>
+      {open && (
+        <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-20">
+          <button
+            className="w-full flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100"
+            onClick={() => setOpen(false)}
+          >
+            <UserIcon className="h-5 w-5 mr-2" /> Profile
+          </button>
+          <button
+            className="w-full flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100"
+            onClick={() => setOpen(false)}
+          >
+            <SettingsIcon className="h-5 w-5 mr-2" /> Settings
+          </button>
+          {/* <button
+            className="w-full flex items-center px-4 py-2 text-red-600 hover:bg-red-50"
+            onClick={onLogout}
+          >
+            <LogOutIcon className="h-5 w-5 mr-2" /> Logout
+          </button> */}
+        </div>
+      )}
+    </div>
+  );
+};
 import { logoutThunk } from "../store/thunks/authThunks";
 import PendingApproval from "./PendingApproval";
 import AdminSidebar from "./dashboard/AdminSidebar";
@@ -34,23 +82,22 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  // Check if user needs approval (non-admin users)
+  // Non-admins with status 'pending' see PendingApproval
   if (user.role !== "admin" && user.status === "pending") {
     return <PendingApproval user={user} />;
   }
 
-  // If user is approved, redirect to dashboard
+  // Non-admins with status 'active' and approval 'approved' see their dashboard
   if (
     user.role !== "admin" &&
-    user.approval === "approved" &&
-    user.status === "active"
+    user.status === "active" &&
+    user.approval === "approved"
   ) {
-    // For now, show a simple dashboard for approved customers/contractors
     return <CustomerContractorDashboard user={user} onLogout={handleLogout} />;
   }
 
-  // Admin Dashboard
-  if (user.role === "admin") {
+  // Admins with status 'active' always see the dashboard, regardless of approval
+  if (user.role === "admin" && user.status === "active") {
     return (
       <div className="min-h-screen bg-gray-50 flex">
         {/* Sidebar */}
@@ -59,8 +106,11 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 p-8">
-          {activeTab === "dashboard" && <AdminDashboardContent />}
+        <div className="flex-1 p-8 relative xl:px-16 lg:px-12 md:px-8 px-4">
+          {/* Profile Icon Top Right */}
+          {activeTab === "dashboard" && (
+            <AdminDashboardContent user={user} handleLogout={handleLogout} />
+          )}
           {activeTab === "users" && <UserManagementContent />}
           {activeTab === "analytics" && <ComingSoonContent title="Analytics" />}
           {activeTab === "settings" && <ComingSoonContent title="Settings" />}
@@ -69,18 +119,43 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  // Fallback for other cases
-  return <PendingApproval user={user} />;
+  // Fallback: show PendingApproval for non-admins, minimal dashboard for admin
+  if (user.role !== "admin") {
+    return <PendingApproval user={user} />;
+  }
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+        <p className="text-gray-600 mt-2">
+          Welcome, admin. If you see this, something is wrong with your account
+          status.
+        </p>
+      </div>
+    </div>
+  );
 };
 
 // Admin Dashboard Content Component
-const AdminDashboardContent: React.FC = () => (
+const AdminDashboardContent: React.FC<{
+  user: any;
+  handleLogout: () => void;
+}> = ({ user, handleLogout }) => (
   <div className="space-y-8">
-    <div>
-      <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-      <p className="text-gray-600 mt-2">
-        Overview of system statistics and user management
-      </p>
+    <div className="flex items-center justify-between pt-4 pb-2">
+      {/* Dashboard Title (center) */}
+
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+        <p className="text-gray-600 mt-2">
+          Overview of system statistics and user management
+        </p>
+      </div>
+
+      {/* Profile Icon (right) */}
+      <div className="ml-4">
+        <ProfileMenu user={user} onLogout={handleLogout} />
+      </div>
     </div>
 
     {/* Statistics Cards */}
