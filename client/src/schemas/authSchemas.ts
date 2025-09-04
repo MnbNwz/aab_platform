@@ -28,21 +28,40 @@ const baseUserSchema = z.object({
   termsAccepted: z
     .boolean()
     .refine((val) => val === true, 'You must accept the terms and conditions'),
+  // Add geoHome fields
+  latitude: z
+    .number()
+    .min(-90, 'Invalid latitude')
+    .max(90, 'Invalid latitude'),
+  longitude: z
+    .number()
+    .min(-180, 'Invalid longitude')
+    .max(180, 'Invalid longitude'),
+});
+
+// Customer specific fields schema
+const customerProfileSchema = z.object({
+  defaultPropertyType: z
+    .enum(['domestic', 'commercial'])
+    .default('domestic'),
 });
 
 // Contractor specific fields schema
 const contractorProfileSchema = z.object({
-  businessName: z
+  companyName: z
     .string()
-    .min(1, 'Business name is required for contractors')
-    .min(2, 'Business name must be at least 2 characters'),
-  licenseNumber: z
+    .min(1, 'Company name is required for contractors')
+    .min(2, 'Company name must be at least 2 characters'),
+  license: z
     .string()
     .min(1, 'License number is required for contractors')
     .min(3, 'License number must be at least 3 characters'),
-  specialties: z
+  services: z
     .array(z.string())
-    .min(1, 'Please select at least one specialty'),
+    .min(1, 'Please select at least one service'),
+  taxId: z
+    .string()
+    .min(1, 'Tax ID is required for contractors'),
   serviceRadius: z
     .number()
     .min(1, 'Service radius must be at least 1 km')
@@ -50,13 +69,15 @@ const contractorProfileSchema = z.object({
 });
 
 // Customer registration schema
-export const customerRegistrationSchema = baseUserSchema.refine(
-  (data) => data.password === data.confirmPassword,
-  {
-    message: 'Passwords must match',
-    path: ['confirmPassword'],
-  }
-);
+export const customerRegistrationSchema = baseUserSchema
+  .merge(customerProfileSchema)
+  .refine(
+    (data) => data.password === data.confirmPassword,
+    {
+      message: 'Passwords must match',
+      path: ['confirmPassword'],
+    }
+  );
 
 // Contractor registration schema
 export const contractorRegistrationSchema = baseUserSchema

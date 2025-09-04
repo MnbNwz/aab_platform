@@ -14,19 +14,19 @@ import {
   type ContractorRegistrationData,
 } from "../../schemas/authSchemas";
 
-const CONTRACTOR_SPECIALTIES = [
-  "Plumbing",
-  "Electrical",
-  "HVAC",
-  "Appliance Repair",
-  "General Maintenance",
-  "Cleaning",
-  "Landscaping",
-  "Security Systems",
-  "Pest Control",
-  "Roofing",
-  "Painting",
-  "Flooring",
+const CONTRACTOR_SERVICES = [
+  "plumbing",
+  "electrical", 
+  "hvac",
+  "appliance_repair",
+  "general_maintenance",
+  "cleaning",
+  "landscaping",
+  "security_systems",
+  "pest_control",
+  "roofing",
+  "painting",
+  "flooring",
 ];
 
 type FormData = CustomerRegistrationData | ContractorRegistrationData;
@@ -43,9 +43,10 @@ const SignUpForm: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Set up form with conditional schema based on role
-  const schema = selectedRole === "contractor" 
-    ? contractorRegistrationSchema 
-    : customerRegistrationSchema;
+  const schema =
+    selectedRole === "contractor"
+      ? contractorRegistrationSchema
+      : customerRegistrationSchema;
 
   const {
     register,
@@ -65,16 +66,22 @@ const SignUpForm: React.FC = () => {
       password: "",
       confirmPassword: "",
       termsAccepted: false,
+      latitude: 40.730610, // Default to NYC coordinates
+      longitude: -73.935242,
+      ...(selectedRole === "customer" && {
+        defaultPropertyType: "domestic",
+      }),
       ...(selectedRole === "contractor" && {
-        businessName: "",
-        licenseNumber: "",
-        specialties: [],
+        companyName: "",
+        license: "",
+        services: [],
+        taxId: "",
         serviceRadius: 25,
       }),
     },
   });
 
-  const watchedSpecialties = watch("specialties");
+  const watchedServices = watch("services");
 
   // Clear form and errors when role changes
   useEffect(() => {
@@ -86,10 +93,16 @@ const SignUpForm: React.FC = () => {
       password: "",
       confirmPassword: "",
       termsAccepted: false,
+      latitude: 40.730610,
+      longitude: -73.935242,
+      ...(selectedRole === "customer" && {
+        defaultPropertyType: "domestic",
+      }),
       ...(selectedRole === "contractor" && {
-        businessName: "",
-        licenseNumber: "",
-        specialties: [],
+        companyName: "",
+        license: "",
+        services: [],
+        taxId: "",
         serviceRadius: 25,
       }),
     });
@@ -98,72 +111,108 @@ const SignUpForm: React.FC = () => {
 
   // Handle redirect after successful registration
   useEffect(() => {
-    if (isAuthenticated && user) {      
-      console.log('🎯 Registration successful, navigating to dashboard for:', user.role);
-      navigate('/dashboard', { replace: true });
+    if (isAuthenticated && user) {
+      console.log(
+        "🎯 Registration successful, navigating to dashboard for:",
+        user.role
+      );
+      navigate("/dashboard", { replace: true });
     }
   }, [isAuthenticated, user, navigate]);
 
   const onSubmit = async (data: any) => {
     try {
+      // Transform data to match backend API format
       const submitData = {
-        ...data,
+        email: data.email,
+        password: data.password,
+        phone: data.phone,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        confirmPassword: data.confirmPassword,
+        termsAccepted: data.termsAccepted,
         role: selectedRole,
+        geoHome: {
+          type: "Point",
+          coordinates: [data.longitude || -73.935242, data.latitude || 40.730610] // Default coordinates if not provided
+        },
+        ...(selectedRole === "customer" && {
+          customer: {
+            defaultPropertyType: data.defaultPropertyType || "domestic"
+          }
+        }),
+        ...(selectedRole === "contractor" && {
+          contractor: {
+            companyName: data.companyName,
+            services: data.services || [],
+            license: data.license,
+            taxId: data.taxId,
+            docs: [] // Will be handled separately for file uploads
+          }
+        })
       };
-      
+
       await dispatch(registerThunk(submitData)).unwrap();
     } catch (err) {
       console.error("Registration failed:", err);
     }
   };
 
-  const handleSpecialtyChange = (specialty: string, checked: boolean) => {
-    const currentSpecialties = watchedSpecialties || [];
-    const newSpecialties = checked
-      ? [...currentSpecialties, specialty]
-      : currentSpecialties.filter((s: string) => s !== specialty);
-    
-    setValue("specialties", newSpecialties);
+  const handleServiceChange = (service: string, checked: boolean) => {
+    const currentServices = watchedServices || [];
+    const newServices = checked
+      ? [...currentServices, service]
+      : currentServices.filter((s: string) => s !== service);
+
+    setValue("services", newServices);
   };
 
-  const roleConfigs: Record<'customer' | 'contractor', { title: string; bgClass: string; description: string }> = {
+  const roleConfigs: Record<
+    "customer" | "contractor",
+    { title: string; bgClass: string; description: string }
+  > = {
     customer: {
       title: "Create Customer Account",
-      bgClass: "bg-orange-500",
-      description: "Join AAS to get access to trusted home service professionals",
+      bgClass: "bg-accent-500",
+      description:
+        "Join AAS to get access to trusted home service professionals",
     },
     contractor: {
       title: "Join as a Contractor",
-      bgClass: "bg-blue-700",
+      bgClass: "bg-primary-700",
       description: "Partner with AAS to grow your service business",
     },
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900 py-8 px-4">
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-white/10 backdrop-blur-md rounded-xl p-8 border border-white/20">
+    <div className="min-h-screen bg-primary-800 py-8 px-4">
+      <div className="max-w-3xl mx-auto">
+        <div className="bg-white/10 backdrop-blur-md rounded-xl p-10 border border-white/20">
           {/* Logo and Header */}
-          <div className="text-center mb-8">
-            <div className="mx-auto h-16 w-16 bg-white rounded-full flex items-center justify-center mb-4">
-              <span className="text-blue-800 font-bold text-xl">AAS</span>
+          <div className="text-center mb-10">
+            <div className="mx-auto h-24 w-24 mb-6 flex items-center justify-center">
+              <img
+                src="https://aasquebec.com/wp-content/uploads/2025/07/aasquebec-logo.svg"
+                alt="AAS Quebec Logo"
+                className="h-24 w-24 object-contain"
+              />
             </div>
-            <h1 className="text-2xl font-bold text-white mb-2">
+            <h1 className="text-3xl font-bold text-white mb-3">
               Create Your Account
             </h1>
-            <p className="text-white/80">Join the AAS platform today</p>
+            <p className="text-white/80 text-lg">Join the AAS platform today</p>
           </div>
 
           {/* Role Selector */}
-          <div className="mb-6">
+          <div className="mb-8">
             <div className="flex rounded-lg overflow-hidden bg-white/10">
               {(["customer", "contractor"] as UserRole[]).map((role) => (
                 <button
                   key={role}
                   onClick={() => setSelectedRole(role)}
-                  className={`flex-1 py-3 px-4 text-sm font-medium transition-all duration-200 ${ 
+                  className={`flex-1 py-4 px-6 text-base font-medium transition-all duration-200 ${
                     selectedRole === role
-                      ? "bg-white text-blue-800"
+                      ? "bg-white text-primary-900"
                       : "text-white hover:bg-white/10"
                   }`}
                 >
@@ -174,12 +223,15 @@ const SignUpForm: React.FC = () => {
           </div>
 
           {/* Current Role Title */}
-          <div className="text-center mb-6">
+          <div className="text-center mb-8">
             <h2 className="text-xl font-semibold text-white mb-2">
-              {roleConfigs[selectedRole as 'customer' | 'contractor'].title}
+              {roleConfigs[selectedRole as "customer" | "contractor"].title}
             </h2>
             <p className="text-white/70 text-sm">
-              {roleConfigs[selectedRole as 'customer' | 'contractor'].description}
+              {
+                roleConfigs[selectedRole as "customer" | "contractor"]
+                  .description
+              }
             </p>
           </div>
 
@@ -191,7 +243,7 @@ const SignUpForm: React.FC = () => {
           )}
 
           {/* Registration Form */}
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Personal Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -204,8 +256,8 @@ const SignUpForm: React.FC = () => {
                   className={`w-full px-4 py-3 rounded-lg border bg-white/10 text-white placeholder-white/60 transition-colors ${
                     errors.firstName
                       ? "border-red-400 focus:border-red-500"
-                      : "border-white/20 focus:border-orange-500"
-                  } focus:ring-2 focus:ring-orange-500/20`}
+                      : "border-white/20 focus:border-accent-500"
+                  } focus:ring-2 focus:ring-accent-500/20`}
                   placeholder="Enter your first name"
                 />
                 {errors.firstName && (
@@ -225,8 +277,8 @@ const SignUpForm: React.FC = () => {
                   className={`w-full px-4 py-3 rounded-lg border bg-white/10 text-white placeholder-white/60 transition-colors ${
                     errors.lastName
                       ? "border-red-400 focus:border-red-500"
-                      : "border-white/20 focus:border-orange-500"
-                  } focus:ring-2 focus:ring-orange-500/20`}
+                      : "border-white/20 focus:border-accent-500"
+                  } focus:ring-2 focus:ring-accent-500/20`}
                   placeholder="Enter your last name"
                 />
                 {errors.lastName && (
@@ -248,12 +300,14 @@ const SignUpForm: React.FC = () => {
                 className={`w-full px-4 py-3 rounded-lg border bg-white/10 text-white placeholder-white/60 transition-colors ${
                   errors.email
                     ? "border-red-400 focus:border-red-500"
-                    : "border-white/20 focus:border-orange-500"
-                } focus:ring-2 focus:ring-orange-500/20`}
+                    : "border-white/20 focus:border-accent-500"
+                } focus:ring-2 focus:ring-accent-500/20`}
                 placeholder="Enter your email address"
               />
               {errors.email && (
-                <p className="mt-1 text-red-300 text-xs">{String(errors.email.message)}</p>
+                <p className="mt-1 text-red-300 text-xs">
+                  {String(errors.email.message)}
+                </p>
               )}
             </div>
 
@@ -267,35 +321,58 @@ const SignUpForm: React.FC = () => {
                 className={`w-full px-4 py-3 rounded-lg border bg-white/10 text-white placeholder-white/60 transition-colors ${
                   errors.phone
                     ? "border-red-400 focus:border-red-500"
-                    : "border-white/20 focus:border-orange-500"
-                } focus:ring-2 focus:ring-orange-500/20`}
+                    : "border-white/20 focus:border-accent-500"
+                } focus:ring-2 focus:ring-accent-500/20`}
                 placeholder="Enter your phone number"
               />
               {errors.phone && (
-                <p className="mt-1 text-red-300 text-xs">{String(errors.phone.message)}</p>
+                <p className="mt-1 text-red-300 text-xs">
+                  {String(errors.phone.message)}
+                </p>
               )}
             </div>
+
+            {/* Customer Specific Fields */}
+            {selectedRole === "customer" && (
+              <div>
+                <label className="block text-white text-sm font-medium mb-2">
+                  Property Type *
+                </label>
+                <select
+                  {...register("defaultPropertyType" as keyof FormData)}
+                  className="w-full px-4 py-3 rounded-lg border border-white/20 bg-white/10 text-white focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
+                >
+                  <option value="domestic">Domestic</option>
+                  <option value="commercial">Commercial</option>
+                </select>
+                {errors.defaultPropertyType && (
+                  <p className="mt-1 text-red-300 text-xs">
+                    {String(errors.defaultPropertyType.message)}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Contractor Specific Fields */}
             {selectedRole === "contractor" && (
               <>
                 <div>
                   <label className="block text-white text-sm font-medium mb-2">
-                    Business Name *
+                    Company Name *
                   </label>
                   <input
-                    {...register("businessName" as keyof FormData)}
+                    {...register("companyName" as keyof FormData)}
                     type="text"
                     className={`w-full px-4 py-3 rounded-lg border bg-white/10 text-white placeholder-white/60 transition-colors ${
-                      errors.businessName
+                      errors.companyName
                         ? "border-red-400 focus:border-red-500"
-                        : "border-white/20 focus:border-orange-500"
-                    } focus:ring-2 focus:ring-orange-500/20`}
-                    placeholder="Enter your business name"
+                        : "border-white/20 focus:border-accent-500"
+                    } focus:ring-2 focus:ring-accent-500/20`}
+                    placeholder="Enter your company name"
                   />
-                  {errors.businessName && (
+                  {errors.companyName && (
                     <p className="mt-1 text-red-300 text-xs">
-                      {String(errors.businessName.message)}
+                      {String(errors.companyName.message)}
                     </p>
                   )}
                 </div>
@@ -305,44 +382,69 @@ const SignUpForm: React.FC = () => {
                     License Number *
                   </label>
                   <input
-                    {...register("licenseNumber" as keyof FormData)}
+                    {...register("license" as keyof FormData)}
                     type="text"
                     className={`w-full px-4 py-3 rounded-lg border bg-white/10 text-white placeholder-white/60 transition-colors ${
-                      errors.licenseNumber
+                      errors.license
                         ? "border-red-400 focus:border-red-500"
-                        : "border-white/20 focus:border-orange-500"
-                    } focus:ring-2 focus:ring-orange-500/20`}
+                        : "border-white/20 focus:border-accent-500"
+                    } focus:ring-2 focus:ring-accent-500/20`}
                     placeholder="Enter your license number"
                   />
-                  {errors.licenseNumber && (
+                  {errors.license && (
                     <p className="mt-1 text-red-300 text-xs">
-                      {String(errors.licenseNumber.message)}
+                      {String(errors.license.message)}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-white text-sm font-medium mb-2">
+                    Tax ID *
+                  </label>
+                  <input
+                    {...register("taxId" as keyof FormData)}
+                    type="text"
+                    className={`w-full px-4 py-3 rounded-lg border bg-white/10 text-white placeholder-white/60 transition-colors ${
+                      errors.taxId
+                        ? "border-red-400 focus:border-red-500"
+                        : "border-white/20 focus:border-accent-500"
+                    } focus:ring-2 focus:ring-accent-500/20`}
+                    placeholder="Enter your tax ID"
+                  />
+                  {errors.taxId && (
+                    <p className="mt-1 text-red-300 text-xs">
+                      {String(errors.taxId.message)}
                     </p>
                   )}
                 </div>
 
                 <div>
                   <label className="block text-white text-sm font-medium mb-3">
-                    Service Specialties (Select all that apply) *
+                    Service Types (Select all that apply) *
                   </label>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    {CONTRACTOR_SPECIALTIES.map((specialty) => (
-                      <label key={specialty} className="flex items-center">
+                    {CONTRACTOR_SERVICES.map((service) => (
+                      <label key={service} className="flex items-center">
                         <input
                           type="checkbox"
-                          checked={((watchedSpecialties as string[]) || []).includes(specialty)}
-                          onChange={(e) => handleSpecialtyChange(specialty, e.target.checked)}
-                          className="h-4 w-4 text-orange-500 border-white/20 rounded focus:ring-orange-500"
+                          checked={(
+                            (watchedServices as string[]) || []
+                          ).includes(service)}
+                          onChange={(e) =>
+                            handleServiceChange(service, e.target.checked)
+                          }
+                          className="h-4 w-4 text-accent-500 border-white/20 rounded focus:ring-accent-500"
                         />
                         <span className="ml-2 text-white text-sm">
-                          {specialty}
+                          {service.charAt(0).toUpperCase() + service.slice(1).replace('_', ' ')}
                         </span>
                       </label>
                     ))}
                   </div>
-                  {errors.specialties && (
+                  {errors.services && (
                     <p className="mt-1 text-red-300 text-xs">
-                      {String(errors.specialties.message)}
+                      {String(errors.services.message)}
                     </p>
                   )}
                 </div>
@@ -352,8 +454,10 @@ const SignUpForm: React.FC = () => {
                     Service Radius (km) *
                   </label>
                   <select
-                    {...register("serviceRadius" as keyof FormData, { valueAsNumber: true })}
-                    className="w-full px-4 py-3 rounded-lg border border-white/20 bg-white/10 text-white focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+                    {...register("serviceRadius" as keyof FormData, {
+                      valueAsNumber: true,
+                    })}
+                    className="w-full px-4 py-3 rounded-lg border border-white/20 bg-white/10 text-white focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
                   >
                     <option value={10}>10 km</option>
                     <option value={25}>25 km</option>
@@ -383,8 +487,8 @@ const SignUpForm: React.FC = () => {
                     className={`w-full px-4 py-3 rounded-lg border bg-white/10 text-white placeholder-white/60 transition-colors pr-12 ${
                       errors.password
                         ? "border-red-400 focus:border-red-500"
-                        : "border-white/20 focus:border-orange-500"
-                    } focus:ring-2 focus:ring-orange-500/20`}
+                        : "border-white/20 focus:border-accent-500"
+                    } focus:ring-2 focus:ring-accent-500/20`}
                     placeholder="Create password"
                   />
                   <button
@@ -413,8 +517,8 @@ const SignUpForm: React.FC = () => {
                     className={`w-full px-4 py-3 rounded-lg border bg-white/10 text-white placeholder-white/60 transition-colors pr-12 ${
                       errors.confirmPassword
                         ? "border-red-400 focus:border-red-500"
-                        : "border-white/20 focus:border-orange-500"
-                    } focus:ring-2 focus:ring-orange-500/20`}
+                        : "border-white/20 focus:border-accent-500"
+                    } focus:ring-2 focus:ring-accent-500/20`}
                     placeholder="Confirm password"
                   />
                   <button
@@ -439,20 +543,20 @@ const SignUpForm: React.FC = () => {
                 <input
                   {...register("termsAccepted")}
                   type="checkbox"
-                  className="h-4 w-4 text-orange-500 border-white/20 rounded focus:ring-orange-500 mt-1"
+                  className="h-4 w-4 text-accent-500 border-white/20 rounded focus:ring-accent-500 mt-1"
                 />
                 <span className="text-white text-sm">
                   I agree to the{" "}
                   <Link
                     to="/terms"
-                    className="text-orange-300 hover:text-orange-200 underline"
+                    className="text-accent-400 hover:text-accent-300 underline"
                   >
                     Terms of Service
                   </Link>{" "}
                   and{" "}
                   <Link
                     to="/privacy"
-                    className="text-orange-300 hover:text-orange-200 underline"
+                    className="text-accent-400 hover:text-accent-300 underline"
                   >
                     Privacy Policy
                   </Link>
@@ -472,8 +576,8 @@ const SignUpForm: React.FC = () => {
               disabled={isLoading || !isValid}
               className={`w-full py-3 px-4 rounded-lg font-semibold text-white transition-all duration-200 ${
                 selectedRole === "customer"
-                  ? "bg-orange-500 hover:bg-orange-600"
-                  : "bg-blue-600 hover:bg-blue-700"
+                  ? "bg-accent-500 hover:bg-accent-600"
+                  : "bg-primary-700 hover:bg-primary-800"
               } disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               {isLoading ? (
@@ -493,7 +597,7 @@ const SignUpForm: React.FC = () => {
               Already have an account?{" "}
               <Link
                 to="/login"
-                className="text-orange-300 hover:text-orange-200 font-medium transition-colors"
+                className="text-accent-400 hover:text-accent-300 font-medium transition-colors"
               >
                 Sign In
               </Link>
