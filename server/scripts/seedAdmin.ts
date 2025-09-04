@@ -43,6 +43,8 @@ const seedAdmin = async () => {
     
     // Create admin user
     const adminUser = new User({
+      firstName: "System",
+      lastName: "Administrator",
       email: adminEmail,
       passwordHash: hashedPassword,
       phone: "+1234567000",

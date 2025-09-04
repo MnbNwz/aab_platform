@@ -6,14 +6,7 @@ export type PropertyType = "domestic" | "commercial";
 export type ApprovalStatus = "pending" | "approved" | "rejected";
 export type MembershipType = "standard" | "premium" | "platinum";
 
-// Base interface for shared profile fields
-export interface BaseProfile {
-  subscriptionId?: Types.ObjectId;
-  membershipId?: Types.ObjectId;
-  approval: ApprovalStatus;
-}
-
-export interface Customer extends BaseProfile {
+export interface Customer {
   defaultPropertyType: PropertyType;
 }
 
@@ -22,7 +15,7 @@ export interface GeoHome {
   coordinates: [number, number];
 }
 
-export interface Contractor extends BaseProfile {
+export interface Contractor {
   companyName: string;
   services: string[];
   license: string;
@@ -31,6 +24,8 @@ export interface Contractor extends BaseProfile {
 }
 
 export interface IUser extends Document {
+  firstName: string;
+  lastName: string;
   role: UserRole;
   email: string;
   phone: string;
@@ -39,4 +34,5 @@ export interface IUser extends Document {
   customer?: Customer;
   contractor?: Contractor;
   geoHome: GeoHome;
+  approval: ApprovalStatus;
 }

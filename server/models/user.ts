@@ -1,16 +1,5 @@
 import mongoose, { Schema } from "mongoose";
-import { IUser, Customer, GeoHome, Contractor, ApprovalStatus } from "./types/user";
-
-// Common schema definition for shared fields between Customer and Contractor
-const baseProfileFields = {
-  subscriptionId: { type: Schema.Types.ObjectId, ref: "Subscription", required: false },
-  membershipId: { type: Schema.Types.ObjectId, ref: "Membership", required: false },
-  approval: {
-    type: String,
-    enum: ["pending", "approved", "rejected"] as ApprovalStatus[],
-    default: "pending" as ApprovalStatus,
-  },
-};
+import { IUser, GeoHome, Contractor, ApprovalStatus, PropertyType, Customer } from "./types/user";
 
 const CustomerSchema = new Schema<Customer>({
   defaultPropertyType: {
@@ -19,7 +8,6 @@ const CustomerSchema = new Schema<Customer>({
     default: "domestic",
     required: true,
   },
-  ...baseProfileFields,
 });
 
 const GeoHomeSchema = new Schema<GeoHome>({
@@ -33,11 +21,12 @@ const ContractorSchema = new Schema<Contractor>({
   license: { type: String, required: true },
   taxId: { type: String, required: true },
   docs: { type: [Object], required: true },
-  ...baseProfileFields,
 });
 
 const UserSchema = new Schema<IUser>(
   {
+    firstName: { type: String, required: true },
+    lastName: { type: String, required: true },
     role: { type: String, enum: ["admin", "customer", "contractor"], required: true },
     email: { type: String, required: true, unique: true },
     phone: { type: String, required: true },
@@ -50,7 +39,11 @@ const UserSchema = new Schema<IUser>(
     geoHome: { type: GeoHomeSchema, required: true },
     customer: { type: CustomerSchema },
     contractor: { type: ContractorSchema },
-    // approval removed from user, now in customer/contractor only
+    approval: {
+      type: String,
+      enum: ["pending", "approved", "rejected"] as ApprovalStatus[],
+      default: "pending" as ApprovalStatus,
+    },
   },
   { timestamps: true },
 );

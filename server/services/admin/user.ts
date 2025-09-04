@@ -23,8 +23,7 @@ export interface PaginationOptions {
 export interface UserUpdateData {
   status?: UserStatus;
   approval?: ApprovalStatus;
-  subscriptionId?: string;
-  membershipId?: string;
+  // Note: subscriptionId and membershipId removed - now handled via Payment/Membership models
 }
 
 // Get all users with filtering and pagination
@@ -45,12 +44,9 @@ export async function getAllUsers(filters: UserFilters = {}, pagination: Paginat
     query.status = filters.status;
   }
 
-  // Approval filter (for customer/contractor profiles)
+  // Approval filter (now at user level)
   if (filters.approval) {
-    query.$or = [
-      { 'customer.approval': filters.approval },
-      { 'contractor.approval': filters.approval }
-    ];
+    query.approval = filters.approval;
   }
 
   // Search filter (email or phone)
@@ -126,34 +122,13 @@ export async function updateUser(userId: string, updateData: UserUpdateData) {
     user.status = updateData.status;
   }
 
-  // Update profile-level approval
+  // Update user-level approval (moved from profile level)
   if (updateData.approval) {
-    if (user.customer) {
-      user.customer.approval = updateData.approval;
-    }
-    if (user.contractor) {
-      user.contractor.approval = updateData.approval;
-    }
+    user.approval = updateData.approval;
   }
 
-  // Update subscription/membership
-  if (updateData.subscriptionId) {
-    if (user.customer) {
-      user.customer.subscriptionId = updateData.subscriptionId as any;
-    }
-    if (user.contractor) {
-      user.contractor.subscriptionId = updateData.subscriptionId as any;
-    }
-  }
-
-  if (updateData.membershipId) {
-    if (user.customer) {
-      user.customer.membershipId = updateData.membershipId as any;
-    }
-    if (user.contractor) {
-      user.contractor.membershipId = updateData.membershipId as any;
-    }
-  }
+  // Note: subscriptionId and membershipId are now handled via Payment model
+  // These fields have been removed from user profiles
 
   await user.save();
   
@@ -223,8 +198,7 @@ export async function bulkApproveUsers(userIds: string[]) {
     { 
       $set: { 
         status: "active",
-        "customer.approval": "approved",
-        "contractor.approval": "approved"
+        approval: "approved" // Now at user level
       }
     }
   );
@@ -242,8 +216,7 @@ export async function bulkRejectUsers(userIds: string[]) {
     { 
       $set: { 
         status: "revoke",
-        "customer.approval": "rejected",
-        "contractor.approval": "rejected"
+        approval: "rejected" // Now at user level
       }
     }
   );

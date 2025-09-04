@@ -25,7 +25,12 @@ function cleanUserData(user: any) {
 
 // Signup function
 export async function signup(signupData: any) {
-  const { email, password, phone, role, customer, contractor, geoHome } = signupData;
+  const { firstName, lastName, email, password, phone, role, customer, contractor, geoHome } = signupData;
+
+  // Validate required fields
+  if (!firstName || !lastName) {
+    throw new Error("First name and last name are required");
+  }
 
   // Check if user exists
   const existingUser = await User.findOne({ email });
@@ -35,11 +40,14 @@ export async function signup(signupData: any) {
 
   // Create user data
   const userData: any = {
+    firstName,
+    lastName,
     email,
     phone,
     passwordHash: hashPassword(password),
     role,
     status: "pending",
+    approval: "pending", // Approval is now at user level
     geoHome,
   };
 
@@ -47,16 +55,7 @@ export async function signup(signupData: any) {
   if (role === "customer" && customer && !contractor) {
     userData.customer = {
       defaultPropertyType: customer.defaultPropertyType,
-      approval: "pending",
     };
-
-    // Add optional fields if provided
-    if (customer.subscriptionId) {
-      userData.customer.subscriptionId = customer.subscriptionId;
-    }
-    if (customer.membershipId) {
-      userData.customer.membershipId = customer.membershipId;
-    }
   }
 
   if (role === "contractor" && contractor && !customer) {
@@ -65,17 +64,8 @@ export async function signup(signupData: any) {
       services: contractor.services,
       license: contractor.license,
       taxId: contractor.taxId,
-      docs: contractor.docs,
-      approval: "pending",
+      docs: contractor.docs || [],
     };
-
-    // Add optional fields if provided
-    if (contractor.subscriptionId) {
-      userData.contractor.subscriptionId = contractor.subscriptionId;
-    }
-    if (contractor.membershipId) {
-      userData.contractor.membershipId = contractor.membershipId;
-    }
   }
 
   // Create and save user

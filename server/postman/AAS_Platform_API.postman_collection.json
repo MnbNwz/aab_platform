@@ -1,8 +1,8 @@
 {
   "info": {
     "name": "AAS Platform API",
-    "description": "Complete API collection for AAS Platform with authentication and admin management",
-    "version": "1.0.0",
+    "description": "Complete API collection for AAS Platform with authentication, user management, and intelligent caching system.\n\n🆕 **Updated Features:**\n• firstName & lastName required for all user registrations\n• User-level approval system (moved from role-specific)\n• Redis caching with memory fallback for production reliability\n• Enhanced customer schema with defaultPropertyType\n• Improved contractor docs structure with proper object format\n\n⚡ **Performance Features:**\n• Authentication middleware caching (50-80% performance boost)\n• Membership plans caching (1-hour TTL)\n• User profile caching with intelligent invalidation\n• Cache fallback system ensures zero downtime\n\n📋 **API Highlights:**\n• JWT-based authentication with HttpOnly cookies\n• Comprehensive admin user management with filtering\n• Role-based access control (RBAC)\n• Rate limiting and security headers\n• Complete membership plan management",
+    "version": "2.0.0",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -43,14 +43,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"contractor3@test.com\",\n  \"password\": \"Contractor@123\"\n}\n\n// Other login credentials:\n// Admin:\n// {\n//   \"email\": \"admin@aasplatform.com\",\n//   \"password\": \"Admin@2025!Secure\"\n// }\n\n// Customer:\n// {\n//   \"email\": \"customer1@test.com\",\n//   \"password\": \"Customer@123\"\n// }"
+              "raw": "{\n  \"email\": \"alice.johnson@business.com\",\n  \"password\": \"Customer@456\"\n}\n\n// Other login credentials:\n// Admin:\n// {\n//   \"email\": \"admin@aasplatform.com\",\n//   \"password\": \"Admin@2025!Secure\"\n// }\n\n// Customer:\n// {\n//   \"email\": \"customer1@test.com\",\n//   \"password\": \"Customer@123\"\n// }\n\n// Contractor:\n// {\n//   \"email\": \"contractor1@test.com\",\n//   \"password\": \"Contractor@123\"\n// }"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/signin",
               "host": ["{{baseUrl}}"],
               "path": ["api", "auth", "signin"]
             },
-            "description": "Generic signin endpoint - change email/password in body as needed. Sets authToken automatically."
+            "description": "Generic signin endpoint - change email/password in body as needed. Sets authToken automatically. Response includes user object with firstName, lastName, and updated schema fields."
           }
         },
         {
@@ -65,14 +65,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"customer1@test.com\",\n  \"password\": \"Customer@123\",\n  \"phone\": \"+1234567890\",\n  \"role\": \"customer\",\n  \"geoHome\": {\n    \"type\": \"Point\",\n    \"coordinates\": [-73.935242, 40.730610]\n  },\n  \"customer\": {\n    \"defaultPropertyType\": \"domestic\"\n  }\n}"
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"customer1@test.com\",\n  \"password\": \"Customer@123\",\n  \"phone\": \"+1234567890\",\n  \"role\": \"customer\",\n  \"geoHome\": {\n    \"type\": \"Point\",\n    \"coordinates\": [-73.935242, 40.730610]\n  },\n  \"customer\": {\n    \"defaultPropertyType\": \"domestic\"\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/signup",
               "host": ["{{baseUrl}}"],
               "path": ["api", "auth", "signup"]
             },
-            "description": "Customer registration"
+            "description": "Customer registration - Required fields: firstName, lastName, email, password, phone, role, geoHome, and customer profile with defaultPropertyType"
           }
         },
         {
@@ -87,14 +87,84 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"contractor1@test.com\",\n  \"password\": \"Contractor@123\",\n  \"phone\": \"+1234567891\",\n  \"role\": \"contractor\",\n  \"geoHome\": {\n    \"type\": \"Point\",\n    \"coordinates\": [-74.006, 40.7128]\n  },\n  \"contractor\": {\n    \"companyName\": \"TestCorp Contracting LLC\",\n    \"services\": [\"plumbing\", \"electrical\", \"hvac\"],\n    \"license\": \"LIC789456\",\n    \"taxId\": \"TAX789456\",\n    \"docs\": [\"license.pdf\", \"insurance.pdf\"]\n  }\n}"
+              "raw": "{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"email\": \"contractor1@test.com\",\n  \"password\": \"Contractor@123\",\n  \"phone\": \"+1234567891\",\n  \"role\": \"contractor\",\n  \"geoHome\": {\n    \"type\": \"Point\",\n    \"coordinates\": [-74.006, 40.7128]\n  },\n  \"contractor\": {\n    \"companyName\": \"TestCorp Contracting LLC\",\n    \"services\": [\"plumbing\", \"electrical\", \"hvac\"],\n    \"license\": \"LIC789456\",\n    \"taxId\": \"TAX789456\",\n    \"docs\": [{\"type\": \"license\", \"url\": \"https://example.com/license.pdf\"}, {\"type\": \"insurance\", \"url\": \"https://example.com/insurance.pdf\"}]\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/signup",
               "host": ["{{baseUrl}}"],
               "path": ["api", "auth", "signup"]
             },
-            "description": "Contractor registration with company details"
+            "description": "Contractor registration - Required fields: firstName, lastName, email, password, phone, role, geoHome, and contractor profile with company details, services, license, taxId, and docs"
+          }
+        },
+        {
+          "name": "Customer Signup (Commercial)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Alice\",\n  \"lastName\": \"Johnson\",\n  \"email\": \"alice.johnson@business.com\",\n  \"password\": \"Customer@456\",\n  \"phone\": \"+1987654321\",\n  \"role\": \"customer\",\n  \"geoHome\": {\n    \"type\": \"Point\",\n    \"coordinates\": [-74.006, 40.7128]\n  },\n  \"customer\": {\n    \"defaultPropertyType\": \"commercial\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/signup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "signup"]
+            },
+            "description": "Customer registration with commercial property type - demonstrates defaultPropertyType options"
+          }
+        },
+        {
+          "name": "Contractor Signup (Multiple Services)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Bob\",\n  \"lastName\": \"Wilson\",\n  \"email\": \"bob.wilson@multiservice.com\",\n  \"password\": \"Contractor@789\",\n  \"phone\": \"+1555123456\",\n  \"role\": \"contractor\",\n  \"geoHome\": {\n    \"type\": \"Point\",\n    \"coordinates\": [-73.935242, 40.730610]\n  },\n  \"contractor\": {\n    \"companyName\": \"Wilson Multi-Service Co\",\n    \"services\": [\"electrical\", \"hvac\", \"general\"],\n    \"license\": \"EL67890\",\n    \"taxId\": \"98-7654321\",\n    \"docs\": [{\"type\": \"license\", \"url\": \"https://example.com/electrical-license.pdf\"}, {\"type\": \"certification\", \"url\": \"https://example.com/hvac-cert.pdf\"}]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/signup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "signup"]
+            },
+            "description": "Contractor registration with multiple services - demonstrates service array options: plumbing, electrical, hvac, general"
+          }
+        },
+        {
+          "name": "Get User Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "profile"]
+            },
+            "description": "Get current authenticated user's profile - returns user object with firstName, lastName, role-specific data, and approval status. Uses cached data for improved performance."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            },
+            "description": "Logout user and invalidate authentication tokens. Clears HttpOnly cookies and removes user from cache."
           }
         }
       ]
