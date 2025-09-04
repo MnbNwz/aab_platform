@@ -1,12 +1,54 @@
-# React + Vite
+# AAS Platform Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern React TypeScript frontend for the AAS (Assistance and Services) platform with role-based access control (RBAC).
 
-Currently, two official plugins are available:
+## 🏗️ Architecture
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+This application follows a functional React approach with:
 
-## Expanding the ESLint configuration
+- **React 19** with TypeScript
+- **Redux Toolkit** for state management
+- **React Router** for routing
+- **Tailwind CSS** for styling (matching AAS brand colors)
+- **Vite** for build tooling
+- **Cookie-based authentication** (HTTP-only cookies)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 🎨 Design System
+
+The application uses AAS Quebec's brand colors:
+
+- **Primary Blue**: `#1e3a5f` (Deep blue from AAS website)
+- **Accent Orange**: `#e85a4f` (Orange from CTA buttons)
+- **Neutral Colors**: Gray scale for backgrounds and text
+
+## 🔐 Authentication Flow
+
+The app uses secure HTTP-only cookie authentication:
+
+1. **Login**: POST `/api/auth/signin` with credentials
+2. **Session**: Automatic cookie handling with `credentials: 'include'`
+3. **Auto-refresh**: Transparent token refresh
+4. **Logout**: POST `/api/auth/logout`
+
+## 🚀 Getting Started
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+```
+
+## Environment Variables
+
+Create a `.env` file:
+
+```env
+VITE_API_BASE_URL=http://localhost:3000
+VITE_APP_NAME=AAS Platform
+VITE_APP_VERSION=1.0.0
+```
