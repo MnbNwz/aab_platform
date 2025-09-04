@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 
 /**
  * Hash password using SHA-256
@@ -10,35 +11,166 @@ export function hashPassword(password: string): string {
 }
 
 /**
- * Generate JWT token payload
- * @param userId - User ID
- * @param role - User role
- * @returns Token payload object
+ * Generate crypto-secure random timestamp offset
+ * @returns Random offset in seconds (0-300 seconds = 0-5 minutes)
  */
-export function generateToken(userId: string, role: string): string {
-  const payload = {
-    userId,
-    role,
-    timestamp: Date.now(),
-  };
-  return Buffer.from(JSON.stringify(payload)).toString("base64");
+function getSecureRandomOffset(): number {
+  const randomBytes = crypto.randomBytes(2);
+  return randomBytes.readUInt16BE(0) % 301; // 0-300 seconds
 }
 
 /**
- * Verify and decode JWT token
- * @param token - JWT token
+ * Generate access token with proper cryptographic signing and random timing
+ * @param userId - User ID
+ * @param role - User role
+ * @returns Signed JWT access token
+ */
+export function generateAccessToken(userId: string, role: string): string {
+  const now = Math.floor(Date.now() / 1000);
+  const randomOffset = getSecureRandomOffset();
+  
+  const payload = {
+    userId,
+    role,
+    type: 'access',
+    iat: now + randomOffset, // Add random offset to make timing unpredictable
+    exp: now + (7 * 24 * 60 * 60), // Expires in 7 days
+    jti: crypto.randomUUID(), // Unique token ID for tracking/revocation
+  };
+  
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET environment variable is not set");
+  }
+  
+  return jwt.sign(payload, secret, { 
+    algorithm: 'HS256',
+    issuer: 'aas-platform',
+    audience: 'aas-users'
+  });
+}
+
+/**
+ * Generate refresh token with longer expiry
+ * @param userId - User ID
+ * @returns Signed JWT refresh token
+ */
+export function generateRefreshToken(userId: string): string {
+  const now = Math.floor(Date.now() / 1000);
+  const randomOffset = getSecureRandomOffset();
+  
+  const payload = {
+    userId,
+    type: 'refresh',
+    iat: now + randomOffset,
+    exp: now + (30 * 24 * 60 * 60), // Expires in 30 days
+    jti: crypto.randomUUID(),
+  };
+  
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET environment variable is not set");
+  }
+  
+  return jwt.sign(payload, secret, { 
+    algorithm: 'HS256',
+    issuer: 'aas-platform',
+    audience: 'aas-users'
+  });
+}
+
+/**
+ * Legacy function for backward compatibility
+ * @deprecated Use generateAccessToken instead
+ */
+export function generateToken(userId: string, role: string): string {
+  return generateAccessToken(userId, role);
+}
+
+/**
+ * Verify and decode access token with cryptographic verification
+ * @param token - JWT access token
  * @returns Decoded payload or null if invalid
  */
-export function verifyToken(token: string): { userId: string; role: string; timestamp: number } | null {
+export function verifyAccessToken(token: string): { userId: string; role: string; type: string; iat: number; exp: number; jti: string } | null {
   try {
-    const decoded = JSON.parse(Buffer.from(token, "base64").toString());
-    if (decoded.userId && decoded.role && decoded.timestamp) {
-      return decoded;
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error("JWT_SECRET environment variable is not set");
+    }
+    
+    const decoded = jwt.verify(token, secret, {
+      algorithms: ['HS256'],
+      issuer: 'aas-platform',
+      audience: 'aas-users'
+    }) as any;
+    
+    if (decoded.userId && decoded.type === 'access') {
+      return {
+        userId: decoded.userId,
+        role: decoded.role,
+        type: decoded.type,
+        iat: decoded.iat,
+        exp: decoded.exp,
+        jti: decoded.jti
+      };
     }
     return null;
-  } catch {
+  } catch (error) {
+    console.error("Access token verification failed:", error.message);
     return null;
   }
+}
+
+/**
+ * Verify and decode refresh token
+ * @param token - JWT refresh token
+ * @returns Decoded payload or null if invalid
+ */
+export function verifyRefreshToken(token: string): { userId: string; type: string; iat: number; exp: number; jti: string } | null {
+  try {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error("JWT_SECRET environment variable is not set");
+    }
+    
+    const decoded = jwt.verify(token, secret, {
+      algorithms: ['HS256'],
+      issuer: 'aas-platform',
+      audience: 'aas-users'
+    }) as any;
+    
+    if (decoded.userId && decoded.type === 'refresh') {
+      return {
+        userId: decoded.userId,
+        type: decoded.type,
+        iat: decoded.iat,
+        exp: decoded.exp,
+        jti: decoded.jti
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error("Refresh token verification failed:", error.message);
+    return null;
+  }
+}
+
+/**
+ * Legacy function for backward compatibility
+ * @deprecated Use verifyAccessToken instead
+ */
+export function verifyToken(token: string): { userId: string; role: string; iat: number; exp: number } | null {
+  const result = verifyAccessToken(token);
+  if (result) {
+    return {
+      userId: result.userId,
+      role: result.role,
+      iat: result.iat,
+      exp: result.exp
+    };
+  }
+  return null;
 }
 
 /**

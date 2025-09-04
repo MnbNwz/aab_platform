@@ -5,6 +5,9 @@ import mongoose from "mongoose";
 import { MembershipPlan } from "../models/membershipPlan";
 import { connectDB } from "../config/db";
 
+// Annual discount rate
+const ANNUAL_DISCOUNT_RATE = 15; // 15%
+
 const membershipPlans = [
   {
     name: "Basic Customer Plan",
@@ -17,8 +20,12 @@ const membershipPlans = [
       "Standard support",
       "Basic dashboard access"
     ],
-    price: 1999, // $19.99 in cents
-    duration: 30, // 30 days
+    monthlyPrice: 100, // $1.00
+    yearlyPrice: 1200, // $12.00 (before discount)
+    annualDiscountRate: ANNUAL_DISCOUNT_RATE,
+    duration: 30,
+    stripePriceIdMonthly: "price_customer_basic_monthly", // Replace with real Stripe Price ID
+    stripePriceIdYearly: "price_customer_basic_yearly",   // Replace with real Stripe Price ID
   },
   {
     name: "Standard Customer Plan", 
@@ -32,8 +39,12 @@ const membershipPlans = [
       "Maintenance scheduling",
       "Advanced analytics"
     ],
-    price: 3999, // $39.99 in cents
+    monthlyPrice: 200, // $2.00
+    yearlyPrice: 2400, // $24.00 (before discount)
+    annualDiscountRate: ANNUAL_DISCOUNT_RATE,
     duration: 30,
+    stripePriceIdMonthly: "price_customer_standard_monthly",
+    stripePriceIdYearly: "price_customer_standard_yearly",
   },
   {
     name: "Premium Customer Plan",
@@ -48,8 +59,12 @@ const membershipPlans = [
       "Priority contractor matching",
       "Emergency services"
     ],
-    price: 7999, // $79.99 in cents
+    monthlyPrice: 300, // $3.00
+    yearlyPrice: 3600, // $36.00 (before discount)
+    annualDiscountRate: ANNUAL_DISCOUNT_RATE,
     duration: 30,
+    stripePriceIdMonthly: "price_customer_premium_monthly",
+    stripePriceIdYearly: "price_customer_premium_yearly",
   },
   {
     name: "Basic Contractor Plan",
@@ -62,8 +77,12 @@ const membershipPlans = [
       "Customer communication tools",
       "Payment processing"
     ],
-    price: 4999, // $49.99 in cents
+    monthlyPrice: 100, // $1.00
+    yearlyPrice: 1200, // $12.00 (before discount)
+    annualDiscountRate: ANNUAL_DISCOUNT_RATE,
     duration: 30,
+    stripePriceIdMonthly: "price_contractor_basic_monthly",
+    stripePriceIdYearly: "price_contractor_basic_yearly",
   },
   {
     name: "Standard Contractor Plan",
@@ -78,8 +97,12 @@ const membershipPlans = [
       "Lead generation",
       "Scheduling tools"
     ],
-    price: 9999, // $99.99 in cents
+    monthlyPrice: 200, // $2.00
+    yearlyPrice: 2400, // $24.00 (before discount)
+    annualDiscountRate: ANNUAL_DISCOUNT_RATE,
     duration: 30,
+    stripePriceIdMonthly: "price_contractor_standard_monthly",
+    stripePriceIdYearly: "price_contractor_standard_yearly",
   },
   {
     name: "Premium Contractor Plan",
@@ -95,8 +118,12 @@ const membershipPlans = [
       "Advanced scheduling & routing",
       "24/7 business support"
     ],
-    price: 19999, // $199.99 in cents
+    monthlyPrice: 300, // $3.00
+    yearlyPrice: 3600, // $36.00 (before discount)
+    annualDiscountRate: ANNUAL_DISCOUNT_RATE,
     duration: 30,
+    stripePriceIdMonthly: "price_contractor_premium_monthly",
+    stripePriceIdYearly: "price_contractor_premium_yearly",
   }
 ];
 
@@ -113,7 +140,7 @@ export const seedMembershipPlans = async () => {
     console.log(`Created ${createdPlans.length} membership plans:`);
     
     createdPlans.forEach(plan => {
-      console.log(`- ${plan.name} (${plan.userType} - ${plan.tier}) - $${plan.price/100}`);
+      console.log(`- ${plan.name} (${plan.userType} - ${plan.tier}) - Monthly: $${plan.monthlyPrice/100}, Yearly: $${plan.yearlyPrice/100} (${plan.annualDiscountRate}% discount)`);
     });
     
     return createdPlans;

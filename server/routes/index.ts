@@ -1,4 +1,5 @@
 import { Router, Request, Response } from "express";
+import { autoRefreshToken } from "../middlewares/autoRefresh";
 
 const router = Router();
 
@@ -6,6 +7,10 @@ import userRoutes from "./user";
 import authRoutes from "./auth";
 import adminRoutes from "./admin";
 import membershipRoutes from "./membership";
+
+// Apply auto-refresh middleware globally to all routes
+// This will automatically refresh expired access tokens using refresh tokens
+router.use(autoRefreshToken);
 
 router.use("/users", userRoutes);
 router.use("/auth", authRoutes);

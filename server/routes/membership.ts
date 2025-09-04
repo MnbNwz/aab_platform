@@ -5,14 +5,12 @@ import { MembershipController } from "../controllers/membershipController";
 
 const router = express.Router();
 
-// Public routes - get available plans
-router.get("/plans", MembershipController.getAllPlans);
-router.get("/plans/:userType", MembershipController.getPlansByUserType);
-
-// Protected routes - require authentication
+// All routes require authentication
 router.use(authenticate);
 
-// User membership routes
+// Authenticated routes - user must be logged in
+router.get("/plans", MembershipController.getAllPlans);
+router.get("/plans/:userType", MembershipController.getPlansByUserType);
 router.get("/current", MembershipController.getCurrentMembership);
 router.post("/purchase", MembershipController.purchaseMembership);
 router.post("/cancel", MembershipController.cancelMembership);

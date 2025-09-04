@@ -1,15 +1,18 @@
 import { User } from "../models/user";
 import { 
   hashPassword, 
-  generateToken, 
+  generateAccessToken,
+  generateRefreshToken,
+  verifyAccessToken as utilVerifyAccessToken,
   verifyToken as utilVerifyToken, 
   validateEmail, 
   validatePhone, 
   sanitizeUser 
 } from "../utils/auth";
 
-// Export the utility function with the same name for backward compatibility
+// Export the utility functions with the same name for backward compatibility
 export const verifyToken = utilVerifyToken;
+export const verifyAccessToken = utilVerifyAccessToken;
 
 // Clean user data (remove password) - now using sanitizeUser utility
 function cleanUserData(user: any) {
@@ -79,12 +82,14 @@ export async function signup(signupData: any) {
   const user = new User(userData);
   await user.save();
 
-  // Generate token
-  const token = generateToken(user._id.toString(), user.role);
+  // Generate tokens
+  const accessToken = generateAccessToken(user._id.toString(), user.role);
+  const refreshToken = generateRefreshToken(user._id.toString());
 
   return {
     user: cleanUserData(user),
-    token,
+    accessToken,
+    refreshToken,
   };
 }
 
@@ -109,11 +114,13 @@ export async function signin(signinData: any) {
     throw new Error("Account has been revoked");
   }
 
-  // Generate token
-  const token = generateToken(user._id.toString(), user.role);
+  // Generate tokens
+  const accessToken = generateAccessToken(user._id.toString(), user.role);
+  const refreshToken = generateRefreshToken(user._id.toString());
 
   return {
     user: cleanUserData(user),
-    token,
+    accessToken,
+    refreshToken,
   };
 }

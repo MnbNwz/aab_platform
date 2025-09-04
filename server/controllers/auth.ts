@@ -1,12 +1,30 @@
 import { Request, Response } from "express";
 import { signup, signin } from "../services/auth";
+import { User } from "../models/user";
 
 export const signupController = async (req: Request, res: Response) => {
   try {
     const result = await signup(req.body);
+    
+    // Set tokens in HTTP-only cookies
+    res.cookie('accessToken', result.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // HTTPS in production
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+    
+    res.cookie('refreshToken', result.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    });
+    
     res.status(201).json({
       message: "User created successfully",
-      ...result,
+      user: result.user,
+      // Don't send tokens in response body for security
     });
   } catch (error: any) {
     res.status(400).json({
@@ -18,9 +36,26 @@ export const signupController = async (req: Request, res: Response) => {
 export const signinController = async (req: Request, res: Response) => {
   try {
     const result = await signin(req.body);
+    
+    // Set tokens in HTTP-only cookies
+    res.cookie('accessToken', result.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // HTTPS in production
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+    
+    res.cookie('refreshToken', result.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    });
+    
     res.status(200).json({
       message: "Login successful",
-      ...result,
+      user: result.user,
+      // Don't send tokens in response body for security
     });
   } catch (error: any) {
     res.status(401).json({
@@ -30,6 +65,19 @@ export const signinController = async (req: Request, res: Response) => {
 };
 
 export const logout = async (req: Request, res: Response) => {
+  // Clear the authentication cookies
+  res.clearCookie('accessToken', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+  });
+  
+  res.clearCookie('refreshToken', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+  });
+  
   res.status(200).json({
     message: "Logout successful",
   });

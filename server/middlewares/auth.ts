@@ -4,20 +4,31 @@ import { User } from "../models/user";
 
 export const authenticate = async (req: any, res: Response, next: NextFunction) => {
   try {
-    const authHeader = req.headers.authorization;
+    let token: string | undefined;
+    
+    // First, try to get token from cookies (preferred for security)
+    if (req.cookies && req.cookies.accessToken) {
+      token = req.cookies.accessToken;
+    }
+    // Fallback to Authorization header for API compatibility
+    else if (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+      token = req.headers.authorization.substring(7);
+    }
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!token) {
       res.status(401).json({ error: "No token provided" });
       return;
     }
 
-    const token = authHeader.substring(7);
-
     // Verify token
-    const { userId } = verifyToken(token);
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      res.status(401).json({ error: "Invalid token" });
+      return;
+    }
 
     // Get user from database
-    const user = await User.findById(userId);
+    const user = await User.findById(decoded.userId);
     if (!user) {
       res.status(401).json({ error: "User not found" });
       return;
@@ -34,7 +45,8 @@ export const authenticate = async (req: any, res: Response, next: NextFunction) 
     req.user = { ...userObj, _id: userObj._id.toString() };
 
     next();
-  } catch {
+  } catch (error) {
+    console.error("Authentication error:", error);
     res.status(401).json({ error: "Invalid token" });
   }
 };

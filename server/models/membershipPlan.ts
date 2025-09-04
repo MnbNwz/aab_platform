@@ -7,8 +7,13 @@ export interface IMembershipPlan extends Document {
   userType: "customer" | "contractor";
   tier: "basic" | "standard" | "premium";
   features: string[];
-  price: number;
+  monthlyPrice: number;
+  yearlyPrice: number;
+  annualDiscountRate: number; // discount percentage for annual billing
   duration: number; // in days
+  stripeProductId?: string; // Stripe product ID
+  stripePriceIdMonthly?: string; // Stripe price ID for monthly
+  stripePriceIdYearly?: string; // Stripe price ID for yearly
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -29,8 +34,13 @@ const MembershipPlanSchema: Schema<IMembershipPlan> = new Schema(
       required: true,
     },
     features: [{ type: String }],
-    price: { type: Number, required: true },
+    monthlyPrice: { type: Number, required: true },
+    yearlyPrice: { type: Number, required: true },
+    annualDiscountRate: { type: Number, default: 15 }, // 15% discount
     duration: { type: Number, required: true, default: 30 }, // 30 days default
+    stripeProductId: { type: String },
+    stripePriceIdMonthly: { type: String },
+    stripePriceIdYearly: { type: String },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }

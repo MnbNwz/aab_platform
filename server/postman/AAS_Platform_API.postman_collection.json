@@ -33,19 +33,6 @@
       "item": [
         {
           "name": "Generic Signin",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "    const jsonData = pm.response.json();",
-                  "    pm.environment.set(\"authToken\", jsonData.token);",
-                  "}"
-                ]
-              }
-            }
-          ],
           "request": {
             "method": "POST",
             "header": [
@@ -113,7 +100,7 @@
       ]
     },
     {
-      "name": "Membership Management", 
+      "name": "Membership Management",
       "item": [
         {
           "name": "Get All Membership Plans",
@@ -226,6 +213,76 @@
               "path": ["api", "membership", "stats"]
             },
             "description": "Admin only - Get membership statistics and analytics"
+          }
+        },
+        {
+          "name": "Get Current Membership",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/membership/current",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "membership", "current"]
+            },
+            "description": "Get user's current active membership"
+          }
+        },
+        {
+          "name": "Purchase Membership (New)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planId\": \"PLAN_ID_HERE\",\n  \"paymentId\": \"PAYMENT_ID_HERE\",\n  \"stripePriceId\": \"price_customer_basic_monthly\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/membership/purchase",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "membership", "purchase"]
+            },
+            "description": "Purchase a membership plan with payment ID (secured version)"
+          }
+        },
+        {
+          "name": "Cancel Membership",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"User requested cancellation\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/membership/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "membership", "cancel"]
+            },
+            "description": "Cancel current active membership"
+          }
+        },
+        {
+          "name": "Get Membership History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/membership/history",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "membership", "history"]
+            },
+            "description": "Get user's membership history"
           }
         }
       ]

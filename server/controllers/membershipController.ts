@@ -24,6 +24,7 @@ export class MembershipController {
   static async getPlansByUserType(req: Request, res: Response) {
     try {
       const { userType } = req.params;
+      const { billingPeriod } = req.query;
       
       if (!["customer", "contractor"].includes(userType)) {
         return res.status(400).json({
@@ -32,7 +33,16 @@ export class MembershipController {
         });
       }
 
-      const plans = await MembershipService.getPlansByUserType(userType as "customer" | "contractor");
+      let plans;
+      if (billingPeriod && ["monthly", "yearly"].includes(billingPeriod as string)) {
+        plans = await MembershipService.getPlansByUserTypeAndBilling(
+          userType as "customer" | "contractor",
+          billingPeriod as "monthly" | "yearly"
+        );
+      } else {
+        plans = await MembershipService.getPlansByUserType(userType as "customer" | "contractor");
+      }
+
       res.json({
         success: true,
         data: plans
@@ -80,7 +90,7 @@ export class MembershipController {
         });
       }
 
-      const { planId } = req.body;
+      const { planId, paymentId, stripePriceId } = req.body;
 
       if (!planId) {
         return res.status(400).json({
@@ -89,7 +99,21 @@ export class MembershipController {
         });
       }
 
-      const result = await MembershipService.purchaseMembership(req.user._id, planId);
+      if (!paymentId) {
+        return res.status(400).json({
+          success: false,
+          message: "Payment ID is required"
+        });
+      }
+
+      if (!stripePriceId) {
+        return res.status(400).json({
+          success: false,
+          message: "Stripe Price ID is required"
+        });
+      }
+
+      const result = await MembershipService.purchaseMembership(req.user._id, planId, paymentId, stripePriceId);
       
       res.json({
         success: true,

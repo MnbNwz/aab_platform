@@ -1,5 +1,6 @@
 import { MembershipPlan, IMembershipPlan } from "../models/membershipPlan";
 import { UserMembership, IUserMembership } from "../models/userMembership";
+import { Payment, IPayment } from "../models/payment";
 import { User } from "../models/user";
 import mongoose from "mongoose";
 
@@ -11,7 +12,19 @@ export class MembershipService {
 
   // Get plans by user type
   static async getPlansByUserType(userType: "customer" | "contractor"): Promise<IMembershipPlan[]> {
-    return await MembershipPlan.find({ userType, isActive: true }).sort({ price: 1 });
+    return await MembershipPlan.find({ userType, isActive: true }).sort({ tier: 1, billingPeriod: 1 });
+  }
+
+  // Get plans by user type and billing period
+  static async getPlansByUserTypeAndBilling(
+    userType: "customer" | "contractor", 
+    billingPeriod: "monthly" | "yearly"
+  ): Promise<IMembershipPlan[]> {
+    return await MembershipPlan.find({ 
+      userType, 
+      billingPeriod, 
+      isActive: true 
+    }).sort({ tier: 1 });
   }
 
   // Get user's current active membership
@@ -23,10 +36,50 @@ export class MembershipService {
     }).populate("planId");
   }
 
-  // Purchase a new membership (expires previous ones)
+  // Determine billing period from Stripe Price ID by looking up in database
+  static async determineBillingPeriodFromStripePrice(stripePriceId: string): Promise<"monthly" | "yearly"> {
+    // Find plan that has this Stripe Price ID
+    const plan = await MembershipPlan.findOne({
+      $or: [
+        { stripePriceIdMonthly: stripePriceId },
+        { stripePriceIdYearly: stripePriceId }
+      ]
+    });
+
+    if (!plan) {
+      throw new Error(`No plan found with Stripe Price ID: ${stripePriceId}`);
+    }
+
+    if (plan.stripePriceIdMonthly === stripePriceId) {
+      return "monthly";
+    } else if (plan.stripePriceIdYearly === stripePriceId) {
+      return "yearly";
+    }
+
+    throw new Error(`Cannot determine billing period from Stripe Price ID: ${stripePriceId}`);
+  }
+
+  // Validate billing period against payment amount
+  static validateBillingPeriod(
+    plan: IMembershipPlan, 
+    billingPeriod: "monthly" | "yearly", 
+    paymentAmount: number
+  ): boolean {
+    if (billingPeriod === "monthly") {
+      return paymentAmount === plan.monthlyPrice;
+    } else {
+      // Calculate discounted yearly price
+      const discountedPrice = Math.round(plan.yearlyPrice * (1 - plan.annualDiscountRate / 100));
+      return paymentAmount === discountedPrice;
+    }
+  }
+
+  // Purchase a new membership with bulletproof billing period detection
   static async purchaseMembership(
     userId: string, 
-    planId: string
+    planId: string,
+    paymentId: string,
+    stripePriceId: string  // Use this to determine billing period
   ): Promise<{ membership: IUserMembership; expiredMemberships: IUserMembership[] }> {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -36,6 +89,21 @@ export class MembershipService {
       const plan = await MembershipPlan.findById(planId);
       if (!plan) {
         throw new Error("Membership plan not found");
+      }
+
+      // Get the payment to validate
+      const payment = await Payment.findById(paymentId);
+      if (!payment) {
+        throw new Error("Payment not found");
+      }
+
+      // Determine billing period from Stripe Price ID (PRIMARY SOURCE)
+      const billingPeriod = await this.determineBillingPeriodFromStripePrice(stripePriceId);
+
+      // Validate billing period against payment amount (VALIDATION LAYER)
+      const isValidAmount = this.validateBillingPeriod(plan, billingPeriod, payment.amount);
+      if (!isValidAmount) {
+        throw new Error(`Payment amount ${payment.amount} doesn't match expected amount for ${billingPeriod} billing`);
       }
 
       // Verify user exists and get their role
@@ -69,15 +137,18 @@ export class MembershipService {
 
       // Create new membership
       const startDate = new Date();
-      const endDate = new Date(startDate.getTime() + (plan.duration * 24 * 60 * 60 * 1000));
+      // Calculate end date based on billing period
+      const durationDays = billingPeriod === "yearly" ? 365 : 30;
+      const endDate = new Date(startDate.getTime() + (durationDays * 24 * 60 * 60 * 1000));
 
       const newMembership = new UserMembership({
         userId: new mongoose.Types.ObjectId(userId),
         planId: new mongoose.Types.ObjectId(planId),
+        paymentId: new mongoose.Types.ObjectId(paymentId),
         status: "active",
+        billingPeriod,
         startDate,
         endDate,
-        purchasePrice: plan.price,
         isAutoRenew: false
       });
 
@@ -152,8 +223,7 @@ export class MembershipService {
       {
         $group: {
           _id: "$status",
-          count: { $sum: 1 },
-          totalRevenue: { $sum: "$purchasePrice" }
+          count: { $sum: 1 }
         }
       }
     ]);
@@ -175,8 +245,7 @@ export class MembershipService {
             userType: "$plan.userType",
             tier: "$plan.tier"
           },
-          count: { $sum: 1 },
-          revenue: { $sum: "$purchasePrice" }
+          count: { $sum: 1 }
         }
       }
     ]);
