@@ -28,14 +28,22 @@ export interface RegisterData {
   email: string;
   phone: string;
   password: string;
-  confirmPassword: string;
   role: UserRole;
-  termsAccepted: boolean;
-  // Contractor specific fields
-  businessName?: string;
-  licenseNumber?: string;
-  specialties?: string[];
-  serviceRadius?: number;
+  geoHome: {
+    type: string;
+    coordinates: [number, number];
+  };
+  // Role-specific nested data
+  customer?: {
+    defaultPropertyType: string;
+  };
+  contractor?: {
+    companyName: string;
+    services: string[];
+    license: string;
+    taxId: string;
+    docs: any[];
+  };
 }
 
 export interface AuthResponse {

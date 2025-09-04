@@ -25,9 +25,6 @@ const baseUserSchema = z.object({
   confirmPassword: z
     .string()
     .min(1, 'Please confirm your password'),
-  termsAccepted: z
-    .boolean()
-    .refine((val) => val === true, 'You must accept the terms and conditions'),
   // Add geoHome fields
   latitude: z
     .number()

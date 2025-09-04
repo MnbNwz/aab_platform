@@ -36,24 +36,10 @@ export const registerThunk = createAsyncThunk<
   async (userData, { rejectWithValue }) => {
     try {
       console.log('🚀 Attempting registration for:', { email: userData.email, role: userData.role });
+      console.log('📦 Full registration payload:', userData);
       
-      const requestBody: any = {
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        email: userData.email,
-        password: userData.password,
-        role: userData.role,
-      };
-
-      // Add contractor-specific profile data if role is contractor
-      if (userData.role === 'contractor') {
-        requestBody.profile = {
-          businessName: userData.businessName || '',
-          licenseNumber: userData.licenseNumber || '',
-          specialties: userData.specialties || [],
-          serviceRadius: userData.serviceRadius || 25,
-        };
-      }
+      // Pass through the exact payload structure from the form
+      const requestBody = userData;
 
       const response = await api.auth.register(requestBody);
       console.log('✅ Registration successful:', response);

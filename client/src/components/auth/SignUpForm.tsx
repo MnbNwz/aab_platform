@@ -76,7 +76,6 @@ const SignUpForm: React.FC = () => {
       phone: "",
       password: "",
       confirmPassword: "",
-      termsAccepted: false,
       latitude: 40.730610, // Default to NYC coordinates
       longitude: -73.935242,
       ...(selectedRole === "customer" && {
@@ -103,7 +102,6 @@ const SignUpForm: React.FC = () => {
       phone: "",
       password: "",
       confirmPassword: "",
-      termsAccepted: false,
       latitude: 40.730610,
       longitude: -73.935242,
       ...(selectedRole === "customer" && {
@@ -133,7 +131,7 @@ const SignUpForm: React.FC = () => {
 
   const onSubmit = async (data: any) => {
     try {
-      // Transform data to match exact backend API format
+      // Transform data to match exact backend API format (exclude client-side validation fields)
       const submitData = {
         firstName: data.firstName,
         lastName: data.lastName,
@@ -141,11 +139,9 @@ const SignUpForm: React.FC = () => {
         password: data.password,
         phone: data.phone,
         role: selectedRole,
-        confirmPassword: data.confirmPassword, // Keep for type compatibility
-        termsAccepted: data.termsAccepted, // Keep for type compatibility
         geoHome: {
           type: "Point",
-          coordinates: [selectedLocation.lng, selectedLocation.lat]
+          coordinates: [selectedLocation.lng, selectedLocation.lat] as [number, number]
         },
         ...(selectedRole === "customer" && {
           customer: {
@@ -592,39 +588,6 @@ const SignUpForm: React.FC = () => {
               </div>
             </div>
 
-            {/* Terms and Conditions */}
-            <div>
-              <label className="flex items-start space-x-3">
-                <input
-                  {...register("termsAccepted")}
-                  type="checkbox"
-                  className="h-4 w-4 text-accent-500 border-white/20 rounded focus:ring-accent-500 mt-1"
-                />
-                <span className="text-white text-sm">
-                  I agree to the{" "}
-                  <Link
-                    to="/terms"
-                    className="text-accent-400 hover:text-accent-300 underline"
-                  >
-                    Terms of Service
-                  </Link>{" "}
-                  and{" "}
-                  <Link
-                    to="/privacy"
-                    className="text-accent-400 hover:text-accent-300 underline"
-                  >
-                    Privacy Policy
-                  </Link>
-                  *
-                </span>
-              </label>
-              {errors.termsAccepted && (
-                <p className="mt-1 text-red-300 text-xs">
-                  {String(errors.termsAccepted.message)}
-                </p>
-              )}
-            </div>
-
             {/* Submit Button */}
             <button
               type="submit"
@@ -669,7 +632,6 @@ const SignUpForm: React.FC = () => {
             setValue("latitude", location.lat);
             setValue("longitude", location.lng);
           }}
-          initialLocation={selectedLocation}
         />
       </div>
     </div>
