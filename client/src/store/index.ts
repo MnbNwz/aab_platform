@@ -3,6 +3,7 @@ import { authSlice } from './slices/authSlice';
 import { userSlice } from './slices/userSlice';
 import { serviceSlice } from './slices/serviceSlice';
 import { uiSlice } from './slices/uiSlice';
+import servicesReducer from './slices/servicesSlice';
 
 export const store = configureStore({
   reducer: {
@@ -10,6 +11,7 @@ export const store = configureStore({
     user: userSlice.reducer,
     service: serviceSlice.reducer,
     ui: uiSlice.reducer,
+    services: servicesReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

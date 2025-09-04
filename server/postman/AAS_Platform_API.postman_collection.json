@@ -1,8 +1,8 @@
 {
   "info": {
     "name": "AAS Platform API",
-    "description": "Complete API collection for AAS Platform with authentication, user management, and intelligent caching system.\n\n🆕 **Updated Features:**\n• firstName & lastName required for all user registrations\n• User-level approval system (moved from role-specific)\n• Redis caching with memory fallback for production reliability\n• Enhanced customer schema with defaultPropertyType\n• Improved contractor docs structure with proper object format\n\n⚡ **Performance Features:**\n• Authentication middleware caching (50-80% performance boost)\n• Membership plans caching (1-hour TTL)\n• User profile caching with intelligent invalidation\n• Cache fallback system ensures zero downtime\n\n📋 **API Highlights:**\n• JWT-based authentication with HttpOnly cookies\n• Comprehensive admin user management with filtering\n• Role-based access control (RBAC)\n• Rate limiting and security headers\n• Complete membership plan management",
-    "version": "2.0.0",
+    "description": "Complete API collection for AAS Platform with authentication, user management, services management, and intelligent caching system.\n\n🆕 **Updated Features:**\n• firstName & lastName required for all user registrations\n• User-level approval system (moved from role-specific)\n• Redis caching with memory fallback for production reliability\n• Enhanced customer schema with defaultPropertyType\n• Improved contractor docs structure with proper object format\n• Simplified Services Management for contractor service categories\n\n⚡ **Performance Features:**\n• Authentication middleware caching (50-80% performance boost)\n• Membership plans caching (1-hour TTL)\n• User profile caching with intelligent invalidation\n• Cache fallback system ensures zero downtime\n\n� **Services Management:**\n• Public endpoint for current services list\n• Admin-only service creation with versioning\n• Automatic normalization and deduplication\n\n�📋 **API Highlights:**\n• JWT-based authentication with HttpOnly cookies\n• Comprehensive admin user management with filtering\n• Role-based access control (RBAC)\n• Rate limiting and security headers\n• Complete membership plan management\n• Simplified contractor services management",
+    "version": "2.1.0",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -94,7 +94,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "auth", "signup"]
             },
-            "description": "Contractor registration - Required fields: firstName, lastName, email, password, phone, role, geoHome, and contractor profile with company details, services, license, taxId, and docs"
+            "description": "Contractor registration - Required fields: firstName, lastName, email, password, phone, role, geoHome, and contractor profile with company details, services, license, taxId, and docs. Services must be from the available list (call GET /api/services first to get current options)."
           }
         },
         {
@@ -131,14 +131,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Bob\",\n  \"lastName\": \"Wilson\",\n  \"email\": \"bob.wilson@multiservice.com\",\n  \"password\": \"Contractor@789\",\n  \"phone\": \"+1555123456\",\n  \"role\": \"contractor\",\n  \"geoHome\": {\n    \"type\": \"Point\",\n    \"coordinates\": [-73.935242, 40.730610]\n  },\n  \"contractor\": {\n    \"companyName\": \"Wilson Multi-Service Co\",\n    \"services\": [\"electrical\", \"hvac\", \"general\"],\n    \"license\": \"EL67890\",\n    \"taxId\": \"98-7654321\",\n    \"docs\": [{\"type\": \"license\", \"url\": \"https://example.com/electrical-license.pdf\"}, {\"type\": \"certification\", \"url\": \"https://example.com/hvac-cert.pdf\"}]\n  }\n}"
+              "raw": "{\n  \"firstName\": \"Bob\",\n  \"lastName\": \"Wilson\",\n  \"email\": \"bob.wilson@multiservice.com\",\n  \"password\": \"Contractor@789\",\n  \"phone\": \"+1555123456\",\n  \"role\": \"contractor\",\n  \"geoHome\": {\n    \"type\": \"Point\",\n    \"coordinates\": [-73.935242, 40.730610]\n  },\n  \"contractor\": {\n    \"companyName\": \"Wilson Multi-Service Co\",\n    \"services\": [\"roofing\", \"painting\", \"carpentry\"],\n    \"license\": \"EL67890\",\n    \"taxId\": \"98-7654321\",\n    \"docs\": [{\"type\": \"license\", \"url\": \"https://example.com/electrical-license.pdf\"}, {\"type\": \"certification\", \"url\": \"https://example.com/hvac-cert.pdf\"}]\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/signup",
               "host": ["{{baseUrl}}"],
               "path": ["api", "auth", "signup"]
             },
-            "description": "Contractor registration with multiple services - demonstrates service array options: plumbing, electrical, hvac, general"
+            "description": "Contractor registration with multiple services - Services are validated against the current available services list from GET /api/services. Update the services array based on the latest available options."
           }
         },
         {
@@ -353,6 +353,90 @@
               "path": ["api", "membership", "history"]
             },
             "description": "Get user's membership history"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Services Management",
+      "item": [
+        {
+          "name": "Get Services (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/services",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "services"]
+            },
+            "description": "Get current available contractor services - Public endpoint, returns latest version of services array with version number and last updated timestamp. Use this endpoint to get valid service options for contractor registration."
+          }
+        },
+        {
+          "name": "Create Services Version",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"services\": [\n    \"plumbing\",\n    \"electrical\",\n    \"hvac\",\n    \"general\",\n    \"roofing\",\n    \"carpentry\",\n    \"painting\",\n    \"landscaping\",\n    \"cleaning\",\n    \"pest control\",\n    \"flooring\",\n    \"windows\",\n    \"doors\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/services",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "services"]
+            },
+            "description": "Create new services version - Admin only. Creates a new document with incremented version number. All service names are normalized to lowercase and deduplicated."
+          }
+        },
+        {
+          "name": "Create Services - Example 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"services\": [\n    \"plumbing\",\n    \"electrical\",\n    \"hvac\",\n    \"general\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/services",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "services"]
+            },
+            "description": "Example: Create initial services with basic categories"
+          }
+        },
+        {
+          "name": "Create Services - Example 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"services\": [\n    \"plumbing\",\n    \"electrical\",\n    \"hvac\",\n    \"general\",\n    \"roofing\",\n    \"carpentry\",\n    \"painting\",\n    \"landscaping\",\n    \"cleaning\",\n    \"pest control\",\n    \"flooring\",\n    \"windows\",\n    \"doors\",\n    \"insulation\",\n    \"solar panels\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/services",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "services"]
+            },
+            "description": "Example: Expanded services list with more specialized categories"
           }
         }
       ]

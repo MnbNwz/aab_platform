@@ -9,6 +9,7 @@ import {
   validatePhone, 
   sanitizeUser 
 } from "../utils/auth";
+import { validateContractorServices } from "../utils/serviceValidation";
 
 // Export the utility functions with the same name for backward compatibility
 export const verifyToken = utilVerifyToken;
@@ -59,9 +60,19 @@ export async function signup(signupData: any) {
   }
 
   if (role === "contractor" && contractor && !customer) {
+    // Validate contractor services against available services
+    const serviceValidation = await validateContractorServices(contractor.services);
+    
+    if (!serviceValidation.isValid) {
+      throw new Error(
+        `Invalid services provided: ${serviceValidation.invalidServices.join(', ')}. ` +
+        `Available services can be retrieved from /api/services endpoint.`
+      );
+    }
+
     userData.contractor = {
       companyName: contractor.companyName,
-      services: contractor.services,
+      services: serviceValidation.validServices, // Use normalized valid services
       license: contractor.license,
       taxId: contractor.taxId,
       docs: contractor.docs || [],

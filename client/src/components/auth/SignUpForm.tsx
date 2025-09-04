@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import { registerThunk } from "../../store/thunks/authThunks";
+import { getServicesThunk } from "../../store/thunks/servicesThunks";
 import { clearError } from "../../store/slices/authSlice";
 import type { RootState, AppDispatch } from "../../store";
 import type { UserRole } from "../../types";
@@ -15,21 +16,6 @@ import {
   type ContractorRegistrationData,
 } from "../../schemas/authSchemas";
 
-const CONTRACTOR_SERVICES = [
-  "plumbing",
-  "electrical", 
-  "hvac",
-  "appliance_repair",
-  "general_maintenance",
-  "cleaning",
-  "landscaping",
-  "security_systems",
-  "pest_control",
-  "roofing",
-  "painting",
-  "flooring",
-];
-
 type FormData = CustomerRegistrationData | ContractorRegistrationData;
 
 const SignUpForm: React.FC = () => {
@@ -38,6 +24,11 @@ const SignUpForm: React.FC = () => {
   const { isLoading, error, isAuthenticated, user } = useSelector(
     (state: RootState) => state.auth
   );
+  const {
+    services,
+    isLoading: servicesLoading,
+    isInitialized,
+  } = useSelector((state: RootState) => state.services);
 
   const [selectedRole, setSelectedRole] = useState<UserRole>("customer");
   const [showPassword, setShowPassword] = useState(false);
@@ -48,10 +39,18 @@ const SignUpForm: React.FC = () => {
     lng: number;
     address?: string;
   }>({
-    lat: 40.730610,
+    lat: 40.73061,
     lng: -73.935242,
-    address: "New York, NY"
+    address: "New York, NY",
   });
+
+  // Fetch services when switching to contractor role
+  useEffect(() => {
+    if (selectedRole === "contractor" && !isInitialized && !servicesLoading) {
+      console.log("🎯 Fetching services for contractor role...");
+      dispatch(getServicesThunk());
+    }
+  }, [selectedRole, isInitialized, servicesLoading, dispatch]);
 
   // Set up form with conditional schema based on role
   const schema =
@@ -76,7 +75,7 @@ const SignUpForm: React.FC = () => {
       phone: "",
       password: "",
       confirmPassword: "",
-      latitude: 40.730610, // Default to NYC coordinates
+      latitude: 40.73061, // Default to NYC coordinates
       longitude: -73.935242,
       ...(selectedRole === "customer" && {
         defaultPropertyType: "domestic",
@@ -102,7 +101,7 @@ const SignUpForm: React.FC = () => {
       phone: "",
       password: "",
       confirmPassword: "",
-      latitude: 40.730610,
+      latitude: 40.73061,
       longitude: -73.935242,
       ...(selectedRole === "customer" && {
         defaultPropertyType: "domestic",
@@ -141,12 +140,15 @@ const SignUpForm: React.FC = () => {
         role: selectedRole,
         geoHome: {
           type: "Point",
-          coordinates: [selectedLocation.lng, selectedLocation.lat] as [number, number]
+          coordinates: [selectedLocation.lng, selectedLocation.lat] as [
+            number,
+            number
+          ],
         },
         ...(selectedRole === "customer" && {
           customer: {
-            defaultPropertyType: data.defaultPropertyType || "domestic"
-          }
+            defaultPropertyType: data.defaultPropertyType || "domestic",
+          },
         }),
         ...(selectedRole === "contractor" && {
           contractor: {
@@ -154,9 +156,9 @@ const SignUpForm: React.FC = () => {
             services: data.services || [],
             license: data.license,
             taxId: data.taxId,
-            docs: [] // Will be handled separately for file uploads
-          }
-        })
+            docs: [], // Will be handled separately for file uploads
+          },
+        }),
       };
 
       await dispatch(registerThunk(submitData)).unwrap();
@@ -351,7 +353,10 @@ const SignUpForm: React.FC = () => {
                   className="w-full px-4 py-3 rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-colors text-left flex items-center justify-between"
                 >
                   <span>
-                    {selectedLocation.address || `${selectedLocation.lat.toFixed(4)}, ${selectedLocation.lng.toFixed(4)}`}
+                    {selectedLocation.address ||
+                      `${selectedLocation.lat.toFixed(
+                        4
+                      )}, ${selectedLocation.lng.toFixed(4)}`}
                   </span>
                   <span className="text-accent-400">📍 Select Location</span>
                 </button>
@@ -474,25 +479,35 @@ const SignUpForm: React.FC = () => {
                   <label className="block text-white text-sm font-medium mb-3">
                     Service Types (Select all that apply) *
                   </label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    {CONTRACTOR_SERVICES.map((service) => (
-                      <label key={service} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={(
-                            (watchedServices as string[]) || []
-                          ).includes(service)}
-                          onChange={(e) =>
-                            handleServiceChange(service, e.target.checked)
-                          }
-                          className="h-4 w-4 text-accent-500 border-white/20 rounded focus:ring-accent-500"
-                        />
-                        <span className="ml-2 text-white text-sm">
-                          {service.charAt(0).toUpperCase() + service.slice(1).replace('_', ' ')}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
+                  {servicesLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white" />
+                      <span className="ml-3 text-white">
+                        Loading services...
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {services.map((service: string) => (
+                        <label key={service} className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={(
+                              (watchedServices as string[]) || []
+                            ).includes(service)}
+                            onChange={(e) =>
+                              handleServiceChange(service, e.target.checked)
+                            }
+                            className="h-4 w-4 text-accent-500 border-white/20 rounded focus:ring-accent-500"
+                          />
+                          <span className="ml-2 text-white text-sm">
+                            {service.charAt(0).toUpperCase() +
+                              service.slice(1).replace("_", " ")}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
                   {errors.services && (
                     <p className="mt-1 text-red-300 text-xs">
                       {String(errors.services.message)}
@@ -600,7 +615,7 @@ const SignUpForm: React.FC = () => {
             >
               {isLoading ? (
                 <span className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" />
                   Creating Account...
                 </span>
               ) : (

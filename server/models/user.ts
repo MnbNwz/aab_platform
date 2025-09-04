@@ -17,7 +17,7 @@ const GeoHomeSchema = new Schema<GeoHome>({
 
 const ContractorSchema = new Schema<Contractor>({
   companyName: { type: String, required: true },
-  services: [{ type: String, enum: ["plumbing", "electrical", "hvac", "general"], required: true }],
+  services: [{ type: String, required: true }],
   license: { type: String, required: true },
   taxId: { type: String, required: true },
   docs: { type: [Object], required: true },

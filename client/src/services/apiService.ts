@@ -176,9 +176,18 @@ export const authApi = {
   },
 } as const;
 
+// Services API
+const servicesApi = {
+  getServices: async (): Promise<{ services: string[]; version: number; lastUpdated: string }> => {
+    const response = await get<{ services: string[]; version: number; lastUpdated: string }>("/api/services");
+    return response.data!;
+  },
+} as const;
+
 // Export API functions
 export const api = {
   auth: authApi,
+  services: servicesApi,
   get,
   post,
   put,
