@@ -7,6 +7,7 @@ import { registerThunk } from "../../store/thunks/authThunks";
 import { clearError } from "../../store/slices/authSlice";
 import type { RootState, AppDispatch } from "../../store";
 import type { UserRole } from "../../types";
+import LocationSelector from "../LocationSelector";
 import {
   customerRegistrationSchema,
   contractorRegistrationSchema,
@@ -41,6 +42,16 @@ const SignUpForm: React.FC = () => {
   const [selectedRole, setSelectedRole] = useState<UserRole>("customer");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<{
+    lat: number;
+    lng: number;
+    address?: string;
+  }>({
+    lat: 40.730610,
+    lng: -73.935242,
+    address: "New York, NY"
+  });
 
   // Set up form with conditional schema based on role
   const schema =
@@ -122,19 +133,19 @@ const SignUpForm: React.FC = () => {
 
   const onSubmit = async (data: any) => {
     try {
-      // Transform data to match backend API format
+      // Transform data to match exact backend API format
       const submitData = {
+        firstName: data.firstName,
+        lastName: data.lastName,
         email: data.email,
         password: data.password,
         phone: data.phone,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        confirmPassword: data.confirmPassword,
-        termsAccepted: data.termsAccepted,
         role: selectedRole,
+        confirmPassword: data.confirmPassword, // Keep for type compatibility
+        termsAccepted: data.termsAccepted, // Keep for type compatibility
         geoHome: {
           type: "Point",
-          coordinates: [data.longitude || -73.935242, data.latitude || 40.730610] // Default coordinates if not provided
+          coordinates: [selectedLocation.lng, selectedLocation.lat]
         },
         ...(selectedRole === "customer" && {
           customer: {
@@ -328,6 +339,50 @@ const SignUpForm: React.FC = () => {
               {errors.phone && (
                 <p className="mt-1 text-red-300 text-xs">
                   {String(errors.phone.message)}
+                </p>
+              )}
+            </div>
+
+            {/* Location Selection */}
+            <div>
+              <label className="block text-white text-sm font-medium mb-2">
+                Location *
+              </label>
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => setShowLocationModal(true)}
+                  className="w-full px-4 py-3 rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-colors text-left flex items-center justify-between"
+                >
+                  <span>
+                    {selectedLocation.address || `${selectedLocation.lat.toFixed(4)}, ${selectedLocation.lng.toFixed(4)}`}
+                  </span>
+                  <span className="text-accent-400">📍 Select Location</span>
+                </button>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    {...register("latitude", { valueAsNumber: true })}
+                    type="number"
+                    step="any"
+                    value={selectedLocation.lat}
+                    readOnly
+                    className="px-3 py-2 rounded-lg border border-white/20 bg-white/5 text-white text-sm"
+                    placeholder="Latitude"
+                  />
+                  <input
+                    {...register("longitude", { valueAsNumber: true })}
+                    type="number"
+                    step="any"
+                    value={selectedLocation.lng}
+                    readOnly
+                    className="px-3 py-2 rounded-lg border border-white/20 bg-white/5 text-white text-sm"
+                    placeholder="Longitude"
+                  />
+                </div>
+              </div>
+              {(errors.latitude || errors.longitude) && (
+                <p className="mt-1 text-red-300 text-xs">
+                  Location is required
                 </p>
               )}
             </div>
@@ -604,6 +659,18 @@ const SignUpForm: React.FC = () => {
             </p>
           </div>
         </div>
+
+        {/* Location Selection Modal */}
+        <LocationSelector
+          isOpen={showLocationModal}
+          onClose={() => setShowLocationModal(false)}
+          onLocationSelect={(location) => {
+            setSelectedLocation(location);
+            setValue("latitude", location.lat);
+            setValue("longitude", location.lng);
+          }}
+          initialLocation={selectedLocation}
+        />
       </div>
     </div>
   );
