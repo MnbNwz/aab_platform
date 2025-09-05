@@ -5,6 +5,7 @@ import { serviceSlice } from './slices/serviceSlice';
 import { uiSlice } from './slices/uiSlice';
 import servicesReducer from './slices/servicesSlice';
 import userManagementReducer from './slices/userManagementSlice';
+import membershipReducer from './slices/membershipSlice';
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
     ui: uiSlice.reducer,
     services: servicesReducer,
     userManagement: userManagementReducer,
+    membership: membershipReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

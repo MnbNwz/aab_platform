@@ -15,54 +15,12 @@ import {
   Briefcase,
 } from "lucide-react";
 import ProfileModal from "./ProfileModal";
-// ProfileMenu component for top right profile icon and dropdown
-const ProfileMenu: React.FC<{ user: any; onLogout: () => void; onProfile: () => void }> = ({
-  user,
-  onLogout,
-  onProfile,
-}) => {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="relative">
-      <button
-        className="flex items-center space-x-2 bg-white border border-gray-200 rounded-full px-3 py-2 shadow hover:bg-gray-50 focus:outline-none"
-        onClick={() => setOpen((o) => !o)}
-      >
-        <UserIcon className="h-6 w-6 text-blue-600" />
-        <span className="hidden md:inline text-sm font-medium text-gray-900">
-          {user?.firstName}
-        </span>
-      </button>
-      {open && (
-        <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-20">
-          <button
-            className="w-full flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100"
-            onClick={() => { setOpen(false); onProfile(); }}
-          >
-            <UserIcon className="h-5 w-5 mr-2" /> Profile
-          </button>
-          <button
-            className="w-full flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100"
-            onClick={() => setOpen(false)}
-          >
-            <SettingsIcon className="h-5 w-5 mr-2" /> Settings
-          </button>
-          {/* <button
-            className="w-full flex items-center px-4 py-2 text-red-600 hover:bg-red-50"
-            onClick={onLogout}
-          >
-            <LogOutIcon className="h-5 w-5 mr-2" /> Logout
-          </button> */}
-        </div>
-      )}
-    </div>
-  );
-};
+import UserDropdown from "./ui/UserDropdown";
 import { logoutThunk } from "../store/thunks/authThunks";
-import PendingApproval from "./PendingApproval";
 import AdminSidebar from "./dashboard/AdminSidebar";
 import UserStatsCards from "./dashboard/UserStatsCards";
 import UserManagementTable from "./dashboard/UserManagementTable";
+import { AppDispatch, RootState } from "../store";
 
 const Dashboard: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -84,10 +42,6 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  // Non-admins with status 'pending' see PendingApproval
-  if (user.role !== "admin" && user.status === "pending") {
-    return <PendingApproval user={user} />;
-  }
 
   // Non-admins with status 'active' and approval 'approved' see their dashboard
   if (
@@ -111,7 +65,12 @@ const Dashboard: React.FC = () => {
         <div className="flex-1 p-8 relative xl:px-16 lg:px-12 md:px-8 px-4 bg-primary-50">
           {/* Profile Icon Top Right */}
           {activeTab === "dashboard" && (
-            <AdminDashboardContent user={user} handleLogout={handleLogout} profileOpen={profileOpen} setProfileOpen={setProfileOpen} />
+            <AdminDashboardContent
+              user={user}
+              handleLogout={handleLogout}
+              profileOpen={profileOpen}
+              setProfileOpen={setProfileOpen}
+            />
           )}
           {activeTab === "users" && <UserManagementContent />}
           {activeTab === "analytics" && <ComingSoonContent title="Analytics" />}
@@ -122,16 +81,14 @@ const Dashboard: React.FC = () => {
           user={user}
           isOpen={profileOpen}
           onClose={() => setProfileOpen(false)}
-          onSave={updated => {/* TODO: implement save logic */}}
+          onSave={(updated) => {
+            /* TODO: implement save logic */
+          }}
         />
       </div>
     );
   }
 
-  // Fallback: show PendingApproval for non-admins, minimal dashboard for admin
-  if (user.role !== "admin") {
-    return <PendingApproval user={user} />;
-  }
   return (
     <div className="min-h-screen flex items-center justify-center bg-primary-800">
       <div className="text-center">
@@ -163,7 +120,12 @@ const AdminDashboardContent: React.FC<{
       </div>
       {/* Profile Icon (right) */}
       <div className="ml-4">
-        <ProfileMenu user={user} onLogout={handleLogout} onProfile={() => setProfileOpen(true)} />
+        <UserDropdown
+          user={user}
+          onLogout={handleLogout}
+          onProfile={() => setProfileOpen(true)}
+          onSettings={() => {}}
+        />
       </div>
     </div>
 

@@ -155,6 +155,28 @@
           }
         },
         {
+          "name": "Edit Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"phone\": \"+1234567890\",\n  \"geoHome\": {\n    \"type\": \"Point\",\n    \"coordinates\": [-74.006, 40.7128]\n  },\n  \"customer\": {\n    \"defaultPropertyType\": \"domestic\"\n  },\n  \"contractor\": {\n    \"companyName\": \"TestCorp Contracting LLC\",\n    \"services\": [\"plumbing\", \"electrical\"],\n    \"license\": \"LIC123456\",\n    \"taxId\": \"TAX123456\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/user/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user", "{{userId}}"]
+            },
+            "description": "Edit the profile of the current user. Only the fields provided in the body will be updated. Requires authentication."
+          }
+        },
+        {
           "name": "Logout",
           "request": {
             "method": "POST",

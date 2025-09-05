@@ -5,7 +5,7 @@ import { User } from "../models/user";
 export const authenticate = async (req: any, res: Response, next: NextFunction) => {
   try {
     let token: string | undefined;
-    
+
     // First, try to get token from cookies (preferred for security)
     if (req.cookies && req.cookies.accessToken) {
       token = req.cookies.accessToken;
@@ -34,10 +34,10 @@ export const authenticate = async (req: any, res: Response, next: NextFunction) 
       return;
     }
 
-    if (user.status === "revoke") {
-      res.status(401).json({ error: "Account has been revoked" });
-      return;
-    }
+    // if (user.status === "revoke") {
+    //   res.status(401).json({ error: "Account has been revoked" });
+    //   return;
+    // }
 
     // Clean user data
     const userObj = user.toObject();

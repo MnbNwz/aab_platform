@@ -22,6 +22,7 @@ import {
 } from "../../store/thunks/userManagementThunks";
 import { setFilters } from "../../store/slices/userManagementSlice";
 import Loader from "../ui/Loader";
+import ConfirmModal from "../ui/ConfirmModal";
 
 export const UserManagementTable: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -37,6 +38,10 @@ export const UserManagementTable: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<{
+    open: boolean;
+    userId: string | null;
+  }>({ open: false, userId: null });
 
   // Load users on component mount and when filters change
   useEffect(() => {
@@ -68,13 +73,14 @@ export const UserManagementTable: React.FC = () => {
   };
 
   const handleRevokeUser = (userId: string) => {
-    if (
-      window.confirm(
-        "Are you sure you want to revoke this user? This action cannot be undone."
-      )
-    ) {
-      dispatch(revokeUserThunk(userId));
+    setDeleteModal({ open: true, userId });
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteModal.userId) {
+      dispatch(revokeUserThunk(deleteModal.userId));
     }
+    setDeleteModal({ open: false, userId: null });
   };
 
   // Get status badge color
@@ -214,7 +220,7 @@ export const UserManagementTable: React.FC = () => {
                   }
                   className="w-full border border-gray-300 rounded-lg px-3 py-2"
                 >
-                  <option value="">All Approvals</option>
+                  <option value="">All Users</option>
                   <option value="pending">Pending</option>
                   <option value="approved">Approved</option>
                   <option value="rejected">Rejected</option>
@@ -273,7 +279,9 @@ export const UserManagementTable: React.FC = () => {
                 <td colSpan={6} className="px-6 py-12 text-center">
                   <div className="flex items-center justify-center">
                     <Loader size="medium" color="primary" />
-                    <span className="ml-3 text-primary-600">Loading users...</span>
+                    <span className="ml-3 text-primary-600">
+                      Loading users...
+                    </span>
                   </div>
                 </td>
               </tr>
@@ -341,7 +349,7 @@ export const UserManagementTable: React.FC = () => {
                     {new Date(user.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 min-h-[32px]">
                       {user.approval === "pending" && (
                         <>
                           <button
@@ -362,15 +370,19 @@ export const UserManagementTable: React.FC = () => {
                           </button>
                         </>
                       )}
-                      {user.status !== "revoke" && (
+                      {user.role !== "admin" && user.status !== "revoke" && (
                         <button
                           onClick={() => handleRevokeUser(user._id)}
                           disabled={updatingUsers[user._id]}
                           className="text-red-600 hover:text-red-900 disabled:opacity-50"
-                          title="Revoke user"
+                          title="Delete user"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
+                      )}
+                      {/* Always reserve space for action icons to prevent layout shift */}
+                      {user.role === "admin" && (
+                        <span className="inline-block w-12" />
                       )}
                       {updatingUsers[user._id] && (
                         <Loader size="small" color="primary" />
@@ -391,6 +403,18 @@ export const UserManagementTable: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Confirm Delete Modal */}
+      <ConfirmModal
+        isOpen={deleteModal.open}
+        title="Delete User"
+        message="Are you sure you want to delete this user? This action cannot be undone."
+        confirmText="Yes, Delete"
+        cancelText="Cancel"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteModal({ open: false, userId: null })}
+        loading={deleteModal.userId ? updatingUsers[deleteModal.userId] : false}
+      />
 
       {/* Pagination */}
       {pagination && (

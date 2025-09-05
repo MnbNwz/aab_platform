@@ -1,13 +1,13 @@
 import { User } from "../models/user";
-import { 
-  hashPassword, 
+import {
+  hashPassword,
   generateAccessToken,
   generateRefreshToken,
   verifyAccessToken as utilVerifyAccessToken,
-  verifyToken as utilVerifyToken, 
-  validateEmail, 
-  validatePhone, 
-  sanitizeUser 
+  verifyToken as utilVerifyToken,
+  validateEmail,
+  validatePhone,
+  sanitizeUser,
 } from "../utils/auth";
 import { validateContractorServices } from "../utils/serviceValidation";
 
@@ -26,7 +26,8 @@ function cleanUserData(user: any) {
 
 // Signup function
 export async function signup(signupData: any) {
-  const { firstName, lastName, email, password, phone, role, customer, contractor, geoHome } = signupData;
+  const { firstName, lastName, email, password, phone, role, customer, contractor, geoHome } =
+    signupData;
 
   // Validate required fields
   if (!firstName || !lastName) {
@@ -62,11 +63,11 @@ export async function signup(signupData: any) {
   if (role === "contractor" && contractor && !customer) {
     // Validate contractor services against available services
     const serviceValidation = await validateContractorServices(contractor.services);
-    
+
     if (!serviceValidation.isValid) {
       throw new Error(
-        `Invalid services provided: ${serviceValidation.invalidServices.join(', ')}. ` +
-        `Available services can be retrieved from /api/services endpoint.`
+        `Invalid services provided: ${serviceValidation.invalidServices.join(", ")}. ` +
+          `Available services can be retrieved from /api/services endpoint.`,
       );
     }
 
@@ -110,10 +111,10 @@ export async function signin(signinData: any) {
     throw new Error("Invalid email or password");
   }
 
-  // Check if revoked
-  if (user.status === "revoke") {
-    throw new Error("Account has been revoked");
-  }
+  // // Check if revoked
+  // if (user.status === "revoke") {
+  //   throw new Error("Account has been revoked");
+  // }
 
   // Generate tokens
   const accessToken = generateAccessToken(user._id.toString(), user.role);
