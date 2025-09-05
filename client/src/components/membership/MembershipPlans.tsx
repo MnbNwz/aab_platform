@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { User as UserIcon } from "lucide-react";
 import UserDropdown from "../ui/UserDropdown";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../../store";
@@ -30,20 +29,21 @@ type Membership = {
 
 const MembershipPlans: React.FC<Props> = ({ plans, onSelect }) => {
   const user = useSelector((state: RootState) => state.auth.user);
-  const currentMembership = useSelector((state: RootState) => state.membership.current) as Membership | null;
+  const currentMembership = useSelector(
+    (state: RootState) => state.membership.current
+  ) as Membership | null;
   const dispatch = useDispatch<AppDispatch>();
-  const [profileOpen, setProfileOpen] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   // Animation: fade/scale in
   // removed unused cardAnim
 
-  // Custom grid logic: center 3rd card if row has 1
+  // Custom grid logic: center last card only on desktop (lg+)
   const getCardClass = (idx: number) => {
-    // If 3rd card in a row (idx 2, 5, 8, ...), center it
+    // Only apply centering if 3rd card in a row and it's the last card, and on large screens
     if ((idx + 1) % 3 === 0 && idx === plans.length - 1) {
-      return "mx-auto col-span-1";
+      return "lg:mx-auto lg:col-span-1";
     }
     return "";
   };
@@ -55,7 +55,6 @@ const MembershipPlans: React.FC<Props> = ({ plans, onSelect }) => {
         <UserDropdown
           user={user || {}}
           onProfile={() => setProfileModalOpen(true)}
-          onSettings={() => {}}
           onLogout={() => dispatch(logoutThunk())}
         />
       </div>
@@ -66,14 +65,17 @@ const MembershipPlans: React.FC<Props> = ({ plans, onSelect }) => {
         Unlock premium features and get the most out of your experience. Select
         a plan below to continue.
       </p>
-      <div className="grid gap-8 w-full max-w-6xl sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+  <div className="grid gap-8 w-full max-w-6xl grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {plans.map((plan, idx) => {
           const isPremium = plan.tier === "premium";
-          const isSelected = currentMembership && (currentMembership._id === plan._id || currentMembership.planId === plan._id);
+          const isSelected =
+            currentMembership &&
+            (currentMembership._id === plan._id ||
+              currentMembership.planId === plan._id);
           return (
             <div
               key={plan._id}
-              className={`relative rounded-2xl shadow-xl flex flex-col border-2 overflow-hidden
+              className={`relative rounded-2xl shadow-xl flex flex-col border-2 overflow-hidden w-full
                 ${
                   isSelected || hoveredId === plan._id
                     ? "border-accent-600 bg-white z-20 outline-none ring-2 ring-accent-400 ring-offset-0 rounded-2xl"
@@ -85,7 +87,7 @@ const MembershipPlans: React.FC<Props> = ({ plans, onSelect }) => {
               style={{
                 animationDelay: `${idx * 120}ms`,
                 animationFillMode: "forwards",
-                transition: 'border-color 0.2s, box-shadow 0.2s',
+                transition: "border-color 0.2s, box-shadow 0.2s",
                 borderRadius: 20, // match rounded-2xl
               }}
               onMouseEnter={() => setHoveredId(plan._id)}
@@ -99,10 +101,13 @@ const MembershipPlans: React.FC<Props> = ({ plans, onSelect }) => {
                     ? "bg-accent-500 text-white shadow"
                     : "bg-primary-200 text-primary-700"
                 }`}
+                style={{ zIndex: 2 }}
               >
                 {plan.tier.charAt(0).toUpperCase() + plan.tier.slice(1)}
               </span>
               <div className="p-8 flex-1 flex flex-col">
+                <div className="mb-4"></div>{" "}
+                {/* Add margin between badge and title */}
                 <h3 className="text-2xl font-extrabold text-primary-900 mb-2 flex items-center gap-2">
                   {isPremium && (
                     <span className="inline-block text-yellow-400 animate-bounce">

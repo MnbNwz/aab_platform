@@ -13,7 +13,7 @@ import type { RootState, AppDispatch } from '../../store';
 import { fetchUserStatsThunk } from '../../store/thunks/userManagementThunks';
 import Loader from '../ui/Loader';
 
-export const UserStatsCards: React.FC = () => {
+export const UserStatsCards: React.FC<{ onCardClick?: (filter: any) => void }> = ({ onCardClick }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { stats, statsLoading, statsError } = useSelector(
     (state: RootState) => state.userManagement
@@ -96,30 +96,51 @@ export const UserStatsCards: React.FC = () => {
     },
   ];
 
+  // Map card title to filter
+  const getFilterForCard = (title: string) => {
+    switch (title) {
+      case 'Admins':
+        return { role: 'admin', status: 'active', approval: 'approved' };
+      case 'Active Contractor':
+        return { role: 'contractor', status: 'active', approval: 'approved' };
+      case 'Active Customer':
+        return { role: 'customer', status: 'active', approval: 'approved' };
+      case 'Customers':
+        return { role: 'customer' };
+      case 'Contractors':
+        return { role: 'contractor' };
+      case 'Total Users':
+        return { role: '' };
+      case 'Active Users':
+        return { status: 'active' };
+      case 'Pending Approval':
+        return { approval: 'pending' };
+      case 'Revoked Users':
+        return { status: 'revoke' };
+      default:
+        return {};
+    }
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
       {statCards.map((card) => {
         const IconComponent = card.icon;
         return (
           <div
             key={card.title}
-            className={`${card.bgColor} rounded-lg shadow p-6 border border-gray-200`}
+            className={`${card.bgColor} rounded-2xl shadow-md px-4 py-5 md:px-6 md:py-6 border border-gray-100 flex flex-col items-center transition-transform hover:scale-105 hover:shadow-lg min-w-[140px] min-h-[140px] cursor-pointer`}
+            onClick={() => onCardClick && onCardClick(getFilterForCard(card.title))}
           >
-            <div className="flex items-center">
-              <div className={`${card.color} p-3 rounded-lg`}>
-                <IconComponent className="h-6 w-6 text-white" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">{card.title}</p>
-                <p className={`text-2xl font-bold ${card.textColor}`}>
-                  {statsLoading ? (
-                    <Loader size="small" color="gray" />
-                  ) : (
-                    card.value.toLocaleString()
-                  )}
-                </p>
-              </div>
+            <div className={`${card.color} p-3 md:p-4 rounded-full mb-3 md:mb-4 flex items-center justify-center`}>
+              <IconComponent className="h-6 w-6 md:h-8 md:w-8 text-white" />
             </div>
+            <p className={`text-2xl md:text-3xl font-extrabold ${card.textColor} mb-0.5 md:mb-1`}>{
+              statsLoading ? <Loader size="small" color="gray" /> : card.value.toLocaleString()
+            }</p>
+            <p className="text-xs md:text-sm font-semibold text-gray-600 text-center break-words max-w-[80px] md:max-w-none uppercase tracking-wide">
+              {card.title}
+            </p>
           </div>
         );
       })}

@@ -5,7 +5,7 @@ import {
   LogOut as LogOutIcon,
 } from "lucide-react";
 
-import { useSelector, useDispatch } from "react-redux";
+import { useSelector } from "react-redux";
 import {
   Users,
   DollarSign,
@@ -19,6 +19,8 @@ import UserDropdown from "./ui/UserDropdown";
 import { logoutThunk } from "../store/thunks/authThunks";
 import AdminSidebar from "./dashboard/AdminSidebar";
 import UserStatsCards from "./dashboard/UserStatsCards";
+import { useDispatch } from "react-redux";
+import { setFilters } from "../store/slices/userManagementSlice";
 import UserManagementTable from "./dashboard/UserManagementTable";
 import { AppDispatch, RootState } from "../store";
 
@@ -42,7 +44,6 @@ const Dashboard: React.FC = () => {
     );
   }
 
-
   // Non-admins with status 'active' and approval 'approved' see their dashboard
   if (
     user.role !== "admin" &&
@@ -54,6 +55,7 @@ const Dashboard: React.FC = () => {
 
   // Admins with status 'active' always see the dashboard, regardless of approval
   if (user.role === "admin" && user.status === "active") {
+
     return (
       <div className="min-h-screen bg-primary-800 flex">
         {/* Sidebar */}
@@ -70,6 +72,11 @@ const Dashboard: React.FC = () => {
               handleLogout={handleLogout}
               profileOpen={profileOpen}
               setProfileOpen={setProfileOpen}
+              setActiveTab={setActiveTab}
+              onStatsCardClick={(filter) => {
+                setActiveTab("users");
+                dispatch(setFilters({ ...filter, page: 1 }));
+              }}
             />
           )}
           {activeTab === "users" && <UserManagementContent />}
@@ -108,7 +115,16 @@ const AdminDashboardContent: React.FC<{
   handleLogout: () => void;
   profileOpen: boolean;
   setProfileOpen: React.Dispatch<React.SetStateAction<boolean>>;
-}> = ({ user, handleLogout, profileOpen, setProfileOpen }) => (
+  setActiveTab: React.Dispatch<React.SetStateAction<string>>;
+  onStatsCardClick: (filter: any) => void;
+}> = ({
+  user,
+  handleLogout,
+  profileOpen,
+  setProfileOpen,
+  setActiveTab,
+  onStatsCardClick,
+}) => (
   <div className="space-y-8">
     <div className="flex items-center justify-between pt-4 pb-2">
       {/* Dashboard Title (center) */}
@@ -130,7 +146,7 @@ const AdminDashboardContent: React.FC<{
     </div>
 
     {/* Statistics Cards */}
-    <UserStatsCards />
+    <UserStatsCards onCardClick={onStatsCardClick} />
 
     {/* Quick Actions */}
     <div className="bg-white rounded-lg shadow p-6">
@@ -138,7 +154,10 @@ const AdminDashboardContent: React.FC<{
         Quick Actions
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer">
+        <div
+          className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
+          onClick={() => setActiveTab("users")}
+        >
           <Users className="h-8 w-8 text-blue-600 mb-2" />
           <h3 className="font-medium text-gray-900">Pending Approvals</h3>
           <p className="text-sm text-gray-500">Review user registrations</p>
