@@ -65,7 +65,7 @@ const MembershipPlans: React.FC<Props> = ({ plans, onSelect }) => {
         Unlock premium features and get the most out of your experience. Select
         a plan below to continue.
       </p>
-  <div className="grid gap-8 w-full max-w-6xl grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-8 w-full max-w-6xl grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {plans.map((plan, idx) => {
           const isPremium = plan.tier === "premium";
           const isSelected =
@@ -83,7 +83,9 @@ const MembershipPlans: React.FC<Props> = ({ plans, onSelect }) => {
                     ? "border-accent-500 bg-gradient-to-br from-accent-50 to-primary-100 scale-105 z-10"
                     : "border-primary-200 bg-primary-50"
                 }
-                hover:shadow-2xl hover:border-accent-500 animate-fadein hover:scale-105 ${getCardClass(idx)}`}
+                hover:shadow-2xl hover:border-accent-500 animate-fadein hover:scale-105 ${getCardClass(
+                  idx
+                )}`}
               style={{
                 animationDelay: `${idx * 120}ms`,
                 animationFillMode: "forwards",
@@ -160,9 +162,32 @@ const MembershipPlans: React.FC<Props> = ({ plans, onSelect }) => {
                       : "bg-accent-500 hover:bg-accent-600"
                   }
                   text-white shadow-md animate-fadein`}
-                onClick={() => onSelect(plan)}
+                onClick={async () => {
+                  try {
+                    const billingType = "recurring"; // or "one-time" if you want to support both
+                    const billingPeriod = "monthly"; // or "yearly"; you can let user choose
+                    const url = window.location.origin + "/payment-result";
+                    const res = await import(
+                      "../../services/membershipService"
+                    ).then((m) =>
+                      m.membershipService.checkout({
+                        planId: plan._id,
+                        billingType,
+                        billingPeriod,
+                        url,
+                      })
+                    );
+                    if (res.success && res.data.url) {
+                      setTimeout(() => {
+                        window.location.href = res.data.url;
+                      }, 800);
+                    }
+                  } catch (err) {
+                    // error toast handled in API
+                  }
+                }}
               >
-                {isPremium ? "Get Premium" : "Select Plan"}
+                Select Plan
               </button>
             </div>
           );

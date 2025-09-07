@@ -14,7 +14,7 @@
     "seed:admin": "npx ts-node -r tsconfig-paths/register scripts/seedAdmin.ts",
     "seed:memberships": "npx ts-node -r tsconfig-paths/register scripts/seedMembershipPlans.ts",
     "seed:all": "npm run seed:admin && npm run seed:memberships",
-  "seed:payment": "npx ts-node -r tsconfig-paths/register scripts/seedPayment.ts",
+    "seed:payment": "npx ts-node -r tsconfig-paths/register scripts/seedPayment.ts",
     "postman:setup": "./postman/setup.sh"
   },
   "keywords": [],
@@ -33,6 +33,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.0",
     "morgan": "^1.10.1",
+    "stripe": "^18.5.0",
     "winston": "^3.17.0"
   },
   "devDependencies": {
@@ -46,6 +47,7 @@
     "@types/mongoose": "^5.11.96",
     "@types/morgan": "^1.9.10",
     "@types/node": "^24.3.0",
+    "@types/stripe": "^8.0.416",
     "@types/winston": "^2.4.4",
     "eslint": "^9.34.0",
     "eslint-config-prettier": "^10.1.8",

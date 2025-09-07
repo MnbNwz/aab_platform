@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "ignoreDeprecations": "6.0",
+  "module": "Node16",
+  "moduleResolution": "node16",
+    // "ignoreDeprecations": "6.0", // Removed invalid value
     "lib": ["ES2022"],
 
     "rootDir": "./",
@@ -24,7 +24,6 @@
     "resolveJsonModule": true,
     "typeRoots": ["./types", "../shared/types"],
     "baseUrl": "./",
-    "types": ["node"],
     "paths": {
       "@/*": ["./*"],
       "@config/*": ["config/*"],

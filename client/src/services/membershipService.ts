@@ -1,4 +1,5 @@
 import type { ApiResponse } from "../types";
+import showToast from "../utils/toast";
 
 const API_CONFIG = {
   baseURL: import.meta.env.VITE_BASE_URL || "http://localhost:5000",
@@ -99,6 +100,12 @@ const makeRequest = async <T = any>(
 const get = <T = any>(endpoint: string): Promise<ApiResponse<T>> =>
   makeRequest<T>(endpoint, { method: "GET" });
 
+const post = <T = any>(endpoint: string, body: any): Promise<ApiResponse<T>> =>
+  makeRequest<T>(endpoint, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
 export const membershipService = {
   getCurrent: async () => {
     return get("/api/membership/current");
@@ -107,5 +114,31 @@ export const membershipService = {
     return userType === "admin"
       ? get(`/api/membership/plans`)
       : get(`/api/membership/plans/${userType}`);
+  },
+  checkout: async (payload: {
+    planId: string;
+    billingType: "recurring" | "one-time";
+    billingPeriod: "monthly" | "yearly";
+    url: string;
+  }) => {
+    let toastId: string | undefined;
+    try {
+      toastId = showToast.loading("Redirecting to payment...");
+      const res = await post<{ url: string }>(
+        "/api/membership/checkout",
+        payload
+      );
+      showToast.dismiss();
+      if (res.success && res.data.url) {
+        showToast.success("Redirecting to secure payment...");
+      } else {
+        showToast.error(res.message || "Failed to start checkout.");
+      }
+      return res;
+    } catch (err: any) {
+      showToast.dismiss();
+      showToast.error("Error starting checkout. Please try again.");
+      throw err;
+    }
   },
 };

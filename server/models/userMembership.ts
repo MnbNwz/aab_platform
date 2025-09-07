@@ -7,6 +7,7 @@ export interface IUserMembership extends Document {
   paymentId: mongoose.Types.ObjectId;
   status: "active" | "expired" | "canceled";
   billingPeriod: "monthly" | "yearly"; // Which billing option user chose
+  billingType: "recurring" | "one_time"; // Add this field to record user's billing type
   startDate: Date;
   endDate: Date;
   isAutoRenew: boolean;
@@ -41,15 +42,24 @@ const UserMembershipSchema: Schema<IUserMembership> = new Schema(
       enum: ["monthly", "yearly"],
       required: true,
     },
+    billingType: {
+      type: String,
+      enum: ["recurring", "one_time"],
+      required: true,
+      default: "recurring",
+    },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
     isAutoRenew: { type: Boolean, default: false },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // Index to quickly find active memberships
 UserMembershipSchema.index({ userId: 1, status: 1 });
 UserMembershipSchema.index({ endDate: 1, status: 1 });
 
-export const UserMembership = mongoose.model<IUserMembership>("UserMembership", UserMembershipSchema);
+export const UserMembership = mongoose.model<IUserMembership>(
+  "UserMembership",
+  UserMembershipSchema,
+);

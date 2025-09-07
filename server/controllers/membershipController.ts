@@ -1,208 +1,198 @@
 import { Request, Response } from "express";
 import { AuthenticatedRequest } from "../middlewares/types";
-import { MembershipService } from "../services/membershipService";
+import {
+  getAllPlans,
+  getPlansByUserType,
+  getPlansByUserTypeAndBilling,
+  getCurrentMembership,
+  getPlanById,
+} from "../services/membershipService";
+// Get all available plans
+export async function getAllPlansController(req: Request, res: Response) {
+  try {
+    const plans = await getAllPlans();
+    res.json({ success: true, data: plans });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to fetch plans" });
+  }
+}
 
-export class MembershipController {
-  // Get all available plans
-  static async getAllPlans(req: Request, res: Response) {
-    try {
-      const plans = await MembershipService.getAllPlans();
-      res.json({
-        success: true,
-        data: plans
-      });
-    } catch (error) {
-      console.error("Error fetching membership plans:", error);
-      res.status(500).json({
+// Get current active membership for user
+export async function getCurrentMembershipController(req: AuthenticatedRequest, res: Response) {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: "Authentication required" });
+  }
+  try {
+    const membership = await getCurrentMembership(req.user._id);
+    res.json({ success: true, data: membership });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to fetch current membership" });
+  }
+}
+
+// Cancel current active membership
+export async function cancelMembershipController(req: AuthenticatedRequest, res: Response) {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: "Authentication required" });
+  }
+  try {
+    const now = new Date();
+    const result = await UserMembership.updateMany(
+      { userId: req.user._id, status: "active", endDate: { $gt: now } },
+      { $set: { status: "cancelled", endDate: now } },
+    );
+    res.json({
+      success: true,
+      message: "Membership cancelled",
+      data: { cancelledCount: result.modifiedCount || 0 },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to cancel membership" });
+  }
+}
+import { UserMembership } from "../models/userMembership";
+import { Payment } from "../models/payment";
+
+export async function purchaseMembershipController(req: AuthenticatedRequest, res: Response) {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: "Authentication required" });
+  }
+  if (req.user.role === "admin") {
+    return res
+      .status(403)
+      .json({
         success: false,
-        message: "Failed to fetch membership plans"
+        message: "Admins are not allowed to subscribe to membership plans.",
       });
-    }
   }
 
-  // Get plans by user type
-  static async getPlansByUserType(req: Request, res: Response) {
-    try {
-      const { userType } = req.params;
-      const { billingPeriod } = req.query;
-      
-      if (!["customer", "contractor"].includes(userType)) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid user type. Must be 'customer' or 'contractor'"
-        });
-      }
-
-      let plans;
-      if (billingPeriod && ["monthly", "yearly"].includes(billingPeriod as string)) {
-        plans = await MembershipService.getPlansByUserTypeAndBilling(
-          userType as "customer" | "contractor",
-          billingPeriod as "monthly" | "yearly"
-        );
-      } else {
-        plans = await MembershipService.getPlansByUserType(userType as "customer" | "contractor");
-      }
-
-      res.json({
-        success: true,
-        data: plans
-      });
-    } catch (error) {
-      console.error("Error fetching plans by user type:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to fetch membership plans"
-      });
-    }
+  const { planId, paymentId, billingPeriod, billingType } = req.body;
+  if (!planId || !paymentId || !billingPeriod || !billingType) {
+    return res.status(400).json({ success: false, message: "Missing required fields." });
   }
 
-  // Get current user's membership
-  static async getCurrentMembership(req: AuthenticatedRequest, res: Response) {
-    try {
-      if (!req.user) {
-        return res.status(401).json({
-          success: false,
-          message: "Authentication required"
-        });
-      }
-
-      const membership = await MembershipService.getCurrentMembership(req.user._id);
-      res.json({
-        success: true,
-        data: membership
-      });
-    } catch (error) {
-      console.error("Error fetching current membership:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to fetch current membership"
-      });
+  const session = await UserMembership.startSession();
+  session.startTransaction();
+  try {
+    // Fetch and validate plan
+    const plan = await getPlanById(planId);
+    if (!plan) {
+      await session.abortTransaction();
+      return res.status(404).json({ success: false, message: "Plan not found" });
     }
+    if (plan.userType !== req.user.role) {
+      await session.abortTransaction();
+      return res.status(403).json({ success: false, message: "You cannot subscribe to this plan type." });
+    }
+
+    // Expire any existing active memberships
+    const now = new Date();
+    const expiredMemberships = await UserMembership.updateMany(
+      { userId: req.user._id, status: "active", endDate: { $gt: now } },
+      { $set: { status: "expired", endDate: now } },
+      { session }
+    );
+
+    // Create new user membership
+    const duration = plan.duration || 30;
+    const startDate = now;
+    const endDate = new Date(now.getTime() + duration * 24 * 60 * 60 * 1000);
+    const newMembership = await UserMembership.create([
+      {
+        userId: req.user._id,
+        planId: plan._id,
+        paymentId,
+        status: "active",
+        billingPeriod,
+        billingType,
+        startDate,
+        endDate,
+        isAutoRenew: billingType === "recurring",
+      }
+    ], { session });
+
+    await session.commitTransaction();
+    session.endSession();
+    return res.json({
+      success: true,
+      message: "Membership purchased successfully",
+      data: {
+        newMembership: newMembership[0],
+        expiredCount: expiredMemberships.modifiedCount || 0,
+      },
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error("Error purchasing membership:", error);
+    return res.status(500).json({ success: false, message: "Failed to purchase membership" });
   }
+}
 
-  // Purchase membership
-  static async purchaseMembership(req: AuthenticatedRequest, res: Response) {
-    try {
-      if (!req.user) {
-        return res.status(401).json({
-          success: false,
-          message: "Authentication required"
-        });
-      }
+export async function getMembershipHistoryController(req: AuthenticatedRequest, res: Response) {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: "Authentication required" });
+  }
+  try {
+    const history = await UserMembership.find({ userId: req.user._id })
+      .sort({ startDate: -1 })
+      .populate("planId")
+      .lean();
+    res.json({ success: true, data: history });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to fetch membership history" });
+  }
+}
 
-      const { planId, paymentId, stripePriceId } = req.body;
-
-      if (!planId) {
-        return res.status(400).json({
-          success: false,
-          message: "Plan ID is required"
-        });
-      }
-
-      if (!paymentId) {
-        return res.status(400).json({
-          success: false,
-          message: "Payment ID is required"
-        });
-      }
-
-      if (!stripePriceId) {
-        return res.status(400).json({
-          success: false,
-          message: "Stripe Price ID is required"
-        });
-      }
-
-      const result = await MembershipService.purchaseMembership(req.user._id, planId, paymentId, stripePriceId);
-      
-      res.json({
-        success: true,
-        message: "Membership purchased successfully",
-        data: {
-          newMembership: result.membership,
-          expiredCount: result.expiredMemberships.length
+export async function getMembershipStatsController(req: AuthenticatedRequest, res: Response) {
+  if (!req.user || req.user.role !== "admin") {
+    return res.status(403).json({ success: false, message: "Admin access required" });
+  }
+  try {
+    const stats = await UserMembership.aggregate([
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 }
         }
-      });
-    } catch (error) {
-      console.error("Error purchasing membership:", error);
-      res.status(500).json({
-        success: false,
-        message: error instanceof Error ? error.message : "Failed to purchase membership"
-      });
-    }
-  }
-
-  // Cancel membership
-  static async cancelMembership(req: AuthenticatedRequest, res: Response) {
-    try {
-      if (!req.user) {
-        return res.status(401).json({
-          success: false,
-          message: "Authentication required"
-        });
       }
-
-      const membership = await MembershipService.cancelMembership(req.user._id);
-      
-      if (!membership) {
-        return res.status(404).json({
-          success: false,
-          message: "No active membership found"
-        });
-      }
-
-      res.json({
-        success: true,
-        message: "Membership canceled successfully",
-        data: membership
-      });
-    } catch (error) {
-      console.error("Error canceling membership:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to cancel membership"
-      });
+    ]);
+    const result: Record<string, number> = {
+      totalMemberships: 0,
+      activeMemberships: 0,
+      cancelledMemberships: 0,
+      expiredMemberships: 0
+    };
+    let total = 0;
+    for (const s of stats) {
+      total += s.count;
+      if (s._id === "active") result.activeMemberships = s.count;
+      if (s._id === "cancelled") result.cancelledMemberships = s.count;
+      if (s._id === "expired") result.expiredMemberships = s.count;
     }
+    result.totalMemberships = total;
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to fetch stats" });
   }
+}
 
-  // Get membership history
-  static async getMembershipHistory(req: AuthenticatedRequest, res: Response) {
-    try {
-      if (!req.user) {
-        return res.status(401).json({
-          success: false,
-          message: "Authentication required"
-        });
-      }
-
-      const history = await MembershipService.getMembershipHistory(req.user._id);
-      res.json({
-        success: true,
-        data: history
-      });
-    } catch (error) {
-      console.error("Error fetching membership history:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to fetch membership history"
-      });
-    }
+export async function getPlansByUserTypeController(req: Request, res: Response) {
+  const userTypeRaw = req.params.userType || req.query.userType;
+  const allowedTypes = ["customer", "contractor"];
+  const userType = typeof userTypeRaw === "string" && allowedTypes.includes(userTypeRaw)
+    ? (userTypeRaw as "customer" | "contractor")
+    : null;
+  if (!userType) {
+    return res.status(400).json({ success: false, message: "Invalid or missing userType parameter" });
   }
-
-  // Admin: Get membership statistics
-  static async getMembershipStats(req: AuthenticatedRequest, res: Response) {
-    try {
-      const stats = await MembershipService.getMembershipStats();
-      res.json({
-        success: true,
-        data: stats
-      });
-    } catch (error) {
-      console.error("Error fetching membership stats:", error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to fetch membership statistics"
-      });
-    }
+  try {
+    const plans = await getPlansByUserType(userType);
+    res.json({ success: true, data: plans });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to fetch plans for user type" });
   }
 }

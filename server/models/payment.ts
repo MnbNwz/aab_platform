@@ -15,6 +15,12 @@ export interface IPayment extends Document {
 
   // Billing details
   billingPeriod: "monthly" | "yearly";
+  billingType: {
+    type: string;
+    enum: ["recurring", "one_time"];
+    required: true;
+    default: "recurring";
+  };
   failureReason?: string;
 
   createdAt: Date;

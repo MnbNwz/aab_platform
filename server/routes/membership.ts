@@ -1,7 +1,16 @@
 import express from "express";
 import { authenticate } from "../middlewares/auth";
 import { requireRole } from "../middlewares/rbac";
-import { MembershipController } from "../controllers/membershipController";
+import {
+  getAllPlansController,
+  getPlansByUserTypeController,
+  getCurrentMembershipController,
+  purchaseMembershipController,
+  cancelMembershipController,
+  getMembershipHistoryController,
+  getMembershipStatsController,
+} from "../controllers/membershipController";
+import { createStripeSession } from "../controllers/stripeController";
 
 const router = express.Router();
 
@@ -9,14 +18,15 @@ const router = express.Router();
 router.use(authenticate);
 
 // Authenticated routes - user must be logged in
-router.get("/plans", MembershipController.getAllPlans);
-router.get("/plans/:userType", MembershipController.getPlansByUserType);
-router.get("/current", MembershipController.getCurrentMembership);
-router.post("/purchase", MembershipController.purchaseMembership);
-router.post("/cancel", MembershipController.cancelMembership);
-router.get("/history", MembershipController.getMembershipHistory);
+router.get("/plans", getAllPlansController);
+router.get("/plans/:userType", getPlansByUserTypeController);
+router.get("/current", getCurrentMembershipController);
+router.post("/checkout", createStripeSession);
+router.post("/purchase", purchaseMembershipController);
+router.post("/cancel", cancelMembershipController);
+router.get("/history", getMembershipHistoryController);
 
 // Admin routes
-router.get("/stats", requireRole(["admin"]), MembershipController.getMembershipStats);
+router.get("/stats", requireRole(["admin"]), getMembershipStatsController);
 
 export default router;
