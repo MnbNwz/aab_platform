@@ -128,7 +128,7 @@ const makeRequest = async <T = any>(
     }
 
     if (error instanceof DOMException && error.name === "AbortError") {
-      throw createApiError("Request timeout", 408);
+      throw createApiError("Request timeout Please refresh the page", 408);
     }
 
     // Network or other errors
@@ -178,12 +178,28 @@ export const authApi = {
     const response = await get<User>("/api/auth/profile");
     return response.data!;
   },
+
+  updateProfile: async (
+    userId: string,
+    userData: Partial<User>
+  ): Promise<User> => {
+    const response = await put<{ user: User }>(`/api/user/${userId}`, userData);
+    return response.data.user;
+  },
 } as const;
 
 // Services API
 const servicesApi = {
-  getServices: async (): Promise<{ services: string[]; version: number; lastUpdated: string }> => {
-    const response = await get<{ services: string[]; version: number; lastUpdated: string }>("/api/services");
+  getServices: async (): Promise<{
+    services: string[];
+    version: number;
+    lastUpdated: string;
+  }> => {
+    const response = await get<{
+      services: string[];
+      version: number;
+      lastUpdated: string;
+    }>("/api/services");
     return response.data!;
   },
 } as const;
@@ -199,16 +215,16 @@ const userManagementApi = {
   // Get users with filtering and pagination
   getUsers: async (filters: UserFilters = {}): Promise<UsersResponse> => {
     const params = new URLSearchParams();
-    
+
     Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
+      if (value !== undefined && value !== null && value !== "") {
         params.append(key, value.toString());
       }
     });
 
     const queryString = params.toString();
-    const endpoint = `/api/admin/users${queryString ? `?${queryString}` : ''}`;
-    
+    const endpoint = `/api/admin/users${queryString ? `?${queryString}` : ""}`;
+
     const response = await get<UsersResponse>(endpoint);
     return response.data;
   },
@@ -220,8 +236,14 @@ const userManagementApi = {
   },
 
   // Update user status/approval
-  updateUser: async (userId: string, updateData: UserUpdateData): Promise<User> => {
-    const response = await put<{ user: User }>(`/api/admin/users/${userId}`, updateData);
+  updateUser: async (
+    userId: string,
+    updateData: UserUpdateData
+  ): Promise<User> => {
+    const response = await put<{ user: User }>(
+      `/api/admin/users/${userId}`,
+      updateData
+    );
     return response.data.user;
   },
 
@@ -233,15 +255,15 @@ const userManagementApi = {
   // Quick approval action
   approveUser: async (userId: string): Promise<User> => {
     return userManagementApi.updateUser(userId, {
-      status: 'active',
-      approval: 'approved'
+      status: "active",
+      approval: "approved",
     });
   },
 
   // Quick rejection action
   rejectUser: async (userId: string): Promise<User> => {
     return userManagementApi.updateUser(userId, {
-      approval: 'rejected'
+      approval: "rejected",
     });
   },
 } as const;

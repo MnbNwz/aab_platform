@@ -91,7 +91,7 @@ const makeRequest = async <T = any>(
       throw error;
     }
     if (error instanceof DOMException && error.name === "AbortError") {
-      throw createApiError("Request timeout", 408);
+      throw createApiError("Request timeout Please refresh the page", 408);
     }
     throw createApiError(ERROR_MESSAGES.NETWORK_ERROR, 0);
   }

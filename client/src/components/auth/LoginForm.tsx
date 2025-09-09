@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate, Link } from 'react-router-dom';
-import { loginThunk } from '../../store/thunks/authThunks';
-import { clearError } from '../../store/slices/authSlice';
-import type { RootState, AppDispatch } from '../../store';
-import { loginSchema, type LoginData } from '../../schemas/authSchemas';
+import React, { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate, Link } from "react-router-dom";
+import { loginThunk } from "../../store/thunks/authThunks";
+import { clearError } from "../../store/slices/authSlice";
+import type { RootState, AppDispatch } from "../../store";
+import { loginSchema, type LoginData } from "../../schemas/authSchemas";
 
 const LoginForm: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -60,28 +60,28 @@ const LoginForm: React.FC = () => {
     <div className="min-h-screen bg-primary-800 flex items-center justify-center px-4 py-8">
       <div className="max-w-xl w-full mx-auto">
         <div className="bg-white/10 backdrop-blur-md rounded-xl p-10 border border-white/20">
-        {/* Logo */}
-        <div className="text-center mb-10">
-          <div className="mx-auto h-24 w-24 mb-6 flex items-center justify-center">
-            <img 
-              src="https://aasquebec.com/wp-content/uploads/2025/07/aasquebec-logo.svg" 
-              alt="AAS Quebec Logo" 
-              className="h-24 w-24 object-contain"
-            />
+          {/* Logo */}
+          <div className="text-center mb-10">
+            <div className="mx-auto h-24 w-24 mb-6 flex items-center justify-center">
+              <img
+                src="https://aasquebec.com/wp-content/uploads/2025/07/aasquebec-logo.svg"
+                alt="AAS Quebec Logo"
+                className="h-24 w-24 object-contain"
+              />
+            </div>
+            <h1 className="text-3xl font-bold text-white mb-3">Welcome Back</h1>
+            <p className="text-white/80 text-lg">Sign in to your AAS account</p>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-3">Welcome Back</h1>
-          <p className="text-white/80 text-lg">Sign in to your AAS account</p>
-        </div>
 
-        {/* Error Display */}
-        {error && (
-          <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
-            <p className="text-red-200 text-sm">{error}</p>
-          </div>
-        )}
+          {/* Error Display */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
+              <p className="text-red-200 text-sm">{error}</p>
+            </div>
+          )}
 
-        {/* Login Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          {/* Login Form */}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div>
               <label className="block text-white text-sm font-medium mb-2">
                 Email Address *
@@ -135,7 +135,7 @@ const LoginForm: React.FC = () => {
 
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <span className="ml-2 text-white text-sm">Remember me</span>
+                <span className="ml-2 text-white text-sm" />
               </div>
               <Link
                 to="/forgot-password"

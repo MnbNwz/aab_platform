@@ -1,11 +1,5 @@
 import React, { useState } from "react";
-import {
-  User as UserIcon,
-  Settings as SettingsIcon,
-  LogOut as LogOutIcon,
-} from "lucide-react";
-
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import {
   Users,
   DollarSign,
@@ -14,20 +8,24 @@ import {
   ShoppingCart,
   Briefcase,
 } from "lucide-react";
-import ProfileModal from "./ProfileModal";
 import UserDropdown from "./ui/UserDropdown";
 import { logoutThunk } from "../store/thunks/authThunks";
-import AdminSidebar from "./dashboard/AdminSidebar";
+import Sidebar from "./dashboard/Sidebar";
 import UserStatsCards from "./dashboard/UserStatsCards";
-import { useDispatch } from "react-redux";
 import { setFilters } from "../store/slices/userManagementSlice";
 import UserManagementTable from "./dashboard/UserManagementTable";
 import { AppDispatch, RootState } from "../store";
+import ProfileModal from "./ProfileModal";
+import type { User } from "../types";
+import { handleApiError } from "../services/apiService";
+import { updateProfileThunk } from "../store/thunks/userThunks";
+import { showToast } from "../utils/toast";
 
 const Dashboard: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((state: RootState) => state.auth);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
   const handleLogout = () => {
@@ -44,268 +42,253 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  // Non-admins with status 'active' and approval 'approved' see their dashboard
-  if (
-    user.role !== "admin" &&
-    user.status === "active" &&
-    user.approval === "approved"
-  ) {
-    return <CustomerContractorDashboard user={user} onLogout={handleLogout} />;
-  }
+  // Check if user is allowed to see dashboard
+  const canAccessDashboard =
+    (user.role === "admin" && user.status === "active") ||
+    (user.role !== "admin" &&
+      user.status === "active" &&
+      user.approval === "approved");
 
-  // Admins with status 'active' always see the dashboard, regardless of approval
-  if (user.role === "admin" && user.status === "active") {
-
+  if (!canAccessDashboard) {
     return (
-      <div className="min-h-screen bg-primary-800 flex">
-        {/* Sidebar */}
-        <div className="w-80 flex-shrink-0 bg-primary-900">
-          <AdminSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+      <div className="min-h-screen flex items-center justify-center bg-primary-800">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-primary-100">
+            Access Restricted
+          </h1>
+          <p className="text-primary-300 mt-2">
+            Please wait for your account to be approved.
+          </p>
         </div>
-
-        {/* Main Content */}
-        <div className="flex-1 p-8 relative xl:px-16 lg:px-12 md:px-8 px-4 bg-primary-50">
-          {/* Profile Icon Top Right */}
-          {activeTab === "dashboard" && (
-            <AdminDashboardContent
-              user={user}
-              handleLogout={handleLogout}
-              profileOpen={profileOpen}
-              setProfileOpen={setProfileOpen}
-              setActiveTab={setActiveTab}
-              onStatsCardClick={(filter) => {
-                setActiveTab("users");
-                dispatch(setFilters({ ...filter, page: 1 }));
-              }}
-            />
-          )}
-          {activeTab === "users" && <UserManagementContent />}
-          {activeTab === "analytics" && <ComingSoonContent title="Analytics" />}
-          {activeTab === "settings" && <ComingSoonContent title="Settings" />}
-        </div>
-        {/* Profile Modal */}
-        <ProfileModal
-          user={user}
-          isOpen={profileOpen}
-          onClose={() => setProfileOpen(false)}
-          onSave={(updated) => {
-            /* TODO: implement save logic */
-          }}
-        />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-primary-800">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-primary-100">Admin Dashboard</h1>
-        <p className="text-primary-300 mt-2">
-          Welcome, admin. If you see this, something is wrong with your account
-          status.
-        </p>
+    <div className="min-h-screen bg-primary-800 flex">
+      {/* Unified Sidebar for all user types */}
+      <Sidebar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        isMobileOpen={isMobileOpen}
+        onMobileToggle={() => setIsMobileOpen(!isMobileOpen)}
+        userRole={user.role as "admin" | "customer" | "contractor"}
+      />
+
+      {/* Main Content */}
+      <div className="flex-1 p-8 relative xl:px-16 lg:px-12 md:px-8 px-4 bg-primary-50">
+        <DashboardContent
+          user={user}
+          activeTab={activeTab}
+          handleLogout={handleLogout}
+          setActiveTab={setActiveTab}
+          setProfileOpen={setProfileOpen}
+        />
       </div>
     </div>
   );
 };
 
-// Admin Dashboard Content Component
-const AdminDashboardContent: React.FC<{
+// Dashboard Content Component
+const DashboardContent: React.FC<{
   user: any;
+  activeTab: string;
   handleLogout: () => void;
-  profileOpen: boolean;
-  setProfileOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  setActiveTab: React.Dispatch<React.SetStateAction<string>>;
-  onStatsCardClick: (filter: any) => void;
-}> = ({
-  user,
-  handleLogout,
-  profileOpen,
-  setProfileOpen,
-  setActiveTab,
-  onStatsCardClick,
-}) => (
-  <div className="space-y-8">
-    <div className="flex items-center justify-between pt-4 pb-2">
-      {/* Dashboard Title (center) */}
-      <div>
-        <h1 className="text-3xl font-bold text-accent-500 ">Admin Dashboard</h1>
-        <p className="text-lg font-semibold  text-accent-400 mt-2">
-          Overview of system statistics and user management
-        </p>
-      </div>
-      {/* Profile Icon (right) */}
-      <div className="ml-4">
-        <UserDropdown
-          user={user}
-          onLogout={handleLogout}
-          onProfile={() => setProfileOpen(true)}
-          onSettings={() => {}}
-        />
-      </div>
-    </div>
+  setActiveTab: (tab: string) => void;
+  setProfileOpen: (open: boolean) => void;
+}> = ({ user, activeTab, handleLogout, setActiveTab, setProfileOpen }) => {
+  const dispatch = useDispatch<AppDispatch>();
+  const isAdmin = user.role === "admin";
+  const [profileOpen, setLocalProfileOpen] = useState(false);
 
-    {/* Statistics Cards */}
-    <UserStatsCards onCardClick={onStatsCardClick} />
+  const handleProfileClose = () => {
+    setLocalProfileOpen(false);
+    setProfileOpen(false);
+  };
 
-    {/* Quick Actions */}
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-4">
-        Quick Actions
-      </h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div
-          className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
-          onClick={() => setActiveTab("users")}
-        >
-          <Users className="h-8 w-8 text-blue-600 mb-2" />
-          <h3 className="font-medium text-gray-900">Pending Approvals</h3>
-          <p className="text-sm text-gray-500">Review user registrations</p>
-        </div>
-        <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer opacity-50">
-          <DollarSign className="h-8 w-8 text-green-600 mb-2" />
-          <h3 className="font-medium text-gray-900">Revenue Reports</h3>
-          <p className="text-sm text-gray-500">Coming soon</p>
-        </div>
-        <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer opacity-50">
-          <TrendingUp className="h-8 w-8 text-purple-600 mb-2" />
-          <h3 className="font-medium text-gray-900">Analytics</h3>
-          <p className="text-sm text-gray-500">Coming soon</p>
-        </div>
-      </div>
-    </div>
-  </div>
-);
+  const handleSaveProfile = async ({ userId, profileData }: { userId: string; profileData: Partial<User> }) => {
+    try {
+      await dispatch(updateProfileThunk({ userId, profileData })).unwrap();
+      handleProfileClose();
+    } catch (error) {
+      showToast.error(handleApiError(error));
+    }
+  };
 
-// User Management Content Component
-const UserManagementContent: React.FC = () => (
-  <div className="space-y-8">
-    <div>
-      <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-      <p className="text-gray-600 mt-2">
-        Manage all users, approvals, and permissions
-      </p>
-    </div>
-
-    <UserManagementTable />
-  </div>
-);
-
-// Coming Soon Content Component
-const ComingSoonContent: React.FC<{ title: string }> = ({ title }) => (
-  <div className="space-y-8">
-    <div>
-      <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
-      <p className="text-gray-600 mt-2">This feature is coming soon</p>
-    </div>
-
-    <div className="bg-white rounded-lg shadow p-12 text-center">
-      <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-        <TrendingUp className="h-12 w-12 text-gray-400" />
-      </div>
-      <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-        {title} Coming Soon
-      </h2>
-      <p className="text-gray-600 max-w-md mx-auto">
-        We're working hard to bring you this feature. Stay tuned for updates!
-      </p>
-    </div>
-  </div>
-);
-
-// Customer/Contractor Dashboard Component
-const CustomerContractorDashboard: React.FC<{
-  user: any;
-  onLogout: () => void;
-}> = ({ user, onLogout }) => (
-  <div className="min-h-screen bg-gray-50">
-    {/* Header */}
-    <div className="bg-white shadow">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center py-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Welcome, {user.firstName}!
-            </h1>
-            <p className="text-gray-600 mt-1">
-              {user.role === "customer" ? "Customer" : "Contractor"} Dashboard
-            </p>
-          </div>
-          <button
-            onClick={onLogout}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
-          >
-            Sign Out
-          </button>
-        </div>
-      </div>
-    </div>
-
-    {/* Content */}
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Profile Card */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center space-x-4">
-            <div className="bg-blue-100 p-3 rounded-full">
-              {user.role === "customer" ? (
-                <ShoppingCart className="h-6 w-6 text-blue-600" />
-              ) : (
-                <Briefcase className="h-6 w-6 text-blue-600" />
-              )}
-            </div>
+  if (activeTab === "dashboard") {
+    if (isAdmin) {
+      return (
+        <div className="space-y-8">
+          <div className="flex items-center justify-between pt-4 pb-2">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Profile</h3>
-              <p className="text-sm text-gray-500">Manage your account</p>
+              <h1 className="text-3xl font-bold text-accent-500">
+                Admin Dashboard
+              </h1>
+              <p className="text-lg font-semibold text-accent-400 mt-2">
+                Overview of system statistics and user management
+              </p>
+            </div>
+            <div className="ml-4">
+              <UserDropdown
+                user={user}
+                onLogout={handleLogout}
+                onProfile={() => setLocalProfileOpen(true)}
+                onSettings={() => {}}
+              />
             </div>
           </div>
-        </div>
 
-        {/* Services Card (Contractor only) */}
-        {user.role === "contractor" && (
+          <UserStatsCards
+            onCardClick={(filter) => {
+              setActiveTab("users");
+              dispatch(setFilters({ ...filter, page: 1 }));
+            }}
+          />
+
           <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center space-x-4">
-              <div className="bg-green-100 p-3 rounded-full">
-                <Briefcase className="h-6 w-6 text-green-600" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              Quick Actions
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div
+                className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
+                onClick={() => setActiveTab("users")}
+              >
+                <Users className="h-8 w-8 text-blue-600 mb-2" />
+                <h3 className="font-medium text-gray-900">Pending Approvals</h3>
+                <p className="text-sm text-gray-500">
+                  Review user registrations
+                </p>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Services
-                </h3>
-                <p className="text-sm text-gray-500">Manage your services</p>
+              <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer opacity-50">
+                <DollarSign className="h-8 w-8 text-green-600 mb-2" />
+                <h3 className="font-medium text-gray-900">Revenue Reports</h3>
+                <p className="text-sm text-gray-500">Coming soon</p>
+              </div>
+              <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer opacity-50">
+                <TrendingUp className="h-8 w-8 text-purple-600 mb-2" />
+                <h3 className="font-medium text-gray-900">Analytics</h3>
+                <p className="text-sm text-gray-500">Coming soon</p>
               </div>
             </div>
           </div>
-        )}
-
-        {/* Bookings Card */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center space-x-4">
-            <div className="bg-purple-100 p-3 rounded-full">
-              <Calendar className="h-6 w-6 text-purple-600" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                {user.role === "customer" ? "My Bookings" : "Appointments"}
-              </h3>
-              <p className="text-sm text-gray-500">View and manage bookings</p>
-            </div>
-          </div>
+          <ProfileModal
+            isOpen={profileOpen}
+            onClose={handleProfileClose}
+            onSave={handleSaveProfile}
+            user={user}
+          />
         </div>
-      </div>
+      );
+    } else {
+      // Customer/Contractor Dashboard
+      return (
+        <div className="space-y-8">
+          <div className="flex items-center justify-between pt-4 pb-2">
+            <div>
+              <h1 className="text-3xl font-bold text-accent-500">
+                Welcome, {user.firstName}!
+              </h1>
+              <p className="text-lg font-semibold text-accent-400 mt-2">
+                {user.role === "customer" ? "Customer" : "Contractor"} Dashboard
+              </p>
+            </div>
+            <div className="ml-4">
+              <UserDropdown
+                user={user}
+                onLogout={handleLogout}
+                onProfile={() => setLocalProfileOpen(true)}
+                onSettings={() => {}}
+              />
+            </div>
+          </div>
 
-      {/* Coming Soon Message */}
-      <div className="mt-8 bg-white rounded-lg shadow p-8 text-center">
-        <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-          Full Dashboard Coming Soon
-        </h2>
-        <p className="text-gray-600">
-          We're working on building a comprehensive dashboard with all the
-          features you need. Stay tuned for updates!
-        </p>
-      </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Profile Card */}
+            <div
+              className="bg-white rounded-lg shadow p-6 cursor-pointer hover:bg-gray-50"
+              onClick={() => setLocalProfileOpen(true)}
+            >
+              <div className="flex items-center space-x-4">
+                <div className="bg-blue-100 p-3 rounded-full">
+                  {user.role === "customer" ? (
+                    <ShoppingCart className="h-6 w-6 text-blue-600" />
+                  ) : (
+                    <Briefcase className="h-6 w-6 text-blue-600" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Profile
+                  </h3>
+                  <p className="text-sm text-gray-500">Manage your account</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Services Card (Contractor only) */}
+            {user.role === "contractor" && (
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center space-x-4">
+                  <div className="bg-green-100 p-3 rounded-full">
+                    <Briefcase className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Services
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      Manage your services
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Bookings Card */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center space-x-4">
+                <div className="bg-purple-100 p-3 rounded-full">
+                  <Calendar className="h-6 w-6 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {user.role === "customer" ? "My Bookings" : "Appointments"}
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    View and manage bookings
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <ProfileModal
+            isOpen={profileOpen}
+            onClose={handleProfileClose}
+            onSave={handleSaveProfile}
+            user={user}
+          />
+        </div>
+      );
+    }
+  }
+
+  // Other tab content based on activeTab
+  if (activeTab === "users" && isAdmin) {
+    return <UserManagementTable />;
+  }
+
+  // Default content for other tabs
+  return (
+    <div className="bg-white rounded-lg shadow p-8 text-center mt-8">
+      <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+        Feature Coming Soon
+      </h2>
+      <p className="text-gray-600">
+        We're working on building this feature. Stay tuned for updates!
+      </p>
     </div>
-  </div>
-);
+  );
+};
 
 export default Dashboard;

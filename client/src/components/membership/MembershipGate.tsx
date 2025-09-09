@@ -44,22 +44,23 @@ const MembershipGate: React.FC<{ children: React.ReactNode }> = ({
     );
   }
 
-  if (
-    membership === null &&
-    plans.length > 0 &&
-    user &&
-    user.role !== "admin"
-  ) {
-    return (
-      <MembershipPlans
-        plans={plans}
-        onSelect={(plan) => {
-          // TODO: Implement plan selection/payment logic here
-          alert(`Selected plan: ${plan.name}`);
-        }}
-      />
-    );
-  }
+  // if (
+  //   !membership &&
+  //   membership === null &&
+  //   plans.length > 0 &&
+  //   user &&
+  //   user.role !== "admin"
+  // ) {
+  //   return (
+  //     <MembershipPlans
+  //       plans={plans}
+  //       onSelect={(plan) => {
+  //         // TODO: Implement plan selection/payment logic here
+  //         alert(`Selected plan: ${plan.name}`);
+  //       }}
+  //     />
+  //   );
+  // }
 
   // If membership exists, render the normal app/dashboard
   return <>{children}</>;

@@ -1,21 +1,27 @@
 import React, { useState } from "react";
-import type { User } from "../types";
+import { User, UserRole, UserStatus, UserApproval } from "../types";
+import { MapPin } from "lucide-react";
+import LocationSelector from "./LocationSelector";
 
-type ContractorFormFields = {
-  companyName: string;
-  phone: string;
-  services: string[];
-  license: string;
-  taxId: string;
-};
-
-type ProfileFormState = {
+interface ProfileFormState {
+  role: UserRole;
   firstName: string;
   lastName: string;
-  status: User["status"];
-  approval: User["approval"];
+  status: UserStatus;
+  approval: UserApproval;
+  phone: string;
   geoHome: [number, number];
-} & Partial<ContractorFormFields>;
+  contractor?: {
+    companyName: string;
+    services: string[];
+    license: string;
+    taxId: string;
+    docs: Array<{ type: string; url: string }>;
+  };
+  customer?: {
+    defaultPropertyType: "domestic" | "commercial";
+  };
+}
 
 interface ProfileModalProps {
   user: User;
@@ -24,34 +30,51 @@ interface ProfileModalProps {
   onSave: (updated: Partial<User>) => void;
 }
 
+const isAdmin = (role: UserRole): role is "admin" => role === "admin";
 const ProfileModal: React.FC<ProfileModalProps> = ({
   user,
   isOpen,
   onClose,
   onSave,
 }) => {
-  console.log("user", user);
+  const [showMapPicker, setShowMapPicker] = useState(false);
   const [form, setForm] = useState<ProfileFormState>(() => {
     const base: ProfileFormState = {
+      role: user.role,
       firstName: user.firstName,
       lastName: user.lastName,
       status: user.status,
       approval: user.approval,
+      phone: user.phone || "",
       geoHome:
         user.geoHome?.coordinates && user.geoHome.coordinates.length === 2
           ? [user.geoHome.coordinates[0], user.geoHome.coordinates[1]]
           : [0, 0],
     };
+
     if (user.role === "contractor" && user.contractor) {
       return {
         ...base,
-        companyName: user.contractor.companyName || "",
-        phone: user.phone || "",
-        services: user.contractor.services || [],
-        license: user.contractor.license || "",
-        taxId: user.contractor.taxId || "",
+        contractor: {
+          companyName: user.contractor.companyName || "",
+          services: user.contractor.services || [],
+          license: user.contractor.license || "",
+          taxId: user.contractor.taxId || "",
+          docs: user.contractor.docs || [],
+        },
       };
     }
+
+    if (user.role === "customer" && user.customer) {
+      return {
+        ...base,
+        customer: {
+          defaultPropertyType: (user.customer.defaultPropertyType ||
+            "domestic") as "domestic" | "commercial",
+        },
+      };
+    }
+
     return base;
   });
   const [loading, setLoading] = useState(false);
@@ -63,39 +86,47 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
     setForm({ ...form, [field]: e.target.value });
   };
 
-  const handleGeoChange = (idx: 0 | 1, value: string) => {
-    const coords: [number, number] = [form.geoHome[0], form.geoHome[1]];
-    coords[idx] = parseFloat(value);
-    setForm({ ...form, geoHome: coords });
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isAdmin(user.role)) return; // Don't allow admin profile updates
+
     setLoading(true);
     const updated: Partial<User> = {
       firstName: form.firstName,
       lastName: form.lastName,
       status: form.status,
       approval: form.approval,
+      phone: form.phone,
       geoHome: {
         type: user.geoHome?.type || "Point",
         coordinates: [form.geoHome[0], form.geoHome[1]] as [number, number],
       },
     };
-    if (user.role === "contractor" && user.contractor) {
-      updated.phone = form.phone || "";
+
+    // Add role-specific data
+    if (user.role === "contractor" && form.contractor) {
       updated.contractor = {
         ...user.contractor,
-        companyName: form.companyName || "",
-        services: Array.isArray(form.services) ? form.services : [],
-        license: form.license || "",
-        taxId: form.taxId || "",
-        docs: user.contractor.docs,
+        companyName: form.contractor.companyName,
+        services: form.contractor.services,
+        license: form.contractor.license,
+        taxId: form.contractor.taxId,
+        docs: user.contractor?.docs || [],
+      };
+    } else if (user.role === "customer" && form.customer) {
+      updated.customer = {
+        defaultPropertyType: form.customer.defaultPropertyType,
       };
     }
-    await onSave(updated);
-    setLoading(false);
-    onClose();
+
+    try {
+      await onSave(updated);
+      setLoading(false);
+      onClose();
+    } catch (error) {
+      setLoading(false);
+      // Error will be handled by the parent component
+    }
   };
 
   if (!isOpen) return null;
@@ -133,7 +164,12 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
               type="text"
               value={form.phone ?? user.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              className="w-full bg-white rounded-lg px-3 py-2 border border-primary-200 focus:outline-none"
+              className={`w-full rounded-lg px-3 py-2 border border-primary-200 focus:outline-none ${
+                isAdmin(user.role)
+                  ? "bg-primary-100 cursor-not-allowed"
+                  : "bg-white"
+              }`}
+              disabled={user.role === "admin"}
             />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -145,7 +181,12 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
                 type="text"
                 value={form.firstName}
                 onChange={(e) => handleChange(e, "firstName")}
-                className="w-full bg-white rounded-lg px-3 py-2 border border-primary-200 focus:outline-none"
+                className={`w-full rounded-lg px-3 py-2 border border-primary-200 focus:outline-none ${
+                  user.role === "admin"
+                    ? "bg-primary-100 cursor-not-allowed"
+                    : "bg-white"
+                }`}
+                disabled={user.role === "admin"}
                 required
               />
             </div>
@@ -157,37 +198,52 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
                 type="text"
                 value={form.lastName}
                 onChange={(e) => handleChange(e, "lastName")}
-                className="w-full bg-white rounded-lg px-3 py-2 border border-primary-200 focus:outline-none"
+                className={`w-full rounded-lg px-3 py-2 border border-primary-200 focus:outline-none ${
+                  user.role === "admin"
+                    ? "bg-primary-100 cursor-not-allowed"
+                    : "bg-white"
+                }`}
+                disabled={user.role === "admin"}
                 required
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-primary-900 font-medium mb-1">
-                Latitude
-              </label>
-              <input
-                type="number"
-                step="any"
-                value={form.geoHome[1]}
-                onChange={(e) => handleGeoChange(1, e.target.value)}
-                className="w-full bg-white rounded-lg px-3 py-2 border border-primary-200 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-primary-900 font-medium mb-1">
-                Longitude
-              </label>
-              <input
-                type="number"
-                step="any"
-                value={form.geoHome[0]}
-                onChange={(e) => handleGeoChange(0, e.target.value)}
-                className="w-full bg-white rounded-lg px-3 py-2 border border-primary-200 focus:outline-none"
-              />
+          <div>
+            <label className="block text-primary-900 font-medium mb-1">
+              Location
+            </label>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowMapPicker(true)}
+                disabled={user.role === "admin"}
+                className={`w-full flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-primary-200 ${
+                  user.role === "admin"
+                    ? "opacity-60 cursor-not-allowed"
+                    : "hover:bg-primary-50"
+                }`}
+              >
+                <span className="text-left">
+                  {form.geoHome
+                    ? `${form.geoHome[1].toFixed(6)}, ${form.geoHome[0].toFixed(
+                        6
+                      )}`
+                    : "Click to update location"}
+                </span>
+                <MapPin className="h-5 w-5" />
+              </button>
             </div>
           </div>
+
+          {/* Location Selector Modal */}
+          <LocationSelector
+            isOpen={showMapPicker}
+            onClose={() => setShowMapPicker(false)}
+            onLocationSelect={(location) => {
+              setForm({ ...form, geoHome: [location.lng, location.lat] });
+              setShowMapPicker(false);
+            }}
+          />
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-primary-900 font-medium mb-1">
@@ -247,10 +303,21 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
                 </label>
                 <input
                   type="text"
-                  value={form.companyName ?? user.contractor.companyName}
-                  onChange={(e) =>
-                    setForm({ ...form, companyName: e.target.value })
+                  value={
+                    form.contractor?.companyName ??
+                    user.contractor?.companyName ??
+                    ""
                   }
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      contractor: {
+                        ...form.contractor!,
+                        companyName: e.target.value,
+                      },
+                    })
+                  }
+                  disabled={user.role === ("admin" as UserRole)}
                   className="w-full bg-white rounded-lg px-3 py-2 border border-primary-200 focus:outline-none"
                 />
               </div>
@@ -275,10 +342,19 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
                 </label>
                 <input
                   type="text"
-                  value={form.license ?? user.contractor.license}
-                  onChange={(e) =>
-                    setForm({ ...form, license: e.target.value })
+                  value={
+                    form.contractor?.license ?? user.contractor?.license ?? ""
                   }
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      contractor: {
+                        ...form.contractor!,
+                        license: e.target.value,
+                      },
+                    })
+                  }
+                  disabled={isAdmin(user.role)}
                   className="w-full bg-white rounded-lg px-3 py-2 border border-primary-200 focus:outline-none"
                 />
               </div>
@@ -288,9 +364,22 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
                 </label>
                 <input
                   type="text"
-                  value={form.taxId ?? user.contractor.taxId}
-                  onChange={(e) => setForm({ ...form, taxId: e.target.value })}
-                  className="w-full bg-white rounded-lg px-3 py-2 border border-primary-200 focus:outline-none"
+                  value={form.contractor?.taxId ?? user.contractor?.taxId ?? ""}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      contractor: {
+                        ...form.contractor!,
+                        taxId: e.target.value,
+                      },
+                    })
+                  }
+                  disabled={user.role === ("admin" as UserRole)}
+                  className={`w-full rounded-lg px-3 py-2 border border-primary-200 focus:outline-none ${
+                    isAdmin(user.role)
+                      ? "bg-primary-100 cursor-not-allowed"
+                      : "bg-white"
+                  }`}
                 />
               </div>
               <div>

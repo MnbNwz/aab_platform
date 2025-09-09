@@ -1,37 +1,34 @@
 import React from "react";
-import { useSelector, useDispatch } from "react-redux";
 import {
-  Users,
-  Settings,
-  LogOut,
   Home,
+  UserCircle,
   FileText,
   ClipboardList,
   CreditCard,
   Building,
-  PiggyBank,
   Star,
+  Settings,
+  LogOut,
   Menu,
 } from "lucide-react";
-import type { RootState, AppDispatch } from "../../store";
+import { useDispatch } from "react-redux";
+import type { AppDispatch } from "../../store";
 import { logoutThunk } from "../../store/thunks/authThunks";
 
-interface AdminSidebarProps {
+interface ContractorSidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   isMobileOpen?: boolean;
   onMobileToggle?: () => void;
 }
 
-export const AdminSidebar: React.FC<AdminSidebarProps> = ({
+export const ContractorSidebar: React.FC<ContractorSidebarProps> = ({
   activeTab,
   onTabChange,
   isMobileOpen = false,
   onMobileToggle = () => {},
 }) => {
   const dispatch = useDispatch<AppDispatch>();
-  // const { user } = useSelector((state: RootState) => state.auth);
-  const { stats } = useSelector((state: RootState) => state.userManagement);
 
   const handleLogout = () => {
     dispatch(logoutThunk());
@@ -45,53 +42,52 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       description: "Overview and statistics",
     },
     {
-      id: "users",
-      label: "User Management",
-      icon: Users,
-      description: "Manage all users",
-      badge: stats?.pendingUsers ? stats.pendingUsers.toString() : undefined,
+      id: "profile",
+      label: "Profile & Portfolio",
+      icon: UserCircle,
+      description: "Manage your profile",
     },
     {
       id: "leads",
-      label: "Leads Management",
+      label: "Active Leads",
       icon: FileText,
-      description: "Manage leads and quotes",
+      description: "View available leads",
     },
     {
       id: "bids",
-      label: "Quotes & Bids",
+      label: "My Bids",
       icon: ClipboardList,
-      description: "Manage contractor bids",
+      description: "Manage your bids",
     },
     {
-      id: "memberships",
-      label: "Memberships",
+      id: "jobs",
+      label: "Job Requests",
+      icon: Building,
+      description: "View job requests",
+    },
+    {
+      id: "payments",
+      label: "Payments",
       icon: CreditCard,
-      description: "Manage subscriptions",
+      description: "Payment history & subscription",
     },
     {
       id: "offmarket",
-      label: "Off-Market Listings",
+      label: "Off-Market Properties",
       icon: Building,
-      description: "Manage property listings",
-    },
-    {
-      id: "finance",
-      label: "Finance",
-      icon: PiggyBank,
-      description: "Financial management",
+      description: "Exclusive property listings",
     },
     {
       id: "reviews",
-      label: "Reviews & Reports",
+      label: "Reviews & Feedback",
       icon: Star,
-      description: "User feedback and reports",
+      description: "Manage reviews",
     },
     {
       id: "settings",
       label: "Settings",
       icon: Settings,
-      description: "System configuration",
+      description: "Account settings",
     },
   ];
 
@@ -114,8 +110,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         {/* Mobile Toggle Button */}
         <button
           onClick={onMobileToggle}
-          className="md:hidden absolute -right-12 top-4 bg-primary-900 p-2 rounded-r-lg text-white hover:bg-primary-800 transition-colors"
-          aria-label="Toggle menu"
+          className="md:hidden absolute -right-12 top-4 bg-primary-900 p-2 rounded-r-lg text-white"
         >
           <Menu className="h-6 w-6" />
         </button>
@@ -124,13 +119,13 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         <div className="flex items-center justify-center py-6">
           <img
             src="https://aasquebec.com/wp-content/uploads/2025/07/aasquebec-logo.svg"
-            alt="AAS Logo"
-            className="w-20 h-20 bg-primary-700 rounded-full p-2"
+            alt="Site Icon"
+            className="w-20 h-20 bg-primary-700 rounded-full"
           />
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-primary-700">
+        <nav className="flex-1 p-4 space-y-2">
           {menuItems.map((item) => {
             const IconComponent = item.icon;
             const isActive = activeTab === item.id;
@@ -139,26 +134,19 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               <button
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
-                className={`w-full flex items-center justify-between p-3 rounded-lg transition-all duration-200 group ${
+                className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors duration-200 ${
                   isActive
-                    ? "bg-primary-700 text-accent-500 border border-primary-600"
-                    : "text-primary-100 hover:bg-primary-800 hover:text-accent-400"
+                    ? "bg-primary-700 text-accent-500 border border-primary-400"
+                    : "text-primary-100 hover:bg-primary-800"
                 }`}
               >
-                <div className="flex items-center space-x-3 min-w-0">
-                  <IconComponent className="h-5 w-5 flex-shrink-0" />
-                  <div className="text-left min-w-0">
-                    <p className="text-sm font-medium truncate">{item.label}</p>
-                    <p className="text-xs opacity-75 truncate">
-                      {item.description}
-                    </p>
+                <div className="flex items-center space-x-3">
+                  <IconComponent className="h-5 w-5" />
+                  <div className="text-left">
+                    <p className="text-sm font-medium">{item.label}</p>
+                    <p className="text-xs opacity-75">{item.description}</p>
                   </div>
                 </div>
-                {item.badge && (
-                  <span className="ml-2 bg-accent-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
-                    {item.badge}
-                  </span>
-                )}
               </button>
             );
           })}
@@ -168,7 +156,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         <div className="p-4 border-t border-primary-700">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center space-x-3 p-3 rounded-lg text-accent-500 hover:bg-accent-500/10 transition-colors duration-200"
+            className="w-full flex items-center space-x-3 p-3 rounded-lg text-accent-500 hover:bg-accent-100 transition-colors duration-200"
           >
             <LogOut className="h-5 w-5" />
             <span className="text-sm font-medium">Sign Out</span>
@@ -179,4 +167,4 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   );
 };
 
-export default AdminSidebar;
+export default ContractorSidebar;
