@@ -1,12 +1,14 @@
 import { Router } from "express";
 import * as authController from "../controllers/auth";
 import { authenticate } from "../middlewares/auth";
+import upload from "../middlewares/multer";
 
 const router = Router();
 
 // Public routes
-router.post("/signup", authController.signupController);
+router.post("/signup", upload.array("docs"), authController.signupController);
 router.post("/signin", authController.signinController);
+router.get("/profile", authenticate, authController.getProfile);
 
 // Protected routes
 router.post("/logout", authenticate, authController.logout);

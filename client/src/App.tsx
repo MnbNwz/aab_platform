@@ -10,6 +10,7 @@ import { Toaster } from "react-hot-toast";
 
 import { store } from "./store";
 import { restoreSessionThunk } from "./store/thunks/authThunks";
+import { authSlice } from "./store/slices/authSlice";
 import LoginForm from "./components/auth/LoginForm";
 import SignUpForm from "./components/auth/SignUpForm";
 import AuthGuard from "./components/auth/AuthGuard";
@@ -23,14 +24,28 @@ import { PendingApproval } from "./components";
 // App Content Component (needs to be inside Provider)
 const AppContent: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { isInitialized, user } = useSelector((state: RootState) => state.auth);
+  const { isInitialized } = useSelector((state: RootState) => state.auth);
 
   useEffect(() => {
-    // Try to restore session on app start
-    dispatch(restoreSessionThunk());
+    const currentPath = window.location.pathname;
+    // Only try to restore session if not on auth pages
+    if (
+      !currentPath.includes("/login") &&
+      !currentPath.includes("/signup") &&
+      !currentPath.includes("/register")
+    ) {
+      dispatch(restoreSessionThunk());
+    } else {
+      // Immediately set initialized for auth pages
+      dispatch(authSlice.actions.setInitialized());
+    }
   }, [dispatch]);
 
-  if (!isInitialized) {
+  // Don't show loading screen on auth pages
+  const isAuthPage = window.location.pathname.match(
+    /\/(login|signup|register)/
+  );
+  if (!isInitialized && !isAuthPage) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-900 to-primary-800">
         <div className="text-center">

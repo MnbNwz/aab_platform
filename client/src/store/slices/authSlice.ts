@@ -33,6 +33,10 @@ export const authSlice = createSlice({
     },
     
     resetAuth: () => initialState,
+    
+    setInitialized: (state) => {
+      state.isInitialized = true;
+    },
   },
   extraReducers: (builder) => {
     // Login
@@ -142,4 +146,4 @@ export const authSlice = createSlice({
   },
 });
 
-export const { clearError, setLoginType, resetAuth } = authSlice.actions;
+export const { clearError, setLoginType, resetAuth, setInitialized } = authSlice.actions;

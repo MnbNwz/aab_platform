@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
+import { MapPin } from "lucide-react";
 import { registerThunk } from "../../store/thunks/authThunks";
 import { getServicesThunk } from "../../store/thunks/servicesThunks";
 import { clearError } from "../../store/slices/authSlice";
@@ -44,6 +45,9 @@ const SignUpForm: React.FC = () => {
     lng: -73.935242,
     address: "New York, NY",
   });
+  // For contractor docs
+  const [contractorDocs, setContractorDocs] = useState<File[]>([]);
+  const [docsError, setDocsError] = useState<string>("");
 
   // Fetch services when switching to contractor role
   useEffect(() => {
@@ -131,38 +135,60 @@ const SignUpForm: React.FC = () => {
 
   const onSubmit = async (data: any) => {
     try {
-      // Transform data to match exact backend API format (exclude client-side validation fields)
-      const submitData = {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        password: data.password,
-        phone: data.phone,
-        role: selectedRole,
-        geoHome: {
-          type: "Point",
-          coordinates: [selectedLocation.lng, selectedLocation.lat] as [
-            number,
-            number
-          ],
-        },
-        ...(selectedRole === "customer" && {
+      if (selectedRole === "contractor") {
+        // Validate docs
+        if (!contractorDocs.length) {
+          setDocsError("Please upload at least one document.");
+          return;
+        }
+        for (const file of contractorDocs) {
+          if (file.size > 10 * 1024 * 1024) { // 10 MB
+            setDocsError(`File ${file.name} exceeds 10 MB limit.`);
+            return;
+          }
+        }
+        setDocsError("");
+        // Build FormData
+        const formData = new FormData();
+        formData.append("firstName", data.firstName);
+        formData.append("lastName", data.lastName);
+        formData.append("email", data.email);
+        formData.append("password", data.password);
+        formData.append("phone", data.phone);
+        formData.append("role", selectedRole);
+        formData.append("geoHome[type]", "Point");
+        formData.append("geoHome[coordinates][0]", String(selectedLocation.lng));
+        formData.append("geoHome[coordinates][1]", String(selectedLocation.lat));
+        formData.append("contractor[companyName]", data.companyName);
+        formData.append("contractor[license]", data.license);
+        formData.append("contractor[taxId]", data.taxId);
+        formData.append("contractor[serviceRadius]", String(data.serviceRadius));
+        (data.services || []).forEach((service: string, idx: number) => {
+          formData.append(`contractor[services][${idx}]`, service);
+        });
+        contractorDocs.forEach((file) => {
+          formData.append("docs", file);
+        });
+        await dispatch(registerThunk(formData)).unwrap();
+      } else {
+        // Customer: normal JSON
+        const submitData = {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          password: data.password,
+          phone: data.phone,
+          role: selectedRole,
+          geoHome: {
+            type: "Point",
+            coordinates: [selectedLocation.lng, selectedLocation.lat] as [number, number],
+          },
           customer: {
             defaultPropertyType: data.defaultPropertyType || "domestic",
           },
-        }),
-        ...(selectedRole === "contractor" && {
-          contractor: {
-            companyName: data.companyName,
-            services: data.services || [],
-            license: data.license,
-            taxId: data.taxId,
-            docs: [], // Will be handled separately for file uploads
-          },
-        }),
-      };
-
-      await dispatch(registerThunk(submitData)).unwrap();
+        };
+        await dispatch(registerThunk(submitData)).unwrap();
+      }
     } catch (err) {
       console.error("Registration failed:", err);
     }
@@ -347,40 +373,31 @@ const SignUpForm: React.FC = () => {
               <label className="block text-white text-sm font-medium mb-2">
                 Location *
               </label>
-              <div className="space-y-3">
+              <div>
                 <button
                   type="button"
                   onClick={() => setShowLocationModal(true)}
-                  className="w-full px-4 py-3 rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-colors text-left flex items-center justify-between"
+                  className="w-full flex items-center justify-between rounded-lg px-4 py-3 border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-colors"
                 >
-                  <span>
+                  <span className="text-left">
                     {selectedLocation.address ||
-                      `${selectedLocation.lat.toFixed(
-                        4
-                      )}, ${selectedLocation.lng.toFixed(4)}`}
+                      `${selectedLocation.lat.toFixed(6)}, ${selectedLocation.lng.toFixed(6)}`}
                   </span>
-                  <span className="text-accent-400">📍 Select Location</span>
+                  <span className="text-accent-400">
+                    <MapPin className="h-5 w-5" />
+                  </span>
                 </button>
-                <div className="grid grid-cols-2 gap-3">
-                  <input
-                    {...register("latitude", { valueAsNumber: true })}
-                    type="number"
-                    step="any"
-                    value={selectedLocation.lat}
-                    readOnly
-                    className="px-3 py-2 rounded-lg border border-white/20 bg-white/5 text-white text-sm"
-                    placeholder="Latitude"
-                  />
-                  <input
-                    {...register("longitude", { valueAsNumber: true })}
-                    type="number"
-                    step="any"
-                    value={selectedLocation.lng}
-                    readOnly
-                    className="px-3 py-2 rounded-lg border border-white/20 bg-white/5 text-white text-sm"
-                    placeholder="Longitude"
-                  />
-                </div>
+                {/* Hidden inputs for form submission */}
+                <input
+                  type="hidden"
+                  {...register("latitude", { valueAsNumber: true })}
+                  value={selectedLocation.lat}
+                />
+                <input
+                  type="hidden"
+                  {...register("longitude", { valueAsNumber: true })}
+                  value={selectedLocation.lng}
+                />
               </div>
               {(errors.latitude || errors.longitude) && (
                 <p className="mt-1 text-red-300 text-xs">
@@ -473,6 +490,34 @@ const SignUpForm: React.FC = () => {
                     <p className="mt-1 text-red-300 text-xs">
                       {String(errors.taxId.message)}
                     </p>
+                  )}
+                </div>
+
+                {/* Docs Upload */}
+                <div>
+                  <label className="block text-white text-sm font-medium mb-2">
+                    Upload Documents (PDF, JPG, PNG, max 10MB each) *
+                  </label>
+                  <input
+                    type="file"
+                    multiple
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={e => {
+                      const files = Array.from(e.target.files || []);
+                      setContractorDocs(files);
+                      setDocsError("");
+                    }}
+                    className="w-full px-4 py-2 rounded-lg border border-white/20 bg-white/10 text-white file:bg-accent-500 file:text-white file:rounded file:px-3 file:py-1"
+                  />
+                  {docsError && (
+                    <p className="mt-1 text-red-300 text-xs">{docsError}</p>
+                  )}
+                  {contractorDocs.length > 0 && (
+                    <ul className="mt-2 text-xs text-white/80">
+                      {contractorDocs.map((file, idx) => (
+                        <li key={idx}>{file.name} ({(file.size/1024/1024).toFixed(2)} MB)</li>
+                      ))}
+                    </ul>
                   )}
                 </div>
 

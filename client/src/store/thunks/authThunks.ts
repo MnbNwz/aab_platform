@@ -29,21 +29,24 @@ export const loginThunk = createAsyncThunk<
 
 export const registerThunk = createAsyncThunk<
   AuthResponse,
-  RegisterData,
+  RegisterData | FormData,
   { rejectValue: string }
 >(
   'auth/register',
   async (userData, { rejectWithValue }) => {
     try {
-      console.log('🚀 Attempting registration for:', { email: userData.email, role: userData.role });
-      console.log('📦 Full registration payload:', userData);
-      
-      // Pass through the exact payload structure from the form
-      const requestBody = userData;
-
-      const response = await api.auth.register(requestBody);
+      // For FormData, log only keys
+      if (userData instanceof FormData) {
+        console.log('🚀 Attempting contractor registration (multipart)');
+        for (const pair of userData.entries()) {
+          console.log('FormData:', pair[0], pair[1]);
+        }
+      } else {
+        console.log('🚀 Attempting registration for:', { email: userData.email, role: userData.role });
+        console.log('📦 Full registration payload:', userData);
+      }
+      const response = await api.auth.register(userData);
       console.log('✅ Registration successful:', response);
-      
       showToast.success('Account created successfully! Welcome to AAS Platform.');
       return response;
     } catch (error) {

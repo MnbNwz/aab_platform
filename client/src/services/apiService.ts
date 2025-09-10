@@ -59,20 +59,34 @@ const makeRequest = async <T = any>(
 ): Promise<ApiResponse<T>> => {
   const url = `${API_CONFIG.baseURL}${endpoint}`;
 
+  // Detect FormData for multipart
+  let headers: Record<string, string> = { "X-Requested-With": "XMLHttpRequest" };
+  if (options.headers && typeof options.headers === 'object' && !(options.headers instanceof Headers) && !Array.isArray(options.headers)) {
+    headers = { ...headers, ...options.headers };
+  }
+  let body = options.body;
+  if (body instanceof FormData) {
+    // Let browser set Content-Type with boundary
+    delete headers["Content-Type"];
+    console.log("📦 Sending FormData (multipart/form-data)");
+  } else if (body && typeof body === "object" && !(body instanceof Blob)) {
+    headers["Content-Type"] = "application/json";
+    body = JSON.stringify(body);
+    if (body) {
+      try { console.log(`📦 Request Body:`, JSON.parse(body as string)); } catch {}
+    }
+  } else if (body) {
+    headers["Content-Type"] = "application/json";
+  }
+
   const config: RequestInit = {
-    credentials: "include", // REQUIRED for auth cookies
-    headers: {
-      "Content-Type": "application/json",
-      "X-Requested-With": "XMLHttpRequest", // CSRF protection
-      ...options.headers,
-    },
+    credentials: "include",
+    headers,
     ...options,
+    body,
   };
 
   console.log(`📡 API Request: ${options.method || "GET"} ${url}`);
-  if (options.body) {
-    console.log(`📦 Request Body:`, JSON.parse(options.body as string));
-  }
 
   try {
     const controller = new AbortController();
@@ -94,8 +108,8 @@ const makeRequest = async <T = any>(
       data = await response.text();
     }
 
-    console.log(`📡 API Response: ${response.status} ${response.statusText}`);
-    console.log(`📦 Response Data:`, data);
+  console.log('API Response: ' + response.status + ' ' + response.statusText);
+  console.log('Response Data:', data);
 
     // Handle different HTTP status codes
     if (response.status === 401) {
@@ -143,7 +157,7 @@ const get = <T = any>(endpoint: string): Promise<ApiResponse<T>> =>
 const post = <T = any>(endpoint: string, data?: any): Promise<ApiResponse<T>> =>
   makeRequest<T>(endpoint, {
     method: "POST",
-    body: data ? JSON.stringify(data) : undefined,
+    body: data instanceof FormData ? data : data ? data : undefined,
   });
 
 const put = <T = any>(endpoint: string, data?: any): Promise<ApiResponse<T>> =>
