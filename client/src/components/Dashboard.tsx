@@ -16,6 +16,7 @@ import { setFilters } from "../store/slices/userManagementSlice";
 import UserManagementTable from "./dashboard/UserManagementTable";
 import { AppDispatch, RootState } from "../store";
 import ProfileModal from "./ProfileModal";
+import JobCreate from "./JobCreate";
 import type { User } from "../types";
 import { handleApiError } from "../services/apiService";
 import { updateProfileThunk } from "../store/thunks/userThunks";
@@ -276,6 +277,11 @@ const DashboardContent: React.FC<{
   // Other tab content based on activeTab
   if (activeTab === "users" && isAdmin) {
     return <UserManagementTable />;
+  }
+
+  // Show JobCreate for customers on jobs tab
+  if (activeTab === "jobs" && user.role === "customer") {
+    return <JobCreate />;
   }
 
   // Default content for other tabs

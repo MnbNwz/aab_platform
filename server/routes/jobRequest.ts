@@ -7,10 +7,11 @@ import {
   deleteJobRequest,
 } from "../controllers/jobRequestController";
 import { authenticate } from "../middlewares/auth";
+import upload from "../middlewares/multer";
 
 const router = Router();
 
-router.post("/", authenticate, createJobRequest);
+router.post("/", authenticate, upload.array("images", 5), createJobRequest);
 router.get("/", authenticate, getJobRequests);
 router.get("/:id", authenticate, getJobRequestById);
 router.put("/:id", authenticate, updateJobRequest);

@@ -7,7 +7,7 @@ import { hashPassword } from "../utils/auth/password";
 
 export const signupController = async (req: Request & { files?: any[] }, res: Response) => {
   try {
-    let signupData = req.body;
+    const signupData = req.body;
     // If files are present (contractor docs), upload to S3 and add URLs to contractor.docs
     if (req.files && Array.isArray(req.files) && req.files.length > 0) {
       const s3 = new S3Service();

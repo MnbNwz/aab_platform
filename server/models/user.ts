@@ -8,7 +8,7 @@ const CustomerSchema = new Schema<Customer>({
     default: "domestic",
     required: true,
   },
-});
+}, { _id: false });
 
 const GeoHomeSchema = new Schema<GeoHome>({
   type: { type: String, enum: ["Point"], required: true },

@@ -59,10 +59,7 @@ const contractorProfileSchema = z.object({
   taxId: z
     .string()
     .min(1, 'Tax ID is required for contractors'),
-  serviceRadius: z
-    .number()
-    .min(1, 'Service radius must be at least 1 km')
-    .max(500, 'Service radius cannot exceed 500 km'),
+  // serviceRadius removed
 });
 
 // Customer registration schema

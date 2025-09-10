@@ -27,18 +27,8 @@ const AppContent: React.FC = () => {
   const { isInitialized } = useSelector((state: RootState) => state.auth);
 
   useEffect(() => {
-    const currentPath = window.location.pathname;
-    // Only try to restore session if not on auth pages
-    if (
-      !currentPath.includes("/login") &&
-      !currentPath.includes("/signup") &&
-      !currentPath.includes("/register")
-    ) {
-      dispatch(restoreSessionThunk());
-    } else {
-      // Immediately set initialized for auth pages
-      dispatch(authSlice.actions.setInitialized());
-    }
+    // Always try to restore session on mount, so AuthGuard works on all routes
+    dispatch(restoreSessionThunk());
   }, [dispatch]);
 
   // Don't show loading screen on auth pages

@@ -28,6 +28,11 @@ const JobRequestSchema = new Schema({
     enum: ["pending", "deposit_paid", "prestart_paid", "completed", "refunded"],
     default: "pending"
   },
+  images: {
+    type: [String],
+    validate: [arr => arr.length <= 5, 'Maximum 5 images allowed'],
+    default: []
+  },
   timeline: [
     {
       status: String,

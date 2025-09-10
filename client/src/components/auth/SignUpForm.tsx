@@ -82,15 +82,11 @@ const SignUpForm: React.FC = () => {
       confirmPassword: "",
       latitude: 40.73061, // Default to NYC coordinates
       longitude: -73.935242,
-      ...(selectedRole === "customer" && {
-        defaultPropertyType: "domestic",
-      }),
       ...(selectedRole === "contractor" && {
         companyName: "",
         license: "",
         services: [],
         taxId: "",
-        serviceRadius: 25,
       }),
     },
   });
@@ -116,7 +112,6 @@ const SignUpForm: React.FC = () => {
         license: "",
         services: [],
         taxId: "",
-        serviceRadius: 25,
       }),
     });
     dispatch(clearError());
@@ -162,7 +157,6 @@ const SignUpForm: React.FC = () => {
         formData.append("contractor[companyName]", data.companyName);
         formData.append("contractor[license]", data.license);
         formData.append("contractor[taxId]", data.taxId);
-        formData.append("contractor[serviceRadius]", String(data.serviceRadius));
         (data.services || []).forEach((service: string, idx: number) => {
           formData.append(`contractor[services][${idx}]`, service);
         });
@@ -183,9 +177,9 @@ const SignUpForm: React.FC = () => {
             type: "Point",
             coordinates: [selectedLocation.lng, selectedLocation.lat] as [number, number],
           },
-          customer: {
-            defaultPropertyType: data.defaultPropertyType || "domestic",
-          },
+           customer: {
+             defaultPropertyType: "domestic",
+           },
         };
         await dispatch(registerThunk(submitData)).unwrap();
       }
@@ -406,26 +400,7 @@ const SignUpForm: React.FC = () => {
               )}
             </div>
 
-            {/* Customer Specific Fields */}
-            {selectedRole === "customer" && (
-              <div>
-                <label className="block text-white text-sm font-medium mb-2">
-                  Property Type *
-                </label>
-                <select
-                  {...register("defaultPropertyType" as keyof FormData)}
-                  className="w-full px-4 py-3 rounded-lg border border-white/20 bg-white/10 text-white focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
-                >
-                  <option value="domestic">Domestic</option>
-                  <option value="commercial">Commercial</option>
-                </select>
-                {errors.defaultPropertyType && (
-                  <p className="mt-1 text-red-300 text-xs">
-                    {String(errors.defaultPropertyType.message)}
-                  </p>
-                )}
-              </div>
-            )}
+            {/* Property Type removed for customer; always set to domestic */}
 
             {/* Contractor Specific Fields */}
             {selectedRole === "contractor" && (
@@ -561,28 +536,7 @@ const SignUpForm: React.FC = () => {
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-white text-sm font-medium mb-2">
-                    Service Radius (km) *
-                  </label>
-                  <select
-                    {...register("serviceRadius" as keyof FormData, {
-                      valueAsNumber: true,
-                    })}
-                    className="w-full px-4 py-3 rounded-lg border border-white/20 bg-white/10 text-white focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
-                  >
-                    <option value={10}>10 km</option>
-                    <option value={25}>25 km</option>
-                    <option value={50}>50 km</option>
-                    <option value={100}>100 km</option>
-                    <option value={200}>200 km (Province-wide)</option>
-                  </select>
-                  {errors.serviceRadius && (
-                    <p className="mt-1 text-red-300 text-xs">
-                      {String(errors.serviceRadius.message)}
-                    </p>
-                  )}
-                </div>
+                {/* Service Radius removed */}
               </>
             )}
 
