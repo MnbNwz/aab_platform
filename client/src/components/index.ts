@@ -10,6 +10,5 @@ export { ProtectedRoute } from './auth/ProtectedRoute';
 export { default as SignUpForm } from './auth/SignUpForm';
 
 // Dashboard components
-export { default as AdminSidebar } from './dashboard/AdminSidebar';
 export { default as UserStatsCards } from './dashboard/UserStatsCards';
 export { default as UserManagementTable } from './dashboard/UserManagementTable';

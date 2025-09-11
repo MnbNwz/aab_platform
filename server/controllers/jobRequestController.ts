@@ -99,21 +99,44 @@ export const getJobRequests = async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const user = authReq.user;
-    let jobs;
-    if (user.role === "admin") {
-      jobs = await JobRequest.find().populate(
-        "createdBy property assignedContractor acceptedBid bids",
-      );
-    } else if (user.role === "contractor") {
-      // TODO: filter by lead visibility logic (tier, delay, etc.)
-      jobs = await JobRequest.find({ status: { $ne: "cancelled" } }).populate("createdBy property");
-    } else {
-      // customer: only own jobs
-      jobs = await JobRequest.find({ createdBy: user._id }).populate(
-        "property assignedContractor acceptedBid bids",
-      );
+    const { page = 1, limit = 10, ...filters } = req.query as any;
+    const query: any = {};
+
+    // Customer: only their jobs
+    if (user.role === "customer") {
+      query.createdBy = user._id;
     }
-    res.json({ success: true, jobs });
+
+    // Contractor: filter by their services as categories
+    if (user.role === "contractor" && user.contractor && user.contractor.services) {
+      query.category = { $in: user.contractor.services };
+    }
+
+    // Flexible filtering
+    if (filters.status) query.status = filters.status;
+    if (filters.category) query.category = filters.category;
+    if (filters.type) query.type = filters.type;
+    if (filters.createdAfter) query.createdAt = { $gte: new Date(filters.createdAfter) };
+    if (filters.createdBefore) {
+      query.createdAt = query.createdAt || {};
+      query.createdAt.$lte = new Date(filters.createdBefore);
+    }
+
+    const jobs = await JobRequest.find(query)
+      .skip((+page - 1) * +limit)
+      .limit(+limit)
+      .sort({ createdAt: -1 })
+      .populate("createdBy property assignedContractor acceptedBid bids");
+
+    const total = await JobRequest.countDocuments(query);
+
+    res.json({
+      success: true,
+      jobs,
+      total,
+      page: +page,
+      pages: Math.ceil(total / +limit),
+    });
   } catch (error) {
     console.error("Error fetching job requests:", error);
     res.status(500).json({ success: false, message: "Failed to fetch job requests" });
@@ -188,12 +211,10 @@ export const updateJobRequest = async (req: Request, res: Response) => {
         user.role !== "admin" &&
         String(job.assignedContractor) !== String(user._id)
       ) {
-        return res
-          .status(403)
-          .json({
-            success: false,
-            message: "Only assigned contractor or admin can mark as completed",
-          });
+        return res.status(403).json({
+          success: false,
+          message: "Only assigned contractor or admin can mark as completed",
+        });
       }
     }
     await job.save();

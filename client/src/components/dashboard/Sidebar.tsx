@@ -57,6 +57,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         description: "Manage system users",
       },
       {
+        id: "jobs",
+        label: "Jobs & Bidding Management",
+        icon: FileText,
+        description: "Manage jobs and contractor bids",
+      },
+      {
         id: "approvals",
         label: "Approvals",
         icon: ShieldCheck,

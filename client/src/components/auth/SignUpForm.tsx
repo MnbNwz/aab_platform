@@ -50,12 +50,27 @@ const SignUpForm: React.FC = () => {
   const [docsError, setDocsError] = useState<string>("");
 
   // Fetch services when switching to contractor role
+  // Track if services fetch failed
+  const [servicesFetchFailed, setServicesFetchFailed] = useState(false);
   useEffect(() => {
-    if (selectedRole === "contractor" && !isInitialized && !servicesLoading) {
+    if (
+      selectedRole === "contractor" &&
+      !isInitialized &&
+      !servicesLoading &&
+      !servicesFetchFailed
+    ) {
       console.log("🎯 Fetching services for contractor role...");
-      dispatch(getServicesThunk());
+      dispatch(getServicesThunk())
+        .unwrap()
+        .catch(() => setServicesFetchFailed(true));
     }
-  }, [selectedRole, isInitialized, servicesLoading, dispatch]);
+  }, [
+    selectedRole,
+    isInitialized,
+    servicesLoading,
+    servicesFetchFailed,
+    dispatch,
+  ]);
 
   // Set up form with conditional schema based on role
   const schema =
@@ -137,7 +152,8 @@ const SignUpForm: React.FC = () => {
           return;
         }
         for (const file of contractorDocs) {
-          if (file.size > 10 * 1024 * 1024) { // 10 MB
+          if (file.size > 10 * 1024 * 1024) {
+            // 10 MB
             setDocsError(`File ${file.name} exceeds 10 MB limit.`);
             return;
           }
@@ -152,8 +168,14 @@ const SignUpForm: React.FC = () => {
         formData.append("phone", data.phone);
         formData.append("role", selectedRole);
         formData.append("geoHome[type]", "Point");
-        formData.append("geoHome[coordinates][0]", String(selectedLocation.lng));
-        formData.append("geoHome[coordinates][1]", String(selectedLocation.lat));
+        formData.append(
+          "geoHome[coordinates][0]",
+          String(selectedLocation.lng)
+        );
+        formData.append(
+          "geoHome[coordinates][1]",
+          String(selectedLocation.lat)
+        );
         formData.append("contractor[companyName]", data.companyName);
         formData.append("contractor[license]", data.license);
         formData.append("contractor[taxId]", data.taxId);
@@ -175,11 +197,14 @@ const SignUpForm: React.FC = () => {
           role: selectedRole,
           geoHome: {
             type: "Point",
-            coordinates: [selectedLocation.lng, selectedLocation.lat] as [number, number],
+            coordinates: [selectedLocation.lng, selectedLocation.lat] as [
+              number,
+              number
+            ],
           },
-           customer: {
-             defaultPropertyType: "domestic",
-           },
+          customer: {
+            defaultPropertyType: "domestic",
+          },
         };
         await dispatch(registerThunk(submitData)).unwrap();
       }
@@ -375,7 +400,9 @@ const SignUpForm: React.FC = () => {
                 >
                   <span className="text-left">
                     {selectedLocation.address ||
-                      `${selectedLocation.lat.toFixed(6)}, ${selectedLocation.lng.toFixed(6)}`}
+                      `${selectedLocation.lat.toFixed(
+                        6
+                      )}, ${selectedLocation.lng.toFixed(6)}`}
                   </span>
                   <span className="text-accent-400">
                     <MapPin className="h-5 w-5" />
@@ -477,7 +504,7 @@ const SignUpForm: React.FC = () => {
                     type="file"
                     multiple
                     accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={e => {
+                    onChange={(e) => {
                       const files = Array.from(e.target.files || []);
                       setContractorDocs(files);
                       setDocsError("");
@@ -490,7 +517,10 @@ const SignUpForm: React.FC = () => {
                   {contractorDocs.length > 0 && (
                     <ul className="mt-2 text-xs text-white/80">
                       {contractorDocs.map((file, idx) => (
-                        <li key={idx}>{file.name} ({(file.size/1024/1024).toFixed(2)} MB)</li>
+                        <li key={idx}>
+                          {file.name} ({(file.size / 1024 / 1024).toFixed(2)}{" "}
+                          MB)
+                        </li>
                       ))}
                     </ul>
                   )}

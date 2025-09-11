@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "../store";
+import { jobApi } from "../services/jobService";
 
 const categories = [
   "painting",
@@ -80,14 +81,9 @@ const JobCreate: React.FC = () => {
       formData.append("type", jobType);
       if (budget) formData.append("budget", budget);
       images.forEach((file) => formData.append("images", file));
-      const res = await fetch("/api/job-request", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || "Failed to create job");
+      const res = await jobApi.createJob(formData);
+      if (!res || res.errors) {
+        throw new Error(res?.errors ? JSON.stringify(res.errors) : "Failed to create job");
       }
       setSuccess(true);
       setTitle("");
