@@ -152,13 +152,19 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
         <ConfirmModal
           isOpen={showConfirm}
           title="Confirm Save"
+          confirmText="Confirm"
           message="Are you sure you want to save these profile changes?"
           onConfirm={handleConfirmSave}
           onCancel={() => setShowConfirm(false)}
           darkOverlay
         />
       )}
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) onClose();
+        }}
+      >
         <div
           className="bg-primary-50 rounded-3xl shadow-2xl w-full max-w-xl mx-4 p-12 relative"
           style={{
@@ -166,6 +172,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
             display: "flex",
             flexDirection: "column",
           }}
+          onClick={(e) => e.stopPropagation()}
         >
           <button
             className="absolute top-8 right-8 text-accent-500 hover:text-accent-700 text-3xl font-bold"

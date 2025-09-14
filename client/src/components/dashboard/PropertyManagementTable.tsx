@@ -1,17 +1,19 @@
-import { ChevronDown } from "lucide-react";
 import React, { useState, useEffect } from "react";
+import Loader from "../ui/Loader";
+import ConfirmModal from "../ui/ConfirmModal";
+import PropertyViewModal from "./PropertyViewModal";
 import { useDispatch, useSelector } from "react-redux";
-import type { AppDispatch, RootState } from "../../store";
+import type { RootState, AppDispatch } from "../../store";
 import { getMyPropertiesThunk } from "../../store/thunks/propertyThunks";
+import { setPropertyInactiveThunk } from "../../store/thunks/propertyThunks";
 import { searchPropertiesApi } from "../../services/propertyService";
-// Placeholder for property data type
+
 interface Property {
   _id: string;
   title: string;
   propertyType: string;
   location: { type: string; coordinates: [number, number] };
   dimensions: { length: number; width: number };
-  totalRooms: number;
   bedrooms: number;
   bathrooms: number;
   kitchens: number;
@@ -40,16 +42,29 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
   filter,
   setFilter,
   sortOrder,
-  setSortOrder,
   search,
   setSearch,
-  properties: _propsProperties, // unused, now from redux
+  properties: _propsProperties,
   page,
   setPage,
   pageSize,
   onCreateNew,
 }) => {
   const dispatch = useDispatch<AppDispatch>();
+
+  const [confirmInactiveId, setConfirmInactiveId] = useState<string | null>(
+    null
+  );
+  const [inactiveLoading, setInactiveLoading] = useState(false);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [viewProperty, setViewProperty] = useState<Property | null>(null);
+
+  const handleSetInactive = async (id: string) => {
+    setInactiveLoading(true);
+    await dispatch(setPropertyInactiveThunk(id));
+    setInactiveLoading(false);
+    setConfirmInactiveId(null);
+  };
   const { properties, loading } = useSelector(
     (state: RootState) => state.property
   );
@@ -84,16 +99,6 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
   const totalPages = Math.ceil(total / pageSize);
   const paginated = sorted.slice((page - 1) * pageSize, page * pageSize);
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <span className="text-accent-500 text-lg font-semibold">
-          Loading properties...
-        </span>
-      </div>
-    );
-  }
-
   return (
     <div className="bg-white rounded-lg shadow mt-2 md:mt-0">
       {/* Header */}
@@ -114,20 +119,7 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
               </select>
-              {/* <div className="relative w-32 flex-shrink-0">
-                <select
-                  value={sortOrder || ""}
-                  onChange={(e) => setSortOrder(e.target.value as any)}
-                  className="appearance-none px-3 py-2 border border-gray-300 rounded-lg pr-8 text-gray-700 font-medium w-full"
-                >
-                  <option value="" disabled hidden>
-                    Sort By
-                  </option>
-                  <option value="asc">Ascending</option>
-                  <option value="desc">Descending</option>
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-3 h-4 w-4 text-gray-400" />
-              </div> */}
+
               <div className="relative flex-grow w-full">
                 <input
                   type="text"
@@ -164,53 +156,135 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
         <table className="min-w-full divide-y divide-gray-200 text-sm">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-3 py-2 md:px-6 md:py-3 text-left font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+              <th className="px-3 py-2 md:px-6 md:py-3 text-center font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                 Title
               </th>
-              <th className="px-3 py-2 md:px-6 md:py-3 text-left font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+              <th className="px-3 py-2 md:px-6 md:py-3 text-center font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                 Type
               </th>
-              {/* Address column removed */}
-              <th className="px-3 py-2 md:px-6 md:py-3 text-left font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                Rooms
-              </th>
-              <th className="px-3 py-2 md:px-6 md:py-3 text-left font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+              <th className="px-3 py-2 md:px-6 md:py-3 text-center font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                 Status
+              </th>
+              <th className="px-3 py-2 md:px-6 md:py-3 text-center font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                Action
               </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {paginated.map((property) => (
-              <tr key={property._id} className="hover:bg-gray-50">
-                <td className="px-3 py-2 md:px-6 md:py-4 font-semibold text-gray-900 max-w-[10rem] truncate">
-                  {property.title}
+            {loading ? (
+              <tr>
+                <td colSpan={4} className="py-12">
+                  <div className="flex justify-center items-center w-full h-full">
+                    <Loader size="large" color="accent" />
+                  </div>
                 </td>
-                <td className="px-3 py-2 md:px-6 md:py-4 text-gray-700 whitespace-nowrap">
-                  {property.propertyType}
-                </td>
-                {/* Address cell removed */}
-                <td className="px-3 py-2 md:px-6 md:py-4 text-gray-700 whitespace-nowrap">
-                  {property.totalRooms}
-                </td>
-                <td className="px-3 py-2 md:px-6 md:py-4">
-                  <span
-                    className={`px-2 py-1 rounded text-xs font-bold ${
-                      property.isActive
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-700"
+              </tr>
+            ) : (
+              <>
+                {paginated.map((property) => (
+                  <tr
+                    key={property._id}
+                    className={`hover:bg-gray-50 ${
+                      !property.isActive ? "opacity-60" : ""
                     }`}
                   >
-                    {property.isActive ? "Active" : "Inactive"}
-                  </span>
-                </td>
-              </tr>
-            ))}
-            {paginated.length === 0 && (
-              <tr>
-                <td colSpan={4} className="text-center text-gray-500 py-8">
-                  No properties found.
-                </td>
-              </tr>
+                    <td className="px-3 py-2 md:px-6 md:py-4 font-semibold text-gray-900 max-w-[10rem] truncate text-center">
+                      {property.title}
+                    </td>
+                    <td className="px-3 py-2 md:px-6 md:py-4 text-gray-700 whitespace-nowrap text-center">
+                      {property.propertyType}
+                    </td>
+                    <td className="px-3 py-2 md:px-6 md:py-4 text-center">
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-bold ${
+                          property.isActive
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                        }`}
+                      >
+                        {property.isActive ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 md:px-6 md:py-4 text-gray-700 whitespace-nowrap text-center">
+                      <button
+                        className="text-blue-600 hover:underline mr-2"
+                        onClick={() => {
+                          // Map property to Property type if needed
+                          // Ensure property matches Property type for modal
+                          const mapped = {
+                            ...property,
+                            dimensions: (property as any).dimensions || {
+                              length: 0,
+                              width: 0,
+                            },
+                            isActive:
+                              typeof property.isActive === "boolean"
+                                ? property.isActive
+                                : true,
+                            images: (property.images || []).filter(
+                              (img: any) => typeof img === "string"
+                            ),
+                          };
+                          setViewProperty(mapped as Property);
+                          setViewModalOpen(true);
+                        }}
+                      >
+                        View
+                      </button>
+                      {"|  "}
+                      <button
+                        className={`text-red-600 ${
+                          property.isActive
+                            ? "hover:underline cursor-pointer"
+                            : "opacity-50 cursor-not-allowed"
+                        } `}
+                        disabled={!property.isActive}
+                        tabIndex={property.isActive ? 0 : -1}
+                        style={
+                          !property.isActive
+                            ? {
+                                pointerEvents: "none",
+                                filter: "grayscale(0.5)",
+                                background: "rgba(0,0,0,0.02)",
+                              }
+                            : {}
+                        }
+                        onClick={() => {
+                          if (
+                            property.isActive &&
+                            typeof property._id === "string"
+                          ) {
+                            setConfirmInactiveId(property._id);
+                          }
+                        }}
+                      >
+                        Inactive
+                      </button>
+                      {/* Confirm Modal for Inactive */}
+                      <ConfirmModal
+                        isOpen={!!confirmInactiveId}
+                        title="Set Property Inactive?"
+                        message="Do you want to set this property as inactive?"
+                        confirmText="Confirm"
+                        cancelText="Cancel"
+                        loading={inactiveLoading}
+                        onCancel={() => setConfirmInactiveId(null)}
+                        onConfirm={() => {
+                          if (confirmInactiveId)
+                            handleSetInactive(confirmInactiveId);
+                        }}
+                      />
+                    </td>
+                  </tr>
+                ))}
+                {paginated.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="text-center text-gray-500 py-8">
+                      No properties found.
+                    </td>
+                  </tr>
+                )}
+              </>
             )}
           </tbody>
         </table>
@@ -243,6 +317,15 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
           </div>
         )}
       </div>
+      {/* Property View Modal */}
+      <PropertyViewModal
+        isOpen={viewModalOpen}
+        onClose={() => {
+          setViewModalOpen(false);
+          setViewProperty(null);
+        }}
+        property={viewProperty}
+      />
     </div>
   );
 };

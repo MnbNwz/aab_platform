@@ -55,6 +55,10 @@ const propertySlice = createSlice({
         state.loading = false;
         state.error = null;
         state.property = action.payload;
+        // Add new property to the start of the list for immediate UI update
+        if (action.payload && action.payload._id) {
+          state.properties = [action.payload, ...state.properties];
+        }
       })
       .addCase(createPropertyThunk.rejected, (state, action) => {
         state.loading = false;

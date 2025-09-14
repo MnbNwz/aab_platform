@@ -172,7 +172,8 @@ const post = <T = any>(endpoint: string, data?: any): Promise<ApiResponse<T>> =>
 const put = <T = any>(endpoint: string, data?: any): Promise<ApiResponse<T>> =>
   makeRequest<T>(endpoint, {
     method: "PUT",
-    body: data ? JSON.stringify(data) : undefined,
+    body:
+      data instanceof FormData ? data : data ? JSON.stringify(data) : undefined,
   });
 
 const del = <T = any>(endpoint: string): Promise<ApiResponse<T>> =>

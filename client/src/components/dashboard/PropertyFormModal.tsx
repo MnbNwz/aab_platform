@@ -37,6 +37,7 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [imageError, setImageError] = useState<string>("");
+  const [formError, setFormError] = useState<string>("");
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -101,6 +102,17 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError("");
+    // Validation: area must be > 0, location must have valid lat/lng
+    const [lng, lat] = form.location.coordinates;
+    if (!form.area || form.area <= 0) {
+      setFormError("Area must be greater than zero.");
+      return;
+    }
+    if (!lng || !lat) {
+      setFormError("Please select a valid location on the map.");
+      return;
+    }
     // Attach images to form data
     const submitData = {
       ...form,
@@ -116,8 +128,7 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
         ] as [number, number],
       },
     };
-    console.log("submitData", submitData);
-    debugger;
+
     await dispatch(createPropertyThunk(submitData))
       .unwrap()
       .then(() => {
@@ -145,10 +156,16 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
     "w-full rounded-lg px-3 py-2 border border-primary-200 bg-white text-primary-900 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div
         className="bg-primary-50 rounded-3xl shadow-2xl w-full max-w-xl mx-4 p-12 relative flex flex-col"
         style={{ height: "90vh" }}
+        onClick={(e) => e.stopPropagation()}
       >
         <button
           className="absolute top-8 right-8 text-accent-500 hover:text-accent-700 text-3xl font-bold"
@@ -415,9 +432,9 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
             >
               {loading ? "Creating Property..." : "Create Property"}
             </button>
-            {error && (
+            {(formError || error) && (
               <div className="text-red-500 text-center mt-2 text-sm">
-                {error}
+                {formError || error}
               </div>
             )}
           </div>
