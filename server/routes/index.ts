@@ -9,6 +9,7 @@ import adminRoutes from "./admin";
 import membershipRoutes from "./membership";
 import serviceRoutes from "./service";
 import jobRequestRoutes from "./jobRequest";
+import propertyRoutes from "./property";
 import { authenticate } from "@/middlewares";
 
 // Apply auto-refresh middleware globally to all routes
@@ -23,6 +24,7 @@ router.use("/user", userRoutes);
 router.use("/admin", adminRoutes);
 router.use("/membership", membershipRoutes);
 router.use("/jobRequest", jobRequestRoutes);
+router.use("/property", propertyRoutes);
 
 // Example route
 router.get("/", (req: Request, res: Response) => {

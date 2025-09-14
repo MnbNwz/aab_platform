@@ -10,7 +10,6 @@ import { Toaster } from "react-hot-toast";
 
 import { store } from "./store";
 import { restoreSessionThunk } from "./store/thunks/authThunks";
-import { authSlice } from "./store/slices/authSlice";
 import LoginForm from "./components/auth/LoginForm";
 import SignUpForm from "./components/auth/SignUpForm";
 import AuthGuard from "./components/auth/AuthGuard";
@@ -25,16 +24,15 @@ import { PendingApproval } from "./components";
 const AppContent: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { isInitialized } = useSelector((state: RootState) => state.auth);
-
-  useEffect(() => {
-    // Always try to restore session on mount, so AuthGuard works on all routes
-    dispatch(restoreSessionThunk());
-  }, [dispatch]);
-
   // Don't show loading screen on auth pages
   const isAuthPage = window.location.pathname.match(
     /\/(login|signup|register)/
   );
+
+  useEffect(() => {
+    dispatch(restoreSessionThunk());
+  }, [dispatch]);
+
   if (!isInitialized && !isAuthPage) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-900 to-primary-800">

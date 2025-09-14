@@ -5,9 +5,9 @@ import {
   fetchJobRequestsThunk,
   setJobFilters,
 } from "../../store/slices/jobRequestsSlice";
-import { UserRole } from "../../types";
 import { Plus } from "lucide-react";
 import Loader from "../ui/Loader";
+import JobCreate from "../JobCreate";
 
 const JobManagementTable: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -17,6 +17,7 @@ const JobManagementTable: React.FC = () => {
   const user = useSelector((state: RootState) => state.auth.user);
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Fetch jobs on mount and when filters change
   useEffect(() => {
@@ -77,13 +78,28 @@ const JobManagementTable: React.FC = () => {
           {/* Create Job Button (admin/customer) */}
           {(isAdmin || isCustomer) && (
             <button
-              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-              // TODO: open job create modal or navigate to job create page
+              className="flex items-center px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition"
+              onClick={() => setShowCreateModal(true)}
               title={"Create Job"}
             >
               <Plus className="h-4 w-4 mr-2" />
-              Create Job
+              Create
             </button>
+          )}
+          {/* Job Create Modal */}
+          {showCreateModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+              <div className="bg-white rounded-lg shadow-lg px-24 py-8 w-full max-w-2xl relative">
+                <button
+                  className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                  onClick={() => setShowCreateModal(false)}
+                  aria-label="Close"
+                >
+                  &times;
+                </button>
+                <JobCreate />
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -242,12 +258,17 @@ const JobManagementTable: React.FC = () => {
       {pagination && (
         <div className="px-6 py-3 border-t border-gray-200 flex items-center justify-between">
           <div className="text-sm text-gray-700">
-            Showing {(pagination.currentPage - 1) * pagination.limit + 1} to{" "}
-            {Math.min(
-              pagination.currentPage * pagination.limit,
-              pagination.totalCount
-            )}{" "}
-            of {pagination.totalCount} jobs
+            {(() => {
+              const currentPage = pagination.currentPage ?? 0;
+              const limit = pagination.limit ?? 0;
+              const totalCount = pagination.totalCount ?? 0;
+              if (totalCount === 0) {
+                return "No data to show";
+              }
+              const start = (currentPage - 1) * limit + 1;
+              const end = Math.min(currentPage * limit, totalCount);
+              return `Showing ${start} to ${end} of ${totalCount} jobs`;
+            })()}
           </div>
           <div className="flex items-center space-x-2">
             <button

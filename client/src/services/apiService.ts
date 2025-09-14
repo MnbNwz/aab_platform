@@ -60,8 +60,15 @@ const makeRequest = async <T = any>(
   const url = `${API_CONFIG.baseURL}${endpoint}`;
 
   // Detect FormData for multipart
-  let headers: Record<string, string> = { "X-Requested-With": "XMLHttpRequest" };
-  if (options.headers && typeof options.headers === 'object' && !(options.headers instanceof Headers) && !Array.isArray(options.headers)) {
+  let headers: Record<string, string> = {
+    "X-Requested-With": "XMLHttpRequest",
+  };
+  if (
+    options.headers &&
+    typeof options.headers === "object" &&
+    !(options.headers instanceof Headers) &&
+    !Array.isArray(options.headers)
+  ) {
     headers = { ...headers, ...options.headers };
   }
   let body = options.body;
@@ -73,7 +80,9 @@ const makeRequest = async <T = any>(
     headers["Content-Type"] = "application/json";
     body = JSON.stringify(body);
     if (body) {
-      try { console.log(`📦 Request Body:`, JSON.parse(body as string)); } catch {}
+      try {
+        console.log(`📦 Request Body:`, JSON.parse(body as string));
+      } catch {}
     }
   } else if (body) {
     headers["Content-Type"] = "application/json";
@@ -108,8 +117,8 @@ const makeRequest = async <T = any>(
       data = await response.text();
     }
 
-  console.log('API Response: ' + response.status + ' ' + response.statusText);
-  console.log('Response Data:', data);
+    console.log("API Response: " + response.status + " " + response.statusText);
+    console.log("Response Data:", data);
 
     // Handle different HTTP status codes
     if (response.status === 401) {

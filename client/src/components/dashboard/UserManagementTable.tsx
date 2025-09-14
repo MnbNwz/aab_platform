@@ -24,7 +24,7 @@ import { setFilters } from "../../store/slices/userManagementSlice";
 import Loader from "../ui/Loader";
 import ConfirmModal from "../ui/ConfirmModal";
 
-export const UserManagementTable: React.FC = () => {
+const UserManagementTable: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const {
     users,
@@ -38,52 +38,51 @@ export const UserManagementTable: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const [deleteModal, setDeleteModal] = useState<{
+  // Generic confirmation modal state
+  const [confirmModal, setConfirmModal] = useState<{
     open: boolean;
     userId: string | null;
-  }>({ open: false, userId: null });
+    action: null | "approve" | "reject" | "revoke";
+  }>({ open: false, userId: null, action: null });
 
-  // Load users on component mount and when filters change
   useEffect(() => {
-    dispatch(fetchUsersThunk(filters));
+    !users && dispatch(fetchUsersThunk(filters));
   }, [dispatch, filters]);
 
-  // Handle search
   const handleSearch = () => {
     dispatch(setFilters({ ...filters, search: searchTerm, page: 1 }));
   };
 
-  // Handle filter changes
   const handleFilterChange = (newFilters: Partial<UserFilters>) => {
     dispatch(setFilters({ ...filters, ...newFilters, page: 1 }));
   };
 
-  // Handle pagination
   const handlePageChange = (page: number) => {
     dispatch(setFilters({ ...filters, page }));
   };
 
-  // Handle user actions
   const handleApproveUser = (userId: string) => {
-    dispatch(approveUserThunk(userId));
+    setConfirmModal({ open: true, userId, action: "approve" });
   };
-
   const handleRejectUser = (userId: string) => {
-    dispatch(rejectUserThunk(userId));
+    setConfirmModal({ open: true, userId, action: "reject" });
   };
-
   const handleRevokeUser = (userId: string) => {
-    setDeleteModal({ open: true, userId });
+    setConfirmModal({ open: true, userId, action: "revoke" });
   };
 
-  const handleConfirmDelete = () => {
-    if (deleteModal.userId) {
-      dispatch(revokeUserThunk(deleteModal.userId));
+  const handleConfirmAction = () => {
+    if (!confirmModal.userId || !confirmModal.action) return;
+    if (confirmModal.action === "approve") {
+      dispatch(approveUserThunk(confirmModal.userId));
+    } else if (confirmModal.action === "reject") {
+      dispatch(rejectUserThunk(confirmModal.userId));
+    } else if (confirmModal.action === "revoke") {
+      dispatch(revokeUserThunk(confirmModal.userId));
     }
-    setDeleteModal({ open: false, userId: null });
+    setConfirmModal({ open: false, userId: null, action: null });
   };
 
-  // Get status badge color
   const getStatusBadge = (status: string, approval: string) => {
     if (status === "revoke") {
       return "bg-red-100 text-red-800";
@@ -100,7 +99,6 @@ export const UserManagementTable: React.FC = () => {
     return "bg-gray-100 text-gray-800";
   };
 
-  // Get role badge color
   const getRoleBadge = (role: string) => {
     switch (role) {
       case "admin":
@@ -127,7 +125,11 @@ export const UserManagementTable: React.FC = () => {
       </div>
     );
   }
-
+  const reUsableTableHeader = (text: string) => (
+    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+      {text}
+    </th>
+  );
   return (
     <div className="bg-white rounded-lg shadow">
       {/* Header */}
@@ -253,24 +255,10 @@ export const UserManagementTable: React.FC = () => {
         <table className="w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                User
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Role
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Approval
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Created
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
+              {reUsableTableHeader("User")}
+              {reUsableTableHeader("Role")}
+              {reUsableTableHeader("Status")} {reUsableTableHeader("Approval")}
+              {reUsableTableHeader("Created")} {reUsableTableHeader("Actions")}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -404,16 +392,44 @@ export const UserManagementTable: React.FC = () => {
         </table>
       </div>
 
-      {/* Confirm Delete Modal */}
+      {/* Generic Confirm Modal for all actions */}
       <ConfirmModal
-        isOpen={deleteModal.open}
-        title="Delete User"
-        message="Are you sure you want to delete this user? This action cannot be undone."
-        confirmText="Yes, Delete"
+        isOpen={confirmModal.open}
+        title={
+          confirmModal.action === "approve"
+            ? "Approve User"
+            : confirmModal.action === "reject"
+            ? "Reject User"
+            : confirmModal.action === "revoke"
+            ? "Delete User"
+            : "Confirm Action"
+        }
+        message={
+          confirmModal.action === "approve"
+            ? "Are you sure you want to approve this user?"
+            : confirmModal.action === "reject"
+            ? "Are you sure you want to reject this user?"
+            : confirmModal.action === "revoke"
+            ? "Are you sure you want to delete this user? This action cannot be undone."
+            : "Are you sure you want to perform this action?"
+        }
+        confirmText={
+          confirmModal.action === "approve"
+            ? "Yes, Approve"
+            : confirmModal.action === "reject"
+            ? "Yes, Reject"
+            : confirmModal.action === "revoke"
+            ? "Yes, Delete"
+            : "Yes"
+        }
         cancelText="Cancel"
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setDeleteModal({ open: false, userId: null })}
-        loading={deleteModal.userId ? updatingUsers[deleteModal.userId] : false}
+        onConfirm={handleConfirmAction}
+        onCancel={() =>
+          setConfirmModal({ open: false, userId: null, action: null })
+        }
+        loading={
+          confirmModal.userId ? updatingUsers[confirmModal.userId] : false
+        }
       />
 
       {/* Pagination */}

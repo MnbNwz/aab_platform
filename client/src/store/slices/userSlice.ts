@@ -1,36 +1,28 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { UserApproval, UserRole, UserStatus } from "../../types";
 
-export interface UserProfile {
-  id: string;
-  email: string;
+export interface ProfileFormState {
+  role: UserRole;
   firstName: string;
   lastName: string;
-  phone?: string;
-  address?: {
-    street: string;
-    city: string;
-    province: string;
-    postalCode: string;
-    country: string;
+  status: UserStatus;
+  approval: UserApproval;
+  phone: string;
+  geoHome: [number, number];
+  contractor?: {
+    companyName: string;
+    services: string[];
+    license: string;
+    taxId: string;
+    docs: Array<{ type: string; url: string }>;
   };
-  preferences: {
-    notifications: boolean;
-    emailAlerts: boolean;
-    smsAlerts: boolean;
-    language: string;
-    timezone: string;
-  };
-  subscription?: {
-    type: string;
-    status: string;
-    startDate: string;
-    endDate: string;
-    features: string[];
+  customer?: {
+    defaultPropertyType: "domestic" | "commercial";
   };
 }
 
 export interface UserState {
-  profile: UserProfile | null;
+  profile: ProfileFormState | null;
   isLoading: boolean;
   error: string | null;
   updateLoading: boolean;
@@ -44,41 +36,41 @@ const initialState: UserState = {
 };
 
 export const userSlice = createSlice({
-  name: 'user',
+  name: "user",
   initialState,
   reducers: {
     fetchProfileStart: (state) => {
       state.isLoading = true;
       state.error = null;
     },
-    
-    fetchProfileSuccess: (state, action: PayloadAction<UserProfile>) => {
+
+    fetchProfileSuccess: (state, action: PayloadAction<ProfileFormState>) => {
       state.isLoading = false;
       state.profile = action.payload;
       state.error = null;
     },
-    
+
     fetchProfileFailure: (state, action: PayloadAction<string>) => {
       state.isLoading = false;
       state.error = action.payload;
     },
-    
+
     updateProfileStart: (state) => {
       state.updateLoading = true;
       state.error = null;
     },
-    
-    updateProfileSuccess: (state, action: PayloadAction<UserProfile>) => {
+
+    updateProfileSuccess: (state, action: PayloadAction<ProfileFormState>) => {
       state.updateLoading = false;
       state.profile = action.payload;
       state.error = null;
     },
-    
+
     updateProfileFailure: (state, action: PayloadAction<string>) => {
       state.updateLoading = false;
       state.error = action.payload;
     },
-    
+
     clearUserError: (state) => {
       state.error = null;
     },

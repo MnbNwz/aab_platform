@@ -1,1 +1,1 @@
-// Export controllers from this folder
+export * as propertyController from "./propertyController";

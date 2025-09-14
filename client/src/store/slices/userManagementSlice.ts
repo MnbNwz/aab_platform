@@ -1,5 +1,5 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import type { User, UserStats, UsersResponse, UserFilters } from '../../types';
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import type { User, UserStats, UsersResponse, UserFilters } from "../../types";
 
 export interface UserManagementState {
   // User statistics
@@ -46,8 +46,8 @@ const initialState: UserManagementState = {
   filters: {
     page: 1,
     limit: 10,
-    sortBy: 'createdAt',
-    sortOrder: 'desc',
+    sortBy: "createdAt",
+    sortOrder: "desc",
   },
 
   selectedUser: null,
@@ -59,7 +59,7 @@ const initialState: UserManagementState = {
 };
 
 export const userManagementSlice = createSlice({
-  name: 'userManagement',
+  name: "userManagement",
   initialState,
   reducers: {
     // Stats actions
@@ -105,9 +105,10 @@ export const userManagementSlice = createSlice({
       state.filters = {
         page: 1,
         limit: 10,
-        sortBy: 'createdAt',
-        sortOrder: 'desc',
+        sortBy: "createdAt",
+        sortOrder: "desc",
       };
+      state.users = [];
     },
 
     // Selected user actions
@@ -132,7 +133,10 @@ export const userManagementSlice = createSlice({
     },
 
     // Update actions
-    setUserUpdating: (state, action: PayloadAction<{ userId: string; isUpdating: boolean }>) => {
+    setUserUpdating: (
+      state,
+      action: PayloadAction<{ userId: string; isUpdating: boolean }>
+    ) => {
       const { userId, isUpdating } = action.payload;
       if (isUpdating) {
         state.updatingUsers[userId] = true;
@@ -143,19 +147,24 @@ export const userManagementSlice = createSlice({
     },
     updateUserInList: (state, action: PayloadAction<User>) => {
       const updatedUser = action.payload;
-      const index = state.users.findIndex(user => user._id === updatedUser._id);
+      const index = state.users.findIndex(
+        (user) => user._id === updatedUser._id
+      );
       if (index !== -1) {
         state.users[index] = updatedUser;
       }
       delete state.updatingUsers[updatedUser._id];
       delete state.updateErrors[updatedUser._id];
-      
+
       // Update selected user if it's the same
       if (state.selectedUser && state.selectedUser._id === updatedUser._id) {
         state.selectedUser = updatedUser;
       }
     },
-    setUpdateError: (state, action: PayloadAction<{ userId: string; error: string }>) => {
+    setUpdateError: (
+      state,
+      action: PayloadAction<{ userId: string; error: string }>
+    ) => {
       const { userId, error } = action.payload;
       state.updateErrors[userId] = error;
       delete state.updatingUsers[userId];
@@ -164,10 +173,10 @@ export const userManagementSlice = createSlice({
     // Remove user from list (after revoke)
     removeUserFromList: (state, action: PayloadAction<string>) => {
       const userId = action.payload;
-      state.users = state.users.filter(user => user._id !== userId);
+      state.users = state.users.filter((user) => user._id !== userId);
       delete state.updatingUsers[userId];
       delete state.updateErrors[userId];
-      
+
       // Clear selected user if it's the same
       if (state.selectedUser && state.selectedUser._id === userId) {
         state.selectedUser = null;

@@ -1,3 +1,4 @@
+import MyProperties from "./MyProperties";
 import React, { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import {
@@ -12,11 +13,9 @@ import UserDropdown from "./ui/UserDropdown";
 import { logoutThunk } from "../store/thunks/authThunks";
 import Sidebar from "./dashboard/Sidebar";
 import UserStatsCards from "./dashboard/UserStatsCards";
-import { setFilters } from "../store/slices/userManagementSlice";
 import UserManagementTable from "./dashboard/UserManagementTable";
 import { AppDispatch, RootState } from "../store";
 import ProfileModal from "./ProfileModal";
-import JobCreate from "./JobCreate";
 import JobManagementTable from "./dashboard/JobManagementTable";
 import type { User } from "../types";
 import { handleApiError } from "../services/apiService";
@@ -28,7 +27,6 @@ const Dashboard: React.FC = () => {
   const { user } = useSelector((state: RootState) => state.auth);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
 
   const handleLogout = () => {
     dispatch(logoutThunk());
@@ -84,7 +82,6 @@ const Dashboard: React.FC = () => {
           activeTab={activeTab}
           handleLogout={handleLogout}
           setActiveTab={setActiveTab}
-          setProfileOpen={setProfileOpen}
         />
       </div>
     </div>
@@ -97,20 +94,21 @@ const DashboardContent: React.FC<{
   activeTab: string;
   handleLogout: () => void;
   setActiveTab: (tab: string) => void;
-  setProfileOpen: (open: boolean) => void;
-}> = ({ user, activeTab, handleLogout, setActiveTab, setProfileOpen }) => {
+}> = ({ user, activeTab, handleLogout, setActiveTab }) => {
   const dispatch = useDispatch<AppDispatch>();
   const isAdmin = user.role === "admin";
   const [profileOpen, setLocalProfileOpen] = useState(false);
 
   const handleProfileClose = () => {
     setLocalProfileOpen(false);
-    setProfileOpen(false);
   };
 
-  const handleSaveProfile = async ({ userId, profileData }: { userId: string; profileData: Partial<User> }) => {
+  const handleSaveProfile = async (profileData: Partial<User>) => {
     try {
-      await dispatch(updateProfileThunk({ userId, profileData })).unwrap();
+      // Always use user._id for update
+      await dispatch(
+        updateProfileThunk({ userId: user._id, profileData })
+      ).unwrap();
       handleProfileClose();
     } catch (error) {
       showToast.error(handleApiError(error));
@@ -142,8 +140,8 @@ const DashboardContent: React.FC<{
 
           <UserStatsCards
             onCardClick={(filter) => {
-              setActiveTab("users");
-              dispatch(setFilters({ ...filter, page: 1 }));
+              // setActiveTab("users");
+              // dispatch(setFilters({ ...filter, page: 1 }));
             }}
           />
 
@@ -185,17 +183,10 @@ const DashboardContent: React.FC<{
     } else {
       // Customer/Contractor Dashboard
       return (
-        <div className="space-y-8">
-          <div className="flex items-center justify-between pt-4 pb-2">
-            <div>
-              <h1 className="text-3xl font-bold text-accent-500">
-                Welcome, {user.firstName}!
-              </h1>
-              <p className="text-lg font-semibold text-accent-400 mt-2">
-                {user.role === "customer" ? "Customer" : "Contractor"} Dashboard
-              </p>
-            </div>
-            <div className="ml-4">
+        <div className="space-y-0 relative">
+          {/* UserDropdown absolute for <768px, static for md+ */}
+          <div className="block md:hidden">
+            <div className="absolute right-0 -top-2 md:top-8 z-10">
               <UserDropdown
                 user={user}
                 onLogout={handleLogout}
@@ -204,66 +195,101 @@ const DashboardContent: React.FC<{
               />
             </div>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Profile Card */}
-            <div
-              className="bg-white rounded-lg shadow p-6 cursor-pointer hover:bg-gray-50"
-              onClick={() => setLocalProfileOpen(true)}
-            >
-              <div className="flex items-center space-x-4">
-                <div className="bg-blue-100 p-3 rounded-full">
-                  {user.role === "customer" ? (
-                    <ShoppingCart className="h-6 w-6 text-blue-600" />
-                  ) : (
-                    <Briefcase className="h-6 w-6 text-blue-600" />
-                  )}
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Profile
-                  </h3>
-                  <p className="text-sm text-gray-500">Manage your account</p>
-                </div>
+          <div className="hidden md:flex items-center justify-between pt-8 pb-2">
+            <div>
+              <h1 className="text-3xl font-bold text-accent-500">
+                Welcome, {user.firstName}!
+              </h1>
+              <p className="text-lg font-semibold text-accent-400 mt-2">
+                {user.role === "customer" ? "Customer" : "Contractor"} Dashboard
+              </p>
+            </div>
+            {/* UserDropdown absolute for md+ */}
+            <div className="hidden md:block">
+              <div className="absolute right-0 top-0 z-10">
+                <UserDropdown
+                  user={user}
+                  onLogout={handleLogout}
+                  onProfile={() => setLocalProfileOpen(true)}
+                  onSettings={() => {}}
+                />
               </div>
             </div>
+          </div>
+          {/* Centered welcome text for <768px */}
+          <div className="md:hidden pt-12 pb-6 text-center">
+            <h1 className="text-3xl font-bold text-accent-500">
+              Welcome, {user.firstName}!
+            </h1>
+            <p className="text-lg font-semibold text-accent-400 mt-2">
+              {user.role === "customer" ? "Customer" : "Contractor"} Dashboard
+            </p>
+          </div>
 
-            {/* Services Card (Contractor only) */}
-            {user.role === "contractor" && (
-              <div className="bg-white rounded-lg shadow p-6">
+          {/* Tab content */}
+          {activeTab === "dashboard" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Profile Card */}
+              <div
+                className="bg-white rounded-lg shadow p-6 cursor-pointer hover:bg-gray-50"
+                onClick={() => setLocalProfileOpen(true)}
+              >
                 <div className="flex items-center space-x-4">
-                  <div className="bg-green-100 p-3 rounded-full">
-                    <Briefcase className="h-6 w-6 text-green-600" />
+                  <div className="bg-blue-100 p-3 rounded-full">
+                    {user.role === "customer" ? (
+                      <ShoppingCart className="h-6 w-6 text-blue-600" />
+                    ) : (
+                      <Briefcase className="h-6 w-6 text-blue-600" />
+                    )}
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">
-                      Services
+                      Profile
+                    </h3>
+                    <p className="text-sm text-gray-500">Manage your account</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Services Card (Contractor only) */}
+              {user.role === "contractor" && (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <div className="flex items-center space-x-4">
+                    <div className="bg-green-100 p-3 rounded-full">
+                      <Briefcase className="h-6 w-6 text-green-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Services
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        Manage your services
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Bookings Card */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center space-x-4">
+                  <div className="bg-purple-100 p-3 rounded-full">
+                    <Calendar className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {user.role === "customer"
+                        ? "My Bookings"
+                        : "Appointments"}
                     </h3>
                     <p className="text-sm text-gray-500">
-                      Manage your services
+                      View and manage bookings
                     </p>
                   </div>
                 </div>
               </div>
-            )}
-
-            {/* Bookings Card */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center space-x-4">
-                <div className="bg-purple-100 p-3 rounded-full">
-                  <Calendar className="h-6 w-6 text-purple-600" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {user.role === "customer" ? "My Bookings" : "Appointments"}
-                  </h3>
-                  <p className="text-sm text-gray-500">
-                    View and manage bookings
-                  </p>
-                </div>
-              </div>
             </div>
-          </div>
+          )}
           <ProfileModal
             isOpen={profileOpen}
             onClose={handleProfileClose}
@@ -280,9 +306,18 @@ const DashboardContent: React.FC<{
     return <UserManagementTable />;
   }
 
+  if (
+    activeTab === "properties" &&
+    (user.role === "admin" || user.role === "customer")
+  ) {
+    return <MyProperties userRole={user.role} />;
+  }
 
   // Show JobManagementTable for jobs tab (admin and customer)
-  if (activeTab === "jobs" && (user.role === "admin" || user.role === "customer")) {
+  if (
+    activeTab === "jobs" &&
+    (user.role === "admin" || user.role === "customer")
+  ) {
     return <JobManagementTable />;
   }
 
