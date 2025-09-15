@@ -71,23 +71,25 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
   const [searchResults, setSearchResults] = useState<Property[] | null>(null);
 
   useEffect(() => {
-    dispatch(getMyPropertiesThunk());
+    !(properties.length > 0) && dispatch(getMyPropertiesThunk());
   }, [dispatch]);
 
+  const [searchLoading, setSearchLoading] = useState(false);
   const handleSearch = async () => {
+    setSearchLoading(true);
     try {
       const res = await searchPropertiesApi(search);
-      setSearchResults(res.data || []);
+      setSearchResults(res.data.properties || []);
     } catch (e) {
       setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
     }
   };
-  const filtered = (searchResults ?? properties)
-    .filter((p) => {
-      if (filter === "all") return true;
-      return filter === "active" ? p.isActive : !p.isActive;
-    })
-    .filter((p) => p.title.toLowerCase().includes(search.toLowerCase()));
+  const filtered = (searchResults ?? properties).filter((p) => {
+    if (filter === "all") return true;
+    return filter === "active" ? p.isActive : !p.isActive;
+  });
 
   const sorted = [...filtered].sort((a, b) => {
     if (sortOrder === "asc") return a.title.localeCompare(b.title);
@@ -100,78 +102,190 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
   const paginated = sorted.slice((page - 1) * pageSize, page * pageSize);
 
   return (
-    <div className="bg-white rounded-lg shadow mt-2 md:mt-0">
-      {/* Header */}
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-4 flex-wrap">
-          <h2 className="text-xl font-semibold text-green-600 text-center md:text-left">
-            My Properties
-          </h2>
-          <div className="flex flex-col w-full gap-2 md:flex-row md:items-center md:gap-4 md:w-auto md:space-x-0">
-            {/* Filters and search row */}
-            <div className="flex flex-row w-full gap-2 md:w-auto md:flex-1">
-              <select
-                value={filter}
-                onChange={(e) => setFilter(e.target.value as any)}
-                className="px-3 py-2 border border-gray-300 rounded-lg w-28 flex-shrink-0"
-              >
-                <option value="all">All</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
+    <div className="bg-white rounded-lg shadow">
+      {/* Controls Header */}
+      <div className="p-4 sm:p-6 border-b border-gray-200">
+        <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-4">
+          {/* Filters and Search */}
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:flex-1 lg:max-w-2xl">
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value as any)}
+              className="px-3 py-2 md:py-3 lg:py-2 border border-gray-300 rounded-lg w-full sm:w-24 md:w-28 lg:w-24 flex-shrink-0 text-sm md:text-base lg:text-sm"
+            >
+              <option value="all">All</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
 
-              <div className="relative flex-grow w-full">
-                <input
-                  type="text"
-                  placeholder="Search properties..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full md:w-auto pl-3 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
-                />
-              </div>
+            <div className="relative flex-1 md:flex-[2] lg:flex-1 lg:max-w-md">
+              <input
+                type="text"
+                placeholder="Search properties..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  if (e.target.value.trim() === "") setSearchResults(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    if (search.trim() === "") {
+                      onCreateNew();
+                    } else {
+                      handleSearch();
+                    }
+                  }
+                }}
+                className="w-full pl-3 pr-4 py-2 md:py-3 lg:py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 text-sm md:text-base lg:text-sm"
+              />
             </div>
-            {/* Button row: right-aligned on md+, next line on mobile */}
-            <div className="flex md:flex-1 md:justify-end">
-              {search.trim() === "" ? (
-                <button
-                  className="bg-accent-500 text-white px-4 py-2 rounded font-semibold hover:bg-accent-600 transition w-full md:w-auto mt-2 md:mt-0"
-                  onClick={onCreateNew}
-                >
-                  Create
-                </button>
-              ) : (
-                <button
-                  className="bg-accent-500 text-white px-4 py-2 rounded font-semibold hover:bg-accent-600 transition w-full md:w-auto mt-2 md:mt-0 disabled:opacity-50"
-                  onClick={handleSearch}
-                  disabled={loading}
-                >
-                  Search
-                </button>
-              )}
-            </div>
+          </div>
+
+          {/* Action Button */}
+          <div className="flex justify-center sm:justify-end">
+            {search.trim() === "" ? (
+              <button
+                className="bg-accent-500 text-white px-4 py-2 md:py-3 lg:py-2 rounded font-semibold hover:bg-accent-600 transition w-full sm:w-auto text-sm md:text-base lg:text-sm"
+                onClick={onCreateNew}
+              >
+                Create
+              </button>
+            ) : (
+              <button
+                className="bg-accent-500 text-white px-4 py-2 md:py-3 lg:py-2 rounded font-semibold hover:bg-accent-600 transition w-full sm:w-auto disabled:opacity-50 text-sm md:text-base lg:text-sm"
+                onClick={handleSearch}
+                disabled={loading || searchLoading}
+              >
+                Search
+              </button>
+            )}
           </div>
         </div>
       </div>
-      <div className="overflow-x-auto">
+
+      {/* Mobile Card View */}
+      <div className="block lg:hidden">
+        {loading || searchLoading ? (
+          <div className="py-12">
+            <div className="flex justify-center items-center w-full h-full">
+              <Loader size="large" color="accent" />
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3 p-4">
+            {paginated.map((property) => (
+              <div
+                key={property._id}
+                className={`bg-white border border-gray-200 rounded-lg p-4 shadow-sm ${
+                  !property.isActive ? "opacity-60" : ""
+                }`}
+              >
+                <div className="flex justify-between items-start mb-3 gap-2">
+                  <h3 className="font-semibold text-gray-900 text-sm flex-1 min-w-0">
+                    <span className="block truncate" title={property.title}>
+                      {property.title.length > 30
+                        ? `${property.title.substring(0, 30)}...`
+                        : property.title}
+                    </span>
+                  </h3>
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-bold flex-shrink-0 ${
+                      property.isActive
+                        ? "bg-accent-100 text-accent-700"
+                        : "bg-primary-200 text-primary-700"
+                    }`}
+                  >
+                    {property.isActive ? "Active" : "Inactive"}
+                  </span>
+                </div>
+
+                <div className="text-sm text-gray-600 mb-3">
+                  <span className="font-medium">Type:</span>{" "}
+                  <span
+                    className="truncate block"
+                    title={property.propertyType}
+                  >
+                    {property.propertyType.length > 25
+                      ? `${property.propertyType.substring(0, 25)}...`
+                      : property.propertyType}
+                  </span>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    className="flex-1 bg-accent-50 text-accent-600 px-3 py-2 rounded text-sm font-medium hover:bg-accent-100 transition"
+                    onClick={() => {
+                      const mapped = {
+                        ...property,
+                        dimensions: (property as any).dimensions || {
+                          length: 0,
+                          width: 0,
+                        },
+                        isActive:
+                          typeof property.isActive === "boolean"
+                            ? property.isActive
+                            : true,
+                        images: (property.images || []).filter(
+                          (img: any) => typeof img === "string"
+                        ),
+                      };
+                      setViewProperty(mapped as Property);
+                      setViewModalOpen(true);
+                    }}
+                  >
+                    View Details
+                  </button>
+                  <button
+                    className={`flex-1 px-3 py-2 rounded text-sm font-medium transition ${
+                      property.isActive
+                        ? "bg-primary-200 text-primary-800 hover:bg-primary-300"
+                        : "bg-primary-100 text-primary-400 cursor-not-allowed"
+                    }`}
+                    disabled={!property.isActive}
+                    onClick={() => {
+                      if (
+                        property.isActive &&
+                        typeof property._id === "string"
+                      ) {
+                        setConfirmInactiveId(property._id);
+                      }
+                    }}
+                  >
+                    Set Inactive
+                  </button>
+                </div>
+              </div>
+            ))}
+            {paginated.length === 0 && (
+              <div className="text-center text-gray-500 py-8">
+                No properties found.
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Table View */}
+      <div className="hidden lg:block overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200 text-sm">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-3 py-2 md:px-6 md:py-3 text-center font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+              <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
                 Title
               </th>
-              <th className="px-3 py-2 md:px-6 md:py-3 text-center font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+              <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
                 Type
               </th>
-              <th className="px-3 py-2 md:px-6 md:py-3 text-center font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+              <th className="px-6 py-3 text-center font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-3 py-2 md:px-6 md:py-3 text-center font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                Action
+              <th className="px-6 py-3 text-center font-medium text-gray-500 uppercase tracking-wider">
+                Actions
               </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {loading ? (
+            {loading || searchLoading ? (
               <tr>
                 <td colSpan={4} className="py-12">
                   <div className="flex justify-center items-center w-full h-full">
@@ -188,92 +302,72 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
                       !property.isActive ? "opacity-60" : ""
                     }`}
                   >
-                    <td className="px-3 py-2 md:px-6 md:py-4 font-semibold text-gray-900 max-w-[10rem] truncate text-center">
-                      {property.title}
+                    <td className="px-6 py-4 font-semibold text-gray-900 max-w-xs">
+                      <span className="block truncate" title={property.title}>
+                        {property.title.length > 40
+                          ? `${property.title.substring(0, 40)}...`
+                          : property.title}
+                      </span>
                     </td>
-                    <td className="px-3 py-2 md:px-6 md:py-4 text-gray-700 whitespace-nowrap text-center">
+                    <td className="px-6 py-4 text-gray-700">
                       {property.propertyType}
                     </td>
-                    <td className="px-3 py-2 md:px-6 md:py-4 text-center">
+                    <td className="px-6 py-4 text-center">
                       <span
                         className={`px-2 py-1 rounded text-xs font-bold ${
                           property.isActive
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
+                            ? "bg-accent-100 text-accent-700"
+                            : "bg-primary-200 text-primary-700"
                         }`}
                       >
                         {property.isActive ? "Active" : "Inactive"}
                       </span>
                     </td>
-                    <td className="px-3 py-2 md:px-6 md:py-4 text-gray-700 whitespace-nowrap text-center">
-                      <button
-                        className="text-blue-600 hover:underline mr-2"
-                        onClick={() => {
-                          // Map property to Property type if needed
-                          // Ensure property matches Property type for modal
-                          const mapped = {
-                            ...property,
-                            dimensions: (property as any).dimensions || {
-                              length: 0,
-                              width: 0,
-                            },
-                            isActive:
-                              typeof property.isActive === "boolean"
-                                ? property.isActive
-                                : true,
-                            images: (property.images || []).filter(
-                              (img: any) => typeof img === "string"
-                            ),
-                          };
-                          setViewProperty(mapped as Property);
-                          setViewModalOpen(true);
-                        }}
-                      >
-                        View
-                      </button>
-                      {"|  "}
-                      <button
-                        className={`text-red-600 ${
-                          property.isActive
-                            ? "hover:underline cursor-pointer"
-                            : "opacity-50 cursor-not-allowed"
-                        } `}
-                        disabled={!property.isActive}
-                        tabIndex={property.isActive ? 0 : -1}
-                        style={
-                          !property.isActive
-                            ? {
-                                pointerEvents: "none",
-                                filter: "grayscale(0.5)",
-                                background: "rgba(0,0,0,0.02)",
-                              }
-                            : {}
-                        }
-                        onClick={() => {
-                          if (
-                            property.isActive &&
-                            typeof property._id === "string"
-                          ) {
-                            setConfirmInactiveId(property._id);
-                          }
-                        }}
-                      >
-                        Inactive
-                      </button>
-                      {/* Confirm Modal for Inactive */}
-                      <ConfirmModal
-                        isOpen={!!confirmInactiveId}
-                        title="Set Property Inactive?"
-                        message="Do you want to set this property as inactive?"
-                        confirmText="Confirm"
-                        cancelText="Cancel"
-                        loading={inactiveLoading}
-                        onCancel={() => setConfirmInactiveId(null)}
-                        onConfirm={() => {
-                          if (confirmInactiveId)
-                            handleSetInactive(confirmInactiveId);
-                        }}
-                      />
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex justify-center gap-2">
+                        <button
+                          className="text-accent-600 hover:underline text-sm"
+                          onClick={() => {
+                            const mapped = {
+                              ...property,
+                              dimensions: (property as any).dimensions || {
+                                length: 0,
+                                width: 0,
+                              },
+                              isActive:
+                                typeof property.isActive === "boolean"
+                                  ? property.isActive
+                                  : true,
+                              images: (property.images || []).filter(
+                                (img: any) => typeof img === "string"
+                              ),
+                            };
+                            setViewProperty(mapped as Property);
+                            setViewModalOpen(true);
+                          }}
+                        >
+                          View
+                        </button>
+                        <span className="text-primary-300">|</span>
+                        <button
+                          className={`text-primary-600 text-sm ${
+                            property.isActive
+                              ? "hover:underline cursor-pointer"
+                              : "opacity-50 cursor-not-allowed"
+                          }`}
+                          disabled={!property.isActive}
+                          onClick={() => {
+                            if (
+                              property.isActive &&
+                              typeof property._id === "string"
+                            ) {
+                              setConfirmInactiveId(property._id);
+                            }
+                          }}
+                        >
+                          Inactive
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -288,35 +382,77 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
             )}
           </tbody>
         </table>
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="px-3 md:px-6 py-3 border-t border-gray-200 flex flex-col md:flex-row items-center justify-between gap-2 text-xs md:text-sm">
-            <div className="text-gray-700">
+      </div>
+
+      {/* Confirm Modal for Inactive */}
+      <ConfirmModal
+        isOpen={!!confirmInactiveId}
+        title="Set Property Inactive?"
+        message="Do you want to set this property as inactive?"
+        confirmText="Confirm"
+        cancelText="Cancel"
+        loading={inactiveLoading}
+        onCancel={() => setConfirmInactiveId(null)}
+        onConfirm={() => {
+          if (confirmInactiveId) handleSetInactive(confirmInactiveId);
+        }}
+      />
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="px-4 sm:px-6 py-4 border-t border-gray-200">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="text-sm text-gray-700 order-2 sm:order-1">
               Showing {(page - 1) * pageSize + 1} to{" "}
               {Math.min(page * pageSize, total)} of {total} properties
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-2 order-1 sm:order-2">
               <button
                 onClick={() => setPage(page - 1)}
                 disabled={page === 1}
-                className="p-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                className="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm font-medium min-w-[44px]"
               >
-                &lt;
+                Previous
               </button>
-              <span className="px-2 md:px-3 py-1">
-                Page {page} of {totalPages}
-              </span>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (page <= 3) {
+                    pageNum = i + 1;
+                  } else if (page >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = page - 2 + i;
+                  }
+
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setPage(pageNum)}
+                      className={`px-3 py-2 text-sm font-medium rounded-lg min-w-[40px] ${
+                        page === pageNum
+                          ? "bg-accent-500 text-white"
+                          : "text-gray-700 hover:bg-gray-100"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
               <button
                 onClick={() => setPage(page + 1)}
                 disabled={page === totalPages}
-                className="p-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                className="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm font-medium min-w-[44px]"
               >
-                &gt;
+                Next
               </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
       {/* Property View Modal */}
       <PropertyViewModal
         isOpen={viewModalOpen}

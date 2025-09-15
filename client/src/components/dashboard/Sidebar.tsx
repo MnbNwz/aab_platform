@@ -10,7 +10,6 @@ import {
   Settings,
   LogOut,
   Heart,
-  Menu,
   UserCircle,
   ClipboardList,
   ChartBar,
@@ -207,19 +206,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
-        {/* Mobile Toggle Button */}
-        <button
-          onClick={onMobileToggle}
-          className={`md:hidden p-2 absolute top-4
-    ${isMobileOpen ? "right-2 z-50" : "-right-12"}`}
-        >
-          <Menu
-            className={`h-6 w-6 ${
-              isMobileOpen ? "text-white" : "text-primary-900"
-            }`}
-          />
-        </button>
-
         {/* Site Icon at Top */}
         <div className="flex items-center justify-center py-6">
           <img

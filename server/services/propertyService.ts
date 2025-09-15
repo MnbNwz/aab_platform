@@ -69,9 +69,24 @@ export const getUserProperties = async (
   filters: any = {},
 ) => {
   const query: any = { userId };
+
+  // Handle property type filter
   if (filters.propertyType) query.propertyType = filters.propertyType;
+
+  // Handle search filter - search across multiple fields
+  if (filters.search) {
+    const searchRegex = { $regex: filters.search, $options: "i" };
+    query.$or = [
+      { title: searchRegex },
+      { description: searchRegex },
+      { propertyType: searchRegex },
+      { areaUnit: searchRegex },
+    ];
+  }
+
+  // Handle specific title filter (for backward compatibility)
   if (filters.title) query.title = { $regex: filters.title, $options: "i" };
-  // Add more filters as needed
+
   const properties = await Property.find(query)
     .skip((+page - 1) * +limit)
     .limit(+limit)

@@ -9,6 +9,7 @@ import userManagementReducer from "./slices/userManagementSlice";
 import membershipReducer from "./slices/membershipSlice";
 import jobRequestsReducer from "./slices/jobRequestsSlice";
 import propertyReducer from "./slices/propertySlice";
+import adminProfileReducer from "./slices/adminProfileSlice";
 
 export const store = configureStore({
   reducer: {
@@ -21,6 +22,7 @@ export const store = configureStore({
     membership: membershipReducer,
     jobRequests: jobRequestsReducer,
     property: propertyReducer,
+    adminProfile: adminProfileReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

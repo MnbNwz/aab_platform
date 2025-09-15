@@ -15,7 +15,7 @@ interface ProfileModalProps {
 
 const isAdmin = (role: UserRole): role is "admin" => role === "admin";
 const getInputClassName = (disabled: boolean = false) =>
-  `w-full rounded-lg px-3 py-2 border border-primary-200 focus:outline-none ${
+  `w-full rounded-lg px-3 py-2 sm:py-3 border border-primary-300 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 text-sm sm:text-base ${
     disabled
       ? "bg-primary-100 text-primary-700 cursor-not-allowed"
       : "bg-white text-primary-900"
@@ -141,6 +141,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
     } catch (error) {
       setLoading(false);
       // Error will be handled by the parent component
+      // Don't close the modal on error
     }
   };
 
@@ -160,379 +161,380 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
         />
       )}
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4"
         onClick={(e) => {
           if (e.target === e.currentTarget) onClose();
         }}
       >
         <div
-          className="bg-primary-50 rounded-3xl shadow-2xl w-full max-w-xl mx-4 p-12 relative"
-          style={{
-            height: "90vh",
-            display: "flex",
-            flexDirection: "column",
-          }}
+          className="bg-white rounded-lg shadow-2xl w-full max-w-2xl mx-auto relative flex flex-col max-h-[90vh]"
           onClick={(e) => e.stopPropagation()}
         >
-          <button
-            className="absolute top-8 right-8 text-accent-500 hover:text-accent-700 text-3xl font-bold"
-            onClick={onClose}
-          >
-            &#10005;
-          </button>
-          <h2 className="text-4xl font-extrabold text-accent-500 mb-12 text-center tracking-tight">
-            Edit Profile
-          </h2>
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-8 overflow-y-auto"
-            style={{ flex: 1, minHeight: 0 }}
-          >
-            {/* Common fields */}
-            <div>
-              <label className="block text-primary-900 font-medium mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                value={user.email}
-                readOnly
-                className={getInputClassName(true)}
-              />
-            </div>
-            <div>
-              <label className="block text-primary-900 font-medium mb-1">
-                Phone
-              </label>
-              <input
-                type="text"
-                value={form.phone ?? user.phone}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setForm({ ...form, phone: val });
-                  if (!/^[0-9]*$/.test(val)) {
-                    setPhoneError("Phone number must contain only digits.");
-                  } else {
-                    setPhoneError("");
-                  }
-                }}
-                className={getInputClassName(user.role === "admin")}
-                disabled={user.role === "admin"}
-              />
-              {phoneError && (
-                <span className="text-red-500 text-xs mt-1 block">
-                  {phoneError}
-                </span>
-              )}
-            </div>
-            {user.role === "admin" ? (
-              <>
-                <div>
-                  <label className="block text-primary-900 font-medium mb-1">
-                    First Name
-                  </label>
-                  <input
-                    type="text"
-                    value={form.firstName}
-                    disabled
-                    className={getInputClassName(true)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-primary-900 font-medium mb-1">
-                    Last Name
-                  </label>
-                  <input
-                    type="text"
-                    value={form.lastName}
-                    disabled
-                    className={getInputClassName(true)}
-                  />
-                </div>
-              </>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-primary-900 font-medium mb-1">
-                    First Name
-                  </label>
-                  <input
-                    type="text"
-                    value={form.firstName}
-                    onChange={(e) => handleChange(e, "firstName")}
-                    className={getInputClassName(isAdmin(user.role))}
-                    disabled={isAdmin(user.role)}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-primary-900 font-medium mb-1">
-                    Last Name
-                  </label>
-                  <input
-                    type="text"
-                    value={form.lastName}
-                    onChange={(e) => handleChange(e, "lastName")}
-                    className={getInputClassName(isAdmin(user.role))}
-                    disabled={isAdmin(user.role)}
-                    required
-                  />
-                </div>
-              </div>
-            )}
-            <div>
-              <label className="block text-primary-900 font-medium mb-1">
-                User Role
-              </label>
-              <input
-                type="text"
-                value={form.userRole || "admin"}
-                disabled
-                className={getInputClassName(true)}
-              />
-            </div>
-            <div>
-              <label className="block text-primary-900 font-medium mb-1">
-                Location
-              </label>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowMapPicker(true)}
-                  disabled={user.role === "admin"}
-                  className={`w-full flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-primary-200 ${
-                    user.role === "admin"
-                      ? "opacity-60 cursor-not-allowed"
-                      : "hover:bg-primary-50"
-                  }`}
-                >
-                  <span className="text-left">
-                    {form.geoHome
-                      ? `${form.geoHome[1].toFixed(
-                          6
-                        )}, ${form.geoHome[0].toFixed(6)}`
-                      : "Click to update location"}
-                  </span>
-                  <MapPin className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Location Selector Modal */}
-            <LocationSelector
-              isOpen={showMapPicker}
-              onClose={() => setShowMapPicker(false)}
-              onLocationSelect={(location) => {
-                setForm({ ...form, geoHome: [location.lng, location.lat] });
-                setShowMapPicker(false);
-              }}
-            />
-            {user.role === "admin" ? (
-              <>
-                <div>
-                  <label className="block text-primary-900 font-medium mb-1">
-                    Status
-                  </label>
-                  <select
-                    value={form.status}
-                    disabled
-                    className={getInputClassName(true) + " appearance-none"}
-                    style={{ backgroundImage: "none" }}
-                  >
-                    <option value="active">Active</option>
-                    <option value="pending">Pending</option>
-                    <option value="revoke">Revoke</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-primary-900 font-medium mb-1">
-                    Approval
-                  </label>
-                  <select
-                    value={form.approval}
-                    disabled
-                    className={getInputClassName(true) + " appearance-none"}
-                    style={{ backgroundImage: "none" }}
-                  >
-                    <option value="approved">Approved</option>
-                    <option value="pending">Pending</option>
-                    <option value="rejected">Rejected</option>
-                  </select>
-                </div>
-              </>
-            ) : (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-primary-900 font-medium mb-1">
-                    Status
-                  </label>
-                  <select
-                    value={form.status}
-                    onChange={(e) => handleChange(e, "status")}
-                    className={getInputClassName(true) + " appearance-none"}
-                    disabled
-                    style={{ backgroundImage: "none" }}
-                  >
-                    <option value="active">Active</option>
-                    <option value="pending">Pending</option>
-                    <option value="revoke">Revoke</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-primary-900 font-medium mb-1">
-                    Approval
-                  </label>
-                  <select
-                    value={form.approval}
-                    onChange={(e) => handleChange(e, "approval")}
-                    className={getInputClassName(true) + " appearance-none"}
-                    disabled
-                    style={{ backgroundImage: "none" }}
-                  >
-                    <option value="approved">Approved</option>
-                    <option value="pending">Pending</option>
-                    <option value="rejected">Rejected</option>
-                  </select>
-                </div>
-              </div>
-            )}
-
-            {/* Customer specific fields */}
-            {user.role === "customer" && user.customer && (
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 sm:p-6 border-b border-primary-200">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-primary-900">
+              Edit Profile
+            </h2>
+            <button
+              className="text-primary-400 hover:text-primary-600 text-2xl sm:text-3xl font-bold p-2"
+              onClick={onClose}
+            >
+              &#10005;
+            </button>
+          </div>
+          {/* Form Content */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+              {/* Common fields */}
               <div>
-                <label className="block text-primary-900 font-medium mb-1">
-                  Default Property Type
+                <label className="block text-primary-700 font-medium mb-1 text-sm sm:text-base">
+                  Email
                 </label>
                 <input
-                  type="text"
-                  value={user.customer.defaultPropertyType}
+                  type="email"
+                  value={user.email}
                   readOnly
                   className={getInputClassName(true)}
                 />
               </div>
-            )}
-
-            {/* Contractor specific fields */}
-            {user.role === "contractor" && user.contractor && (
-              <div className="space-y-4 pr-2">
-                <div>
-                  <label className="block text-primary-900 font-medium mb-1">
-                    Company Name
-                  </label>
-                  <input
-                    type="text"
-                    value={
-                      form.contractor?.companyName ??
-                      user.contractor?.companyName ??
-                      ""
+              <div>
+                <label className="block text-primary-700 font-medium mb-1 text-sm sm:text-base">
+                  Phone
+                </label>
+                <input
+                  type="text"
+                  value={form.phone ?? user.phone}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setForm({ ...form, phone: val });
+                    if (!/^[0-9]*$/.test(val)) {
+                      setPhoneError("Phone number must contain only digits.");
+                    } else {
+                      setPhoneError("");
                     }
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        contractor: {
-                          ...form.contractor!,
-                          companyName: e.target.value,
-                        },
-                      })
-                    }
-                    disabled={user.role === ("admin" as UserRole)}
-                    className={getInputClassName(false)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-primary-900 font-medium mb-1">
-                    Services
-                  </label>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {(user.contractor.services ?? []).map((service, idx) => (
-                      <span
-                        key={idx}
-                        className="inline-block bg-accent-100 text-accent-700 text-sm font-medium px-3 py-1 rounded-full border border-accent-200"
-                      >
-                        {service}
-                      </span>
-                    ))}
+                  }}
+                  className={getInputClassName(user.role === "admin")}
+                  disabled={user.role === "admin"}
+                />
+                {phoneError && (
+                  <span className="text-accent-500 text-xs mt-1 block">
+                    {phoneError}
+                  </span>
+                )}
+              </div>
+              {user.role === "admin" ? (
+                <>
+                  <div>
+                    <label className="block text-primary-700 font-medium mb-1 text-sm sm:text-base">
+                      First Name
+                    </label>
+                    <input
+                      type="text"
+                      value={form.firstName}
+                      disabled
+                      className={getInputClassName(true)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-primary-700 font-medium mb-1 text-sm sm:text-base">
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      value={form.lastName}
+                      disabled
+                      className={getInputClassName(true)}
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                  <div>
+                    <label className="block text-primary-700 font-medium mb-1 text-sm sm:text-base">
+                      First Name
+                    </label>
+                    <input
+                      type="text"
+                      value={form.firstName}
+                      onChange={(e) => handleChange(e, "firstName")}
+                      className={getInputClassName(isAdmin(user.role))}
+                      disabled={isAdmin(user.role)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-primary-700 font-medium mb-1 text-sm sm:text-base">
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      value={form.lastName}
+                      onChange={(e) => handleChange(e, "lastName")}
+                      className={getInputClassName(isAdmin(user.role))}
+                      disabled={isAdmin(user.role)}
+                      required
+                    />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-primary-900 font-medium mb-1">
-                    License
-                  </label>
-                  <input
-                    type="text"
-                    value={
-                      form.contractor?.license ?? user.contractor?.license ?? ""
-                    }
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        contractor: {
-                          ...form.contractor!,
-                          license: e.target.value,
-                        },
-                      })
-                    }
-                    disabled={isAdmin(user.role)}
-                    className={getInputClassName(false)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-primary-900 font-medium mb-1">
-                    Tax ID
-                  </label>
-                  <input
-                    type="text"
-                    value={
-                      form.contractor?.taxId ?? user.contractor?.taxId ?? ""
-                    }
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        contractor: {
-                          ...form.contractor!,
-                          taxId: e.target.value,
-                        },
-                      })
-                    }
-                    disabled={user.role === ("admin" as UserRole)}
-                    className={getInputClassName(isAdmin(user.role))}
-                  />
-                </div>
-                <div>
-                  <label className="block text-primary-900 font-medium mb-1">
-                    Documents
-                  </label>
-                  <ul className="list-disc ml-6">
-                    {user.contractor.docs.map((doc: any, idx: number) => (
-                      <li key={idx}>
-                        <a
-                          href={doc.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-accent-500 underline"
-                        >
-                          View
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
+              )}
+              <div>
+                <label className="block text-primary-700 font-medium mb-1 text-sm sm:text-base">
+                  User Role
+                </label>
+                <input
+                  type="text"
+                  value={form.userRole || "admin"}
+                  disabled
+                  className={getInputClassName(true)}
+                />
+              </div>
+              <div>
+                <label className="block text-primary-700 font-medium mb-1 text-sm sm:text-base">
+                  Location
+                </label>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowMapPicker(true)}
+                    disabled={user.role === "admin"}
+                    className={`w-full flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-primary-200 ${
+                      user.role === "admin"
+                        ? "opacity-60 cursor-not-allowed"
+                        : "hover:bg-primary-50"
+                    }`}
+                  >
+                    <span className="text-left">
+                      {form.geoHome
+                        ? `${form.geoHome[1].toFixed(
+                            6
+                          )}, ${form.geoHome[0].toFixed(6)}`
+                        : "Click to update location"}
+                    </span>
+                    <MapPin className="h-5 w-5" />
+                  </button>
                 </div>
               </div>
-            )}
-            <button
-              type="submit"
-              disabled={loading || isAdmin(user.role)}
-              className={`w-full font-bold py-2 rounded-lg mt-4 transition-colors
-                ${
-                  isAdmin(user.role)
-                    ? "bg-primary-200 text-primary-400 cursor-not-allowed"
-                    : "bg-accent-500 text-white hover:bg-accent-600"
-                }
-              `}
-            >
-              {loading ? "Saving..." : "Save Changes"}
-            </button>
-          </form>
+
+              {/* Location Selector Modal */}
+              <LocationSelector
+                isOpen={showMapPicker}
+                onClose={() => setShowMapPicker(false)}
+                onLocationSelect={(location) => {
+                  setForm({ ...form, geoHome: [location.lng, location.lat] });
+                  setShowMapPicker(false);
+                }}
+              />
+              {user.role === "admin" ? (
+                <>
+                  <div>
+                    <label className="block text-primary-900 font-medium mb-1">
+                      Status
+                    </label>
+                    <select
+                      value={form.status}
+                      disabled
+                      className={getInputClassName(true) + " appearance-none"}
+                      style={{ backgroundImage: "none" }}
+                    >
+                      <option value="active">Active</option>
+                      <option value="pending">Pending</option>
+                      <option value="revoke">Revoke</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-primary-900 font-medium mb-1">
+                      Approval
+                    </label>
+                    <select
+                      value={form.approval}
+                      disabled
+                      className={getInputClassName(true) + " appearance-none"}
+                      style={{ backgroundImage: "none" }}
+                    >
+                      <option value="approved">Approved</option>
+                      <option value="pending">Pending</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                  </div>
+                </>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-primary-700 font-medium mb-1 text-sm sm:text-base">
+                      Status
+                    </label>
+                    <select
+                      value={form.status}
+                      onChange={(e) => handleChange(e, "status")}
+                      className={getInputClassName(true) + " appearance-none"}
+                      disabled
+                      style={{ backgroundImage: "none" }}
+                    >
+                      <option value="active">Active</option>
+                      <option value="pending">Pending</option>
+                      <option value="revoke">Revoke</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-primary-700 font-medium mb-1 text-sm sm:text-base">
+                      Approval
+                    </label>
+                    <select
+                      value={form.approval}
+                      onChange={(e) => handleChange(e, "approval")}
+                      className={getInputClassName(true) + " appearance-none"}
+                      disabled
+                      style={{ backgroundImage: "none" }}
+                    >
+                      <option value="approved">Approved</option>
+                      <option value="pending">Pending</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Customer specific fields */}
+              {user.role === "customer" && user.customer && (
+                <div>
+                  <label className="block text-primary-700 font-medium mb-1 text-sm sm:text-base">
+                    Default Property Type
+                  </label>
+                  <input
+                    type="text"
+                    value={user.customer.defaultPropertyType}
+                    readOnly
+                    className={getInputClassName(true)}
+                  />
+                </div>
+              )}
+
+              {/* Contractor specific fields */}
+              {user.role === "contractor" && user.contractor && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-primary-700 font-medium mb-1 text-sm sm:text-base">
+                      Company Name
+                    </label>
+                    <input
+                      type="text"
+                      value={
+                        form.contractor?.companyName ??
+                        user.contractor?.companyName ??
+                        ""
+                      }
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          contractor: {
+                            ...form.contractor!,
+                            companyName: e.target.value,
+                          },
+                        })
+                      }
+                      disabled={user.role === ("admin" as UserRole)}
+                      className={getInputClassName(false)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-primary-700 font-medium mb-1 text-sm sm:text-base">
+                      Services
+                    </label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {(user.contractor.services ?? []).map((service, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-block bg-accent-100 text-accent-700 text-sm font-medium px-3 py-1 rounded-full border border-accent-200"
+                        >
+                          {service}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-primary-700 font-medium mb-1 text-sm sm:text-base">
+                      License
+                    </label>
+                    <input
+                      type="text"
+                      value={
+                        form.contractor?.license ??
+                        user.contractor?.license ??
+                        ""
+                      }
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          contractor: {
+                            ...form.contractor!,
+                            license: e.target.value,
+                          },
+                        })
+                      }
+                      disabled={isAdmin(user.role)}
+                      className={getInputClassName(false)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-primary-700 font-medium mb-1 text-sm sm:text-base">
+                      Tax ID
+                    </label>
+                    <input
+                      type="text"
+                      value={
+                        form.contractor?.taxId ?? user.contractor?.taxId ?? ""
+                      }
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          contractor: {
+                            ...form.contractor!,
+                            taxId: e.target.value,
+                          },
+                        })
+                      }
+                      disabled={user.role === ("admin" as UserRole)}
+                      className={getInputClassName(isAdmin(user.role))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-primary-700 font-medium mb-1 text-sm sm:text-base">
+                      Documents
+                    </label>
+                    <ul className="list-disc ml-6">
+                      {user.contractor.docs.map((doc: any, idx: number) => (
+                        <li key={idx}>
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-accent-500 underline"
+                          >
+                            View
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+              <div className="pt-4 sm:pt-6">
+                <button
+                  type="submit"
+                  disabled={loading || isAdmin(user.role)}
+                  className={`w-full font-semibold py-2 sm:py-3 rounded-lg transition-colors text-sm sm:text-base
+                    ${
+                      isAdmin(user.role)
+                        ? "bg-primary-200 text-primary-400 cursor-not-allowed"
+                        : "bg-accent-500 text-white hover:bg-accent-600"
+                    }
+                  `}
+                >
+                  {loading ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     </>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import PropertyManagementTable from "./dashboard/PropertyManagementTable";
 import PropertyFormModal from "./dashboard/PropertyFormModal";
 
@@ -32,6 +32,16 @@ const MyProperties: React.FC<MyPropertiesProps> = ({ userRole }) => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 10;
+
+  // Reset filters on component unmount
+  useEffect(() => {
+    return () => {
+      setFilter("all");
+      setSortOrder("asc");
+      setSearch("");
+      setPage(1);
+    };
+  }, []);
 
   return (
     <div>

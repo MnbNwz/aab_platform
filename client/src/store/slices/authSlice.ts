@@ -1,6 +1,13 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { loginThunk, registerThunk, logoutThunk, getProfileThunk, restoreSessionThunk } from '../thunks/authThunks';
-import type { User, UserRole } from '../../types';
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import {
+  loginThunk,
+  registerThunk,
+  logoutThunk,
+  getProfileThunk,
+  restoreSessionThunk,
+} from "../thunks/authThunks";
+import { updateProfileThunk } from "../thunks/userThunks";
+import type { User, UserRole } from "../../types";
 
 export interface AuthState {
   user: User | null;
@@ -21,19 +28,19 @@ const initialState: AuthState = {
 };
 
 export const authSlice = createSlice({
-  name: 'auth',
+  name: "auth",
   initialState,
   reducers: {
     clearError: (state) => {
       state.error = null;
     },
-    
+
     setLoginType: (state, action: PayloadAction<UserRole>) => {
       state.loginType = action.payload;
     },
-    
+
     resetAuth: () => initialState,
-    
+
     setInitialized: (state) => {
       state.isInitialized = true;
     },
@@ -54,7 +61,7 @@ export const authSlice = createSlice({
       })
       .addCase(loginThunk.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload || 'Login failed';
+        state.error = action.payload || "Login failed";
         state.isAuthenticated = false;
         state.user = null;
         state.loginType = null;
@@ -75,7 +82,7 @@ export const authSlice = createSlice({
       })
       .addCase(registerThunk.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload || 'Registration failed';
+        state.error = action.payload || "Registration failed";
         state.isAuthenticated = false;
         state.user = null;
       });
@@ -95,7 +102,7 @@ export const authSlice = createSlice({
       })
       .addCase(logoutThunk.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload || 'Logout failed';
+        state.error = action.payload || "Logout failed";
         // Even if logout fails on server, clear local state
         state.user = null;
         state.isAuthenticated = false;
@@ -117,7 +124,7 @@ export const authSlice = createSlice({
       })
       .addCase(getProfileThunk.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload || 'Failed to get profile';
+        state.error = action.payload || "Failed to get profile";
         state.isAuthenticated = false;
         state.user = null;
         state.isInitialized = true;
@@ -143,7 +150,25 @@ export const authSlice = createSlice({
         state.isInitialized = true;
         // Don't set error for failed session restore
       });
+
+    // Update Profile
+    builder
+      .addCase(updateProfileThunk.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(updateProfileThunk.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload;
+        state.error = null;
+      })
+      .addCase(updateProfileThunk.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload || "Failed to update profile";
+        // Don't update user state on error
+      });
   },
 });
 
-export const { clearError, setLoginType, resetAuth, setInitialized } = authSlice.actions;
+export const { clearError, setLoginType, resetAuth, setInitialized } =
+  authSlice.actions;

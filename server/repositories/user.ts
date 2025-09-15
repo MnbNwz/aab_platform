@@ -21,3 +21,7 @@ export const deleteUser = async (id: string) => {
 export const findUsers = async (filter: FilterQuery<CreateUserDTO>) => {
   return await User.find(filter);
 };
+
+export const findAdminUsers = async () => {
+  return await User.find({ role: "admin" }).select("-passwordHash").lean();
+};

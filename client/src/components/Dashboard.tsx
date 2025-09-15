@@ -10,6 +10,7 @@ import {
   Briefcase,
 } from "lucide-react";
 import UserDropdown from "./ui/UserDropdown";
+import PageHeader from "./ui/PageHeader";
 import { logoutThunk } from "../store/thunks/authThunks";
 import Sidebar from "./dashboard/Sidebar";
 import UserStatsCards from "./dashboard/UserStatsCards";
@@ -76,12 +77,14 @@ const Dashboard: React.FC = () => {
       />
 
       {/* Main Content */}
-      <div className="flex-1 p-8 relative xl:px-16 lg:px-12 md:px-8 px-4 bg-primary-50">
+      <div className="flex-1 flex flex-col bg-primary-50">
         <DashboardContent
           user={user}
           activeTab={activeTab}
           handleLogout={handleLogout}
           setActiveTab={setActiveTab}
+          isMobileOpen={isMobileOpen}
+          onMobileToggle={() => setIsMobileOpen(!isMobileOpen)}
         />
       </div>
     </div>
@@ -94,7 +97,16 @@ const DashboardContent: React.FC<{
   activeTab: string;
   handleLogout: () => void;
   setActiveTab: (tab: string) => void;
-}> = ({ user, activeTab, handleLogout, setActiveTab }) => {
+  isMobileOpen: boolean;
+  onMobileToggle: () => void;
+}> = ({
+  user,
+  activeTab,
+  handleLogout,
+  setActiveTab,
+  isMobileOpen,
+  onMobileToggle,
+}) => {
   const dispatch = useDispatch<AppDispatch>();
   const isAdmin = user.role === "admin";
   const [profileOpen, setLocalProfileOpen] = useState(false);
@@ -107,7 +119,7 @@ const DashboardContent: React.FC<{
     try {
       // Always use user._id for update
       await dispatch(
-        updateProfileThunk({ userId: user._id, profileData })
+        updateProfileThunk({ userId: "user._id", profileData })
       ).unwrap();
       handleProfileClose();
     } catch (error) {
@@ -303,14 +315,46 @@ const DashboardContent: React.FC<{
 
   // Other tab content based on activeTab
   if (activeTab === "users" && isAdmin) {
-    return <UserManagementTable />;
+    return (
+      <>
+        <PageHeader
+          title="User Management"
+          subtitle="Manage system users and permissions"
+          user={user}
+          onLogout={handleLogout}
+          onProfile={() => setLocalProfileOpen(true)}
+          showHamburger={true}
+          onHamburgerClick={onMobileToggle}
+          isSidebarOpen={isMobileOpen}
+        />
+        <div className="flex-1 p-4 sm:p-6 lg:p-8 relative xl:px-16 lg:px-12 md:px-8 px-4">
+          <UserManagementTable />
+        </div>
+      </>
+    );
   }
 
   if (
     activeTab === "properties" &&
     (user.role === "admin" || user.role === "customer")
   ) {
-    return <MyProperties userRole={user.role} />;
+    return (
+      <>
+        <PageHeader
+          title="My Properties"
+          subtitle="Manage your property listings"
+          user={user}
+          onLogout={handleLogout}
+          onProfile={() => setLocalProfileOpen(true)}
+          showHamburger={true}
+          onHamburgerClick={onMobileToggle}
+          isSidebarOpen={isMobileOpen}
+        />
+        <div className="flex-1 p-4 sm:p-6 lg:p-8 relative xl:px-16 lg:px-12 md:px-8 px-4">
+          <MyProperties userRole={user.role} />
+        </div>
+      </>
+    );
   }
 
   // Show JobManagementTable for jobs tab (admin and customer)
@@ -318,7 +362,23 @@ const DashboardContent: React.FC<{
     activeTab === "jobs" &&
     (user.role === "admin" || user.role === "customer")
   ) {
-    return <JobManagementTable />;
+    return (
+      <>
+        <PageHeader
+          title="Job Management"
+          subtitle="Manage job requests and assignments"
+          user={user}
+          onLogout={handleLogout}
+          onProfile={() => setLocalProfileOpen(true)}
+          showHamburger={true}
+          onHamburgerClick={onMobileToggle}
+          isSidebarOpen={isMobileOpen}
+        />
+        <div className="flex-1 p-4 sm:p-6 lg:p-8 relative xl:px-16 lg:px-12 md:px-8 px-4">
+          <JobManagementTable />
+        </div>
+      </>
+    );
   }
 
   // Default content for other tabs

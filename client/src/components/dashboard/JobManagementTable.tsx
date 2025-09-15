@@ -5,7 +5,6 @@ import {
   fetchJobRequestsThunk,
   setJobFilters,
 } from "../../store/slices/jobRequestsSlice";
-import { Plus } from "lucide-react";
 import Loader from "../ui/Loader";
 import JobCreate from "../JobCreate";
 
@@ -21,7 +20,8 @@ const JobManagementTable: React.FC = () => {
 
   // Fetch jobs on mount and when filters change
   useEffect(() => {
-    dispatch(fetchJobRequestsThunk(filters));
+    console.log("jobs", jobs);
+    !(jobs.length > 0) && dispatch(fetchJobRequestsThunk(filters));
   }, [dispatch, filters]);
 
   // Handle search
@@ -45,26 +45,36 @@ const JobManagementTable: React.FC = () => {
 
   return (
     <div className="bg-white rounded-lg shadow">
-      {/* Header */}
-      <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-900">Job Management</h2>
+      {/* Controls Header */}
+      <div className="p-4 sm:p-6 border-b border-gray-200">
         <div className="flex items-center space-x-3">
-          {/* Search */}
+          {/* Search & Create Button Combined */}
           <div className="flex items-center space-x-2">
             <input
               type="text"
               placeholder="Search jobs..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+              onKeyPress={(e) => {
+                if (e.key === "Enter" && searchTerm.trim()) handleSearch();
+              }}
               className="pl-3 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
-            <button
-              onClick={handleSearch}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Search
-            </button>
+            {(isAdmin || isCustomer) && (
+              <button
+                className="flex items-center px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition"
+                onClick={() => {
+                  if (searchTerm.trim()) {
+                    handleSearch();
+                  } else {
+                    setShowCreateModal(true);
+                  }
+                }}
+                title={searchTerm.trim() ? "Search Jobs" : "Create Job"}
+              >
+                {searchTerm.trim() ? "Search" : "Create"}
+              </button>
+            )}
           </div>
           {/* Filters Toggle (admin only) */}
           {isAdmin && (
@@ -73,17 +83,6 @@ const JobManagementTable: React.FC = () => {
               className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
             >
               <span>Filters</span>
-            </button>
-          )}
-          {/* Create Job Button (admin/customer) */}
-          {(isAdmin || isCustomer) && (
-            <button
-              className="flex items-center px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition"
-              onClick={() => setShowCreateModal(true)}
-              title={"Create Job"}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create
             </button>
           )}
           {/* Job Create Modal */}
@@ -163,24 +162,104 @@ const JobManagementTable: React.FC = () => {
         </div>
       )}
 
-      {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full">
+      {/* Mobile Card View */}
+      <div className="block lg:hidden">
+        {jobsLoading ? (
+          <div className="py-12">
+            <div className="flex justify-center items-center w-full h-full">
+              <Loader size="large" color="accent" />
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3 p-4">
+            {jobs.map((job) => (
+              <div
+                key={job._id}
+                className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
+              >
+                <div className="flex justify-between items-start mb-3 gap-2">
+                  <h3 className="font-semibold text-gray-900 text-sm flex-1 min-w-0">
+                    <span className="block truncate" title={job.title}>
+                      {job.title.length > 30
+                        ? `${job.title.substring(0, 30)}...`
+                        : job.title}
+                    </span>
+                  </h3>
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-bold flex-shrink-0 ${
+                      job.status === "pending"
+                        ? "bg-accent-100 text-accent-800"
+                        : job.status === "active"
+                        ? "bg-primary-200 text-primary-800"
+                        : job.status === "completed"
+                        ? "bg-primary-100 text-primary-600"
+                        : job.status === "cancelled"
+                        ? "bg-primary-200 text-primary-800"
+                        : "bg-primary-100 text-primary-600"
+                    }`}
+                  >
+                    {job.status}
+                  </span>
+                </div>
+
+                <div className="text-sm text-gray-600 mb-2">
+                  <span className="font-medium">Category:</span>{" "}
+                  <span className="truncate block" title={job.category}>
+                    {job.category}
+                  </span>
+                </div>
+
+                <div className="text-sm text-gray-600 mb-3">
+                  <span className="font-medium">Description:</span>{" "}
+                  <span className="truncate block" title={job.description}>
+                    {job.description?.length > 40
+                      ? `${job.description.substring(0, 40)}...`
+                      : job.description}
+                  </span>
+                </div>
+
+                <div className="text-sm text-gray-500 mb-3">
+                  <span className="font-medium">Created:</span>{" "}
+                  {new Date(job.createdAt).toLocaleDateString()}
+                </div>
+
+                <div className="flex gap-2">
+                  <button className="flex-1 bg-accent-50 text-accent-600 px-3 py-2 rounded text-sm font-medium hover:bg-accent-100 transition">
+                    View Details
+                  </button>
+                  <button className="flex-1 bg-primary-100 text-primary-600 px-3 py-2 rounded text-sm font-medium hover:bg-primary-200 transition">
+                    Edit
+                  </button>
+                </div>
+              </div>
+            ))}
+            {jobs.length === 0 && (
+              <div className="text-center text-gray-500 py-8">
+                No jobs found.
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Table View */}
+      <div className="hidden lg:block overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200 text-sm">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
                 Title
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
                 Category
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-center font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
                 Created
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-center font-medium text-gray-500 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -188,42 +267,36 @@ const JobManagementTable: React.FC = () => {
           <tbody className="bg-white divide-y divide-gray-200">
             {jobsLoading ? (
               <tr>
-                <td colSpan={5} className="px-6 py-12 text-center">
-                  <div className="flex items-center justify-center">
-                    <Loader size="medium" color="primary" />
-                    <span className="ml-3 text-primary-600">
-                      Loading jobs...
-                    </span>
+                <td colSpan={5} className="py-12">
+                  <div className="flex justify-center items-center w-full h-full">
+                    <Loader size="large" color="accent" />
                   </div>
                 </td>
               </tr>
             ) : jobs.length === 0 ? (
               <tr>
-                <td
-                  colSpan={5}
-                  className="px-6 py-12 text-center text-gray-500"
-                >
-                  No jobs found
+                <td colSpan={5} className="text-center text-gray-500 py-8">
+                  No jobs found.
                 </td>
               </tr>
             ) : (
               jobs.map((job) => (
                 <tr key={job._id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {job.title}
-                    </div>
-                    <div className="text-xs text-gray-500">
+                  <td className="px-6 py-4 font-semibold text-gray-900 max-w-xs">
+                    <span className="block truncate" title={job.title}>
+                      {job.title.length > 40
+                        ? `${job.title.substring(0, 40)}...`
+                        : job.title}
+                    </span>
+                    <div className="text-xs text-gray-500 mt-1">
                       {job.description?.slice(0, 60)}
                       {job.description?.length > 60 ? "..." : ""}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                    {job.category}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-6 py-4 text-gray-700">{job.category}</td>
+                  <td className="px-6 py-4 text-center">
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      className={`px-2 py-1 rounded text-xs font-bold ${
                         job.status === "pending"
                           ? "bg-yellow-100 text-yellow-800"
                           : job.status === "active"
@@ -238,14 +311,19 @@ const JobManagementTable: React.FC = () => {
                       {job.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 text-gray-500">
                     {new Date(job.createdAt).toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    {/* TODO: Add actions (view, edit, etc.) */}
-                    <button className="text-blue-600 hover:text-blue-900">
-                      View
-                    </button>
+                  <td className="px-6 py-4 text-center">
+                    <div className="flex justify-center gap-2">
+                      <button className="text-blue-600 hover:underline text-sm">
+                        View
+                      </button>
+                      <span className="text-gray-300">|</span>
+                      <button className="text-gray-600 hover:underline text-sm">
+                        Edit
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -256,38 +334,71 @@ const JobManagementTable: React.FC = () => {
 
       {/* Pagination */}
       {pagination && (
-        <div className="px-6 py-3 border-t border-gray-200 flex items-center justify-between">
-          <div className="text-sm text-gray-700">
-            {(() => {
-              const currentPage = pagination.currentPage ?? 0;
-              const limit = pagination.limit ?? 0;
-              const totalCount = pagination.totalCount ?? 0;
-              if (totalCount === 0) {
-                return "No data to show";
-              }
-              const start = (currentPage - 1) * limit + 1;
-              const end = Math.min(currentPage * limit, totalCount);
-              return `Showing ${start} to ${end} of ${totalCount} jobs`;
-            })()}
-          </div>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => handlePageChange(pagination.currentPage - 1)}
-              disabled={!pagination.hasPrevPage || jobsLoading}
-              className="p-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-            >
-              &lt;
-            </button>
-            <span className="px-3 py-1 text-sm">
-              Page {pagination.currentPage} of {pagination.totalPages}
-            </span>
-            <button
-              onClick={() => handlePageChange(pagination.currentPage + 1)}
-              disabled={!pagination.hasNextPage || jobsLoading}
-              className="p-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-            >
-              &gt;
-            </button>
+        <div className="px-4 sm:px-6 py-4 border-t border-gray-200">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="text-sm text-gray-700 order-2 sm:order-1">
+              {(() => {
+                const currentPage = pagination.currentPage ?? 0;
+                const limit = pagination.limit ?? 0;
+                const totalCount = pagination.totalCount ?? 0;
+                if (totalCount === 0) {
+                  return "No data to show";
+                }
+                const start = (currentPage - 1) * limit + 1;
+                const end = Math.min(currentPage * limit, totalCount);
+                return `Showing ${start} to ${end} of ${totalCount} jobs`;
+              })()}
+            </div>
+            <div className="flex items-center gap-2 order-1 sm:order-2">
+              <button
+                onClick={() => handlePageChange(pagination.currentPage - 1)}
+                disabled={!pagination.hasPrevPage || jobsLoading}
+                className="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm font-medium min-w-[44px]"
+              >
+                Previous
+              </button>
+              <div className="flex items-center gap-1">
+                {Array.from(
+                  { length: Math.min(5, pagination.totalPages) },
+                  (_, i) => {
+                    let pageNum;
+                    if (pagination.totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (pagination.currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (
+                      pagination.currentPage >=
+                      pagination.totalPages - 2
+                    ) {
+                      pageNum = pagination.totalPages - 4 + i;
+                    } else {
+                      pageNum = pagination.currentPage - 2 + i;
+                    }
+
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => handlePageChange(pageNum)}
+                        className={`px-3 py-2 text-sm font-medium rounded-lg min-w-[40px] ${
+                          pagination.currentPage === pageNum
+                            ? "bg-accent-500 text-white"
+                            : "text-gray-700 hover:bg-gray-100"
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  }
+                )}
+              </div>
+              <button
+                onClick={() => handlePageChange(pagination.currentPage + 1)}
+                disabled={!pagination.hasNextPage || jobsLoading}
+                className="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm font-medium min-w-[44px]"
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
       )}

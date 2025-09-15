@@ -49,23 +49,23 @@ const MembershipPlans: React.FC<Props> = ({ plans, onSelect }) => {
   };
 
   return (
-    <div className="pt-16 px-4 pb-4 min-h-screen bg-primary-50 flex flex-col items-center relative">
+    <div className="pt-12 xs:pt-16 px-2 xs:px-4 pb-4 min-h-screen bg-primary-50 flex flex-col items-center relative">
       {/* Profile/Logout section top right */}
-      <div className="absolute top-6 right-8 z-20">
+      <div className="absolute top-2 right-2 xs:top-4 xs:right-4 sm:top-6 sm:right-8 z-20">
         <UserDropdown
           user={user || {}}
           onProfile={() => setProfileModalOpen(true)}
           onLogout={() => dispatch(logoutThunk())}
         />
       </div>
-      <h2 className="text-3xl font-extrabold text-accent-500 mb-2 text-center">
+      <h2 className="text-xl xs:text-2xl sm:text-3xl font-extrabold text-accent-500 mb-1 xs:mb-2 text-center px-2 xs:px-4">
         Choose Your Membership Plan
       </h2>
-      <p className="text-primary-700 mb-8 text-center max-w-2xl text-base">
+      <p className="text-primary-700 mb-4 xs:mb-6 sm:mb-8 text-center max-w-2xl text-xs xs:text-sm sm:text-base px-2 xs:px-4">
         Unlock premium features and get the most out of your experience. Select
         a plan below to continue.
       </p>
-      <div className="grid gap-8 w-full max-w-6xl grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 xs:gap-4 sm:gap-6 lg:gap-8 w-full max-w-6xl grid-cols-1 md:grid-cols-2 lg:grid-cols-3 px-2 xs:px-4">
         {plans.map((plan, idx) => {
           const isPremium = plan.tier === "premium";
           const isSelected =
@@ -75,29 +75,29 @@ const MembershipPlans: React.FC<Props> = ({ plans, onSelect }) => {
           return (
             <div
               key={plan._id}
-              className={`relative rounded-2xl shadow-xl flex flex-col border-2 overflow-hidden w-full
+              className={`relative rounded-lg xs:rounded-xl shadow-lg flex flex-col border-2 overflow-hidden w-full
                 ${
                   isSelected || hoveredId === plan._id
-                    ? "border-accent-600 bg-white z-20 outline-none ring-2 ring-accent-400 ring-offset-0 rounded-2xl"
+                    ? "border-accent-600 bg-white z-20 outline-none ring-2 ring-accent-400 ring-offset-0"
                     : isPremium
                     ? "border-accent-500 bg-gradient-to-br from-accent-50 to-primary-100 scale-105 z-10"
-                    : "border-primary-200 bg-primary-50"
+                    : "border-primary-200 bg-white"
                 }
-                hover:shadow-2xl hover:border-accent-500 animate-fadein hover:scale-105 ${getCardClass(
+                hover:shadow-xl hover:border-accent-500 animate-fadein hover:scale-105 transition-all duration-200 ${getCardClass(
                   idx
                 )}`}
               style={{
                 animationDelay: `${idx * 120}ms`,
                 animationFillMode: "forwards",
                 transition: "border-color 0.2s, box-shadow 0.2s",
-                borderRadius: 20, // match rounded-2xl
+                borderRadius: 12, // match rounded-xl
               }}
               onMouseEnter={() => setHoveredId(plan._id)}
               onMouseLeave={() => setHoveredId(null)}
             >
               {/* Tier badge */}
               <span
-                className={`absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-bold tracking-wide
+                className={`absolute top-2 right-2 xs:top-4 xs:right-4 px-1.5 xs:px-2 sm:px-3 py-0.5 xs:py-1 rounded-full text-xs font-bold tracking-wide
                 ${
                   isPremium
                     ? "bg-accent-500 text-white shadow"
@@ -107,45 +107,47 @@ const MembershipPlans: React.FC<Props> = ({ plans, onSelect }) => {
               >
                 {plan.tier.charAt(0).toUpperCase() + plan.tier.slice(1)}
               </span>
-              <div className="p-8 flex-1 flex flex-col">
-                <div className="mb-4"></div>{" "}
+              <div className="p-3 xs:p-4 sm:p-6 lg:p-8 flex-1 flex flex-col">
+                <div className="mb-1 xs:mb-2 sm:mb-4"></div>{" "}
                 {/* Add margin between badge and title */}
-                <h3 className="text-2xl font-extrabold text-primary-900 mb-2 flex items-center gap-2">
-                  {isPremium && (
-                    <span className="inline-block text-yellow-400 animate-bounce">
-                      ★
-                    </span>
-                  )}
-                  {plan.name}
-                </h3>
-                <p className="text-primary-700 mb-5 text-base min-h-[48px]">
+                <div className="relative">
+                  <h3 className="text-lg xs:text-xl sm:text-2xl font-extrabold text-primary-900 mb-1 xs:mb-2 flex items-center gap-1 xs:gap-2 pr-16 xs:pr-20">
+                    {isPremium && (
+                      <span className="inline-block text-accent-400 animate-bounce text-sm xs:text-base">
+                        ★
+                      </span>
+                    )}
+                    <span className="truncate">{plan.name}</span>
+                  </h3>
+                </div>
+                <p className="text-primary-700 mb-3 xs:mb-4 sm:mb-5 text-xs xs:text-sm sm:text-base min-h-[32px] xs:min-h-[40px] sm:min-h-[48px]">
                   {plan.description}
                 </p>
-                <ul className="mb-6 flex-1 space-y-2">
+                <ul className="mb-4 xs:mb-6 flex-1 space-y-1 xs:space-y-2">
                   {plan.features.map((f, i) => (
                     <li
                       key={i}
-                      className="text-primary-700 text-sm flex items-center gap-2"
+                      className="text-primary-700 text-xs xs:text-sm flex items-center gap-1 xs:gap-2"
                     >
-                      <span className="inline-block w-2 h-2 rounded-full bg-accent-500 animate-pulse"></span>{" "}
-                      {f}
+                      <span className="inline-block w-1.5 h-1.5 xs:w-2 xs:h-2 rounded-full bg-accent-500 animate-pulse flex-shrink-0"></span>{" "}
+                      <span className="truncate">{f}</span>
                     </li>
                   ))}
                 </ul>
-                <div className="mt-auto space-y-2">
+                <div className="mt-auto space-y-1 xs:space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-primary-900">
+                    <span className="font-semibold text-primary-900 text-xs xs:text-sm">
                       Monthly
                     </span>
-                    <span className="text-accent-500 font-bold text-lg">
+                    <span className="text-accent-500 font-bold text-base xs:text-lg">
                       ${plan.monthlyPrice}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-primary-900">
+                    <span className="font-semibold text-primary-900 text-xs xs:text-sm">
                       Yearly
                     </span>
-                    <span className="text-accent-500 font-bold text-lg">
+                    <span className="text-accent-500 font-bold text-base xs:text-lg">
                       ${plan.yearlyPrice}{" "}
                       <span className="text-xs text-primary-500">
                         ({plan.annualDiscountRate}% off)
@@ -155,7 +157,7 @@ const MembershipPlans: React.FC<Props> = ({ plans, onSelect }) => {
                 </div>
               </div>
               <button
-                className={`w-full py-3 text-lg font-bold rounded-b-2xl transition-colors
+                className={`w-full py-2 xs:py-2.5 sm:py-3 text-xs xs:text-sm sm:text-base font-bold rounded-b-lg xs:rounded-b-xl transition-colors
                   ${
                     isPremium
                       ? "bg-accent-600 hover:bg-accent-700"

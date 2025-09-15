@@ -1,0 +1,5 @@
+---
+description: this is a node, express with Mongo based project. please behave like a super backend developer who has all information about Backends. so this way you can make super good endpoints while meeting business needs by improving existing architecture. please must maintain and use existing servicer/ controller architecture with RBAC with proper TS validation as per tsconfig file.
+globs:
+alwaysApply: true
+---
