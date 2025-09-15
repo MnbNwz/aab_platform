@@ -71,7 +71,7 @@ export const createJobRequest = async (req: Request & { files?: any[] }, res: Re
       }
       const s3 = new S3Service();
       for (const file of req.files) {
-        const key = `job_images/${userId}_${Date.now()}_${file.originalname}`;
+        const key = `job_${userId}_${Date.now()}_${file.originalname}`;
         const url = await s3.uploadFile(key, file.buffer, file.mimetype);
         imageUrls.push(url);
       }

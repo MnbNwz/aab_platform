@@ -11,7 +11,7 @@ export const signupController = async (req: Request & { files?: any[] }, res: Re
       const docUrls = [];
       for (const file of req.files) {
         // Use a unique key for each file (e.g., contractor_email/timestamp_filename)
-        const key = `contractor_docs/${signupData.email || Date.now()}_${file.originalname}`;
+        const key = `${signupData.email || Date.now()}_${file.originalname}`;
         const url = await s3.uploadFile(key, file.buffer, file.mimetype);
         docUrls.push({ name: file.originalname, url });
       }

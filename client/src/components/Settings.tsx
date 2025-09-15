@@ -26,6 +26,7 @@ interface SettingsProps {
     currentPassword: string,
     newPassword: string
   ) => Promise<void>;
+  onProfileImageUpdate?: (profileImage: string) => void;
 }
 
 interface SettingsSection {
@@ -54,6 +55,7 @@ const Settings: React.FC<SettingsProps> = ({
   onProfileEdit,
   onEmailChange,
   onPasswordChange,
+  onProfileImageUpdate,
 }) => {
   const [activeSection, setActiveSection] = useState<string>("profile");
   const [changeEmailOpen, setChangeEmailOpen] = useState(false);
@@ -144,6 +146,11 @@ const Settings: React.FC<SettingsProps> = ({
               profileData: { profileImage: base64String },
             })
           );
+
+          // Update the display user in the parent component
+          if (onProfileImageUpdate) {
+            onProfileImageUpdate(base64String);
+          }
 
           // Clean up the preview URL
           URL.revokeObjectURL(selectedImage.url);

@@ -24,10 +24,8 @@ export const getUser = async (req: Request, res: Response) => {
 
 export const updateUser = async (req: Request & { file?: any }, res: Response) => {
   try {
-    // Handle profile image upload to S3
     if (req.file) {
       const s3 = new S3Service();
-      // Upload new profile image
       const profileImageUrl = await s3.uploadProfileImage(req.params.id, req.file);
       req.body.profileImage = profileImageUrl;
     }

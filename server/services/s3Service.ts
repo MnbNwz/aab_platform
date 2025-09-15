@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { Readable } from "stream";
 import dotenv from "dotenv";
 dotenv.config();
@@ -37,18 +37,9 @@ class S3Service {
       ContentType: contentType,
     };
     await this.s3.send(new PutObjectCommand(params));
-    return `https://${this.bucket}.s3.amazonaws.com/${key}`;
+    return `https://${this.bucket}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
   }
 
-  async deleteFile(key: string): Promise<void> {
-    const params = {
-      Bucket: this.bucket,
-      Key: key,
-    };
-    await this.s3.send(new DeleteObjectCommand(params));
-  }
-
-  // Extract key from S3 URL for deletion
   extractKeyFromUrl(url: string): string {
     const urlParts = url.split("/");
     return urlParts.slice(3).join("/"); // Remove https://bucket.s3.amazonaws.com/
@@ -71,14 +62,8 @@ class S3Service {
       throw new Error("Image size must be less than 5MB");
     }
 
-    const key = `profile_images/${userId}_${Date.now()}_${file.originalname}`;
+    const key = `${userId}_${Date.now()}_${file.originalname}`;
     return this.uploadFile(key, file.buffer, file.mimetype);
-  }
-
-  // Delete profile image
-  async deleteProfileImage(imageUrl: string): Promise<void> {
-    const key = this.extractKeyFromUrl(imageUrl);
-    await this.deleteFile(key);
   }
 }
 

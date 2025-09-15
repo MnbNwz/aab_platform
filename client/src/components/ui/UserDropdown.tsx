@@ -46,8 +46,6 @@ const UserDropdown: React.FC<UserDropdownProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [open]);
 
-  console.log("user", user);
-
   return (
     <div className="relative" ref={dropdownRef}>
       <button

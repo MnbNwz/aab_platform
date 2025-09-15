@@ -55,6 +55,7 @@ interface TabContentProps {
     currentPassword: string,
     newPassword: string
   ) => Promise<void>;
+  onProfileImageUpdate?: (profileImage: string) => void;
   isMobileOpen: boolean;
   onMobileToggle: () => void;
   setActiveTab: (tab: string) => void;
@@ -245,6 +246,7 @@ const DashboardContent = memo<TabContentProps>(
     onProfileFromSettings,
     onEmailChange,
     onPasswordChange,
+    onProfileImageUpdate,
     isMobileOpen,
     onMobileToggle,
     setActiveTab,
@@ -319,6 +321,7 @@ const DashboardContent = memo<TabContentProps>(
               onProfileEdit={onProfileFromSettings}
               onEmailChange={onEmailChange}
               onPasswordChange={onPasswordChange}
+              onProfileImageUpdate={onProfileImageUpdate}
             />
           ),
         },
@@ -449,6 +452,18 @@ const Dashboard: React.FC = () => {
     [dispatch]
   );
 
+  const handleProfileImageUpdate = useCallback(
+    (profileImage: string) => {
+      // Update displayUser with the new profile image
+      hasManuallyUpdatedDisplayUser.current = true;
+      setDisplayUser((prev) => {
+        const currentUser = prev || user!;
+        return { ...currentUser, profileImage };
+      });
+    },
+    [user]
+  );
+
   const handleSaveProfile = useCallback(
     async (profileData: Partial<User>) => {
       try {
@@ -459,9 +474,10 @@ const Dashboard: React.FC = () => {
         // Update only the displayUser state for UI updates
         // This prevents triggering global re-renders that cause white screen
         hasManuallyUpdatedDisplayUser.current = true;
-        if (displayUser) {
-          setDisplayUser({ ...displayUser, ...profileData });
-        }
+        setDisplayUser((prev) => {
+          const currentUser = prev || user!;
+          return { ...currentUser, ...profileData };
+        });
       } catch (error) {
         showToast.error(handleApiError(error));
       }
@@ -539,6 +555,7 @@ const Dashboard: React.FC = () => {
           onProfileFromSettings={handleProfileOpenFromSettings}
           onEmailChange={handleEmailChange}
           onPasswordChange={handlePasswordChange}
+          onProfileImageUpdate={handleProfileImageUpdate}
           isMobileOpen={isMobileOpen}
           onMobileToggle={handleMobileToggle}
           setActiveTab={setActiveTab}

@@ -38,7 +38,7 @@ export const createProperty = async ({ userId, body, files }: PropertyInput) => 
     }
     const s3 = new S3Service();
     for (const file of files) {
-      const key = `property_images/${userId}_${Date.now()}_${file.originalname}`;
+      const key = `property_${userId}_${Date.now()}_${file.originalname}`;
       const url = await s3.uploadFile(key, file.buffer, file.mimetype);
       imageUrls.push(url);
     }
