@@ -56,6 +56,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         description: "Manage system users",
       },
       {
+        id: "properties",
+        label: "My Properties",
+        icon: Building,
+        description: "Manage your properties",
+      },
+      {
         id: "jobs",
         label: "Jobs & Bidding Management",
         icon: FileText,

@@ -2,54 +2,142 @@ import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState, AppDispatch } from "../../store";
-import {
-  fetchJobRequestsThunk,
-  setJobFilters,
-} from "../../store/slices/jobRequestsSlice";
+import type { Job } from "../../store/slices/jobSlice";
+import { getJobsThunk, cancelJobThunk } from "../../store/thunks/jobThunks";
+import { setJobFilters } from "../../store/slices/jobSlice";
+import { getMyPropertiesThunk } from "../../store/thunks/propertyThunks";
 import Loader from "../ui/Loader";
 import JobCreate from "../JobCreate";
+import JobViewEditModal from "../JobViewEditModal";
+import { showToast } from "../../utils/toast";
+import ConfirmModal from "../ui/ConfirmModal";
 
 const JobManagementTable: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { jobs, pagination, jobsLoading, jobsError, filters } = useSelector(
-    (state: RootState) => state.jobRequests
+  const {
+    jobs,
+    loading: jobsLoading,
+    error: jobsError,
+    pagination,
+    filters,
+  } = useSelector((state: RootState) => state.job);
+  const { properties, loading: propertiesLoading } = useSelector(
+    (state: RootState) => state.property
   );
   const user = useSelector((state: RootState) => state.auth.user);
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [viewEditModalOpen, setViewEditModalOpen] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<any>(null);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [jobToCancel, setJobToCancel] = useState<any>(null);
+  const [noPropertyConfirmOpen, setNoPropertyConfirmOpen] = useState(false);
 
   // Fetch jobs on mount and when filters change
   useEffect(() => {
-    !(jobs.length > 0) && dispatch(fetchJobRequestsThunk(filters));
+    dispatch(getJobsThunk(filters));
   }, [dispatch, filters]);
+
+  // Fetch properties on mount (only once)
+  useEffect(() => {
+    if (user && properties.length === 0 && !propertiesLoading) {
+      dispatch(getMyPropertiesThunk());
+    }
+  }, [user, properties.length, propertiesLoading, dispatch]);
 
   // Handle search
   const handleSearch = () => {
-    dispatch(setJobFilters({ ...filters, search: searchTerm, page: 1 }));
+    dispatch(setJobFilters({ search: searchTerm, page: 1 }));
   };
 
   // Handle filter changes
   const handleFilterChange = (newFilters: any) => {
-    dispatch(setJobFilters({ ...filters, ...newFilters, page: 1 }));
+    dispatch(setJobFilters({ ...newFilters, page: 1 }));
   };
 
   // Handle pagination
   const handlePageChange = (page: number) => {
-    dispatch(setJobFilters({ ...filters, page }));
+    dispatch(setJobFilters({ page }));
+  };
+
+  // Handle job view/edit
+  const handleViewJob = (job: any) => {
+    setSelectedJob(job);
+    setViewEditModalOpen(true);
+  };
+
+  const handleCloseViewEditModal = () => {
+    setViewEditModalOpen(false);
+    setSelectedJob(null);
+  };
+
+  // Handle cancel job
+  const handleCancelJob = (job: Job, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent row click
+    setJobToCancel(job);
+    setCancelConfirmOpen(true);
+  };
+
+  const confirmCancelJob = async () => {
+    if (!jobToCancel) return;
+
+    try {
+      const result = await dispatch(cancelJobThunk(jobToCancel._id));
+      if (cancelJobThunk.fulfilled.match(result)) {
+        showToast.success("Job cancelled successfully!");
+        setCancelConfirmOpen(false);
+        setJobToCancel(null);
+      }
+    } catch (error) {
+      showToast.error("Failed to cancel job");
+    }
+  };
+
+  const cancelCancelJob = () => {
+    setCancelConfirmOpen(false);
+    setJobToCancel(null);
+  };
+
+  // Handle create job button click
+  const handleCreateJobClick = () => {
+    // Check if user has any properties
+    if (properties.length === 0) {
+      setNoPropertyConfirmOpen(true);
+    } else {
+      setShowCreateModal(true);
+    }
+  };
+
+  const handleNoPropertyConfirm = () => {
+    setNoPropertyConfirmOpen(false);
+    // You can redirect to property creation page here if needed
+    // For now, just close the modal
+  };
+
+  const handleNoPropertyCancel = () => {
+    setNoPropertyConfirmOpen(false);
   };
 
   // Show filters for admin, minimal for customer
   const isAdmin = user?.role === "admin";
   const isCustomer = user?.role === "customer";
 
+  // Check if user can cancel a job
+  const canCancelJob = (job: Job) => {
+    if (!user) return false;
+    if (isAdmin) return true; // Admin can cancel any job
+    if (isCustomer && user._id === job.createdBy) return true; // Customer can cancel their own jobs
+    return false;
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow">
+    <div className="bg-white rounded-lg shadow w-full max-w-full overflow-x-hidden">
       {/* Controls Header */}
       <div className="p-4 sm:p-6 border-b border-gray-200">
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           {/* Search & Create Button Combined */}
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 flex-1 min-w-0">
             <input
               type="text"
               placeholder="Search jobs..."
@@ -58,16 +146,16 @@ const JobManagementTable: React.FC = () => {
               onKeyPress={(e) => {
                 if (e.key === "Enter" && searchTerm.trim()) handleSearch();
               }}
-              className="pl-3 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="flex-1 min-w-0 pl-3 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
             {(isAdmin || isCustomer) && (
               <button
-                className="flex items-center px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition"
+                className="flex-shrink-0 flex items-center px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition"
                 onClick={() => {
                   if (searchTerm.trim()) {
                     handleSearch();
                   } else {
-                    setShowCreateModal(true);
+                    handleCreateJobClick();
                   }
                 }}
                 title={searchTerm.trim() ? "Search Jobs" : "Create Job"}
@@ -80,7 +168,7 @@ const JobManagementTable: React.FC = () => {
           {isAdmin && (
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              className="flex-shrink-0 flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
             >
               <span>Filters</span>
             </button>
@@ -110,7 +198,7 @@ const JobManagementTable: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Category
+                Service
               </label>
               <select
                 value={filters.category || ""}
@@ -148,7 +236,7 @@ const JobManagementTable: React.FC = () => {
       )}
 
       {/* Mobile Card View */}
-      <div className="block lg:hidden">
+      <div className="block lg:hidden w-full overflow-x-hidden">
         {jobsLoading ? (
           <div className="py-12">
             <div className="flex justify-center items-center w-full h-full">
@@ -156,11 +244,15 @@ const JobManagementTable: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="space-y-3 p-4">
-            {jobs.map((job) => (
+          <div className="space-y-3 p-4 w-full">
+            {jobs.map((job: Job) => (
               <div
                 key={job._id}
-                className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
+                className={`bg-white border rounded-lg p-4 shadow-sm transition-shadow w-full ${
+                  job.status === "open"
+                    ? "border-gray-200 hover:shadow-md"
+                    : "border-gray-300 hover:shadow-sm"
+                }`}
               >
                 <div className="flex justify-between items-start mb-3 gap-2">
                   <h3 className="font-semibold text-gray-900 text-sm flex-1 min-w-0">
@@ -170,11 +262,16 @@ const JobManagementTable: React.FC = () => {
                         : job.title}
                     </span>
                   </h3>
+                  {job.status !== "open" && (
+                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                      Read Only
+                    </span>
+                  )}
                   <span
                     className={`px-2 py-1 rounded text-xs font-bold flex-shrink-0 ${
-                      job.status === "pending"
+                      job.status === "open"
                         ? "bg-accent-100 text-accent-800"
-                        : job.status === "active"
+                        : job.status === "in_progress"
                         ? "bg-primary-200 text-primary-800"
                         : job.status === "completed"
                         ? "bg-primary-100 text-primary-600"
@@ -188,9 +285,9 @@ const JobManagementTable: React.FC = () => {
                 </div>
 
                 <div className="text-sm text-gray-600 mb-2">
-                  <span className="font-medium">Category:</span>{" "}
-                  <span className="truncate block" title={job.category}>
-                    {job.category}
+                  <span className="font-medium">Service:</span>{" "}
+                  <span className="truncate block" title={job.service}>
+                    {job.service}
                   </span>
                 </div>
 
@@ -209,12 +306,20 @@ const JobManagementTable: React.FC = () => {
                 </div>
 
                 <div className="flex gap-2">
-                  <button className="flex-1 bg-accent-50 text-accent-600 px-3 py-2 rounded text-sm font-medium hover:bg-accent-100 transition">
+                  <button
+                    onClick={() => handleViewJob(job)}
+                    className="flex-1 bg-accent-50 text-accent-600 px-3 py-2 rounded text-sm font-medium hover:bg-accent-100 transition"
+                  >
                     View Details
                   </button>
-                  <button className="flex-1 bg-primary-100 text-primary-600 px-3 py-2 rounded text-sm font-medium hover:bg-primary-200 transition">
-                    Edit
-                  </button>
+                  {job.status === "open" && canCancelJob(job) && (
+                    <button
+                      onClick={(e) => handleCancelJob(job, e)}
+                      className="flex-1 bg-red-500 text-white px-3 py-2 rounded text-sm font-medium hover:bg-red-600 transition"
+                    >
+                      Cancel Job
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -229,22 +334,22 @@ const JobManagementTable: React.FC = () => {
 
       {/* Desktop Table View */}
       <div className="hidden lg:block overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 text-sm">
+        <table className="w-full divide-y divide-gray-200 text-sm">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 lg:px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">
                 Title
               </th>
-              <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
-                Category
+              <th className="px-3 lg:px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
+                Service
               </th>
-              <th className="px-6 py-3 text-center font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 lg:px-6 py-3 text-center font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">
                 Status
               </th>
-              <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 lg:px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">
                 Created
               </th>
-              <th className="px-6 py-3 text-center font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-3 lg:px-6 py-3 text-center font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
                 Actions
               </th>
             </tr>
@@ -265,9 +370,9 @@ const JobManagementTable: React.FC = () => {
                 </td>
               </tr>
             ) : (
-              jobs.map((job) => (
+              jobs.map((job: Job) => (
                 <tr key={job._id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 font-semibold text-gray-900 max-w-xs">
+                  <td className="px-3 lg:px-3 lg:px-6 py-4 font-semibold text-gray-900 max-w-xs">
                     <span className="block truncate" title={job.title}>
                       {job.title.length > 40
                         ? `${job.title.substring(0, 40)}...`
@@ -278,13 +383,15 @@ const JobManagementTable: React.FC = () => {
                       {job.description?.length > 60 ? "..." : ""}
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-gray-700">{job.category}</td>
-                  <td className="px-6 py-4 text-center">
+                  <td className="px-3 lg:px-3 lg:px-6 py-4 text-gray-700">
+                    {job.service}
+                  </td>
+                  <td className="px-3 lg:px-6 py-4 text-center">
                     <span
                       className={`px-2 py-1 rounded text-xs font-bold ${
-                        job.status === "pending"
+                        job.status === "open"
                           ? "bg-yellow-100 text-yellow-800"
-                          : job.status === "active"
+                          : job.status === "in_progress"
                           ? "bg-blue-100 text-blue-800"
                           : job.status === "completed"
                           ? "bg-green-100 text-green-800"
@@ -296,18 +403,28 @@ const JobManagementTable: React.FC = () => {
                       {job.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-gray-500">
+                  <td className="px-3 lg:px-6 py-4 text-gray-500">
                     {new Date(job.createdAt).toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4 text-center">
+                  <td className="px-3 lg:px-6 py-4 text-center">
                     <div className="flex justify-center gap-2">
-                      <button className="text-blue-600 hover:underline text-sm">
+                      <button
+                        onClick={() => handleViewJob(job)}
+                        className="text-blue-600 hover:underline text-sm"
+                      >
                         View
                       </button>
-                      <span className="text-gray-300">|</span>
-                      <button className="text-gray-600 hover:underline text-sm">
-                        Edit
-                      </button>
+                      {job.status === "open" && canCancelJob(job) && (
+                        <>
+                          <span className="text-gray-300">|</span>
+                          <button
+                            onClick={(e) => handleCancelJob(job, e)}
+                            className="text-red-600 hover:underline text-sm"
+                          >
+                            Cancel Job
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -318,17 +435,14 @@ const JobManagementTable: React.FC = () => {
       </div>
 
       {/* Pagination */}
-      {pagination && (
-        <div className="px-4 sm:px-6 py-4 border-t border-gray-200">
+      {pagination && pagination.totalCount > 0 && (
+        <div className="px-4 sm:px-3 lg:px-6 py-4 border-t border-gray-200">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="text-sm text-gray-700 order-2 sm:order-1">
               {(() => {
                 const currentPage = pagination.currentPage ?? 0;
                 const limit = pagination.limit ?? 0;
                 const totalCount = pagination.totalCount ?? 0;
-                if (totalCount === 0) {
-                  return "No data to show";
-                }
                 const start = (currentPage - 1) * limit + 1;
                 const end = Math.min(currentPage * limit, totalCount);
                 return `Showing ${start} to ${end} of ${totalCount} jobs`;
@@ -337,48 +451,62 @@ const JobManagementTable: React.FC = () => {
             <div className="flex items-center gap-2 order-1 sm:order-2">
               <button
                 onClick={() => handlePageChange(pagination.currentPage - 1)}
-                disabled={!pagination.hasPrevPage || jobsLoading}
+                disabled={
+                  !pagination.hasPrevPage ||
+                  jobsLoading ||
+                  pagination.totalPages <= 1
+                }
                 className="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm font-medium min-w-[44px]"
               >
                 Previous
               </button>
               <div className="flex items-center gap-1">
-                {Array.from(
-                  { length: Math.min(5, pagination.totalPages) },
-                  (_, i) => {
-                    let pageNum;
-                    if (pagination.totalPages <= 5) {
-                      pageNum = i + 1;
-                    } else if (pagination.currentPage <= 3) {
-                      pageNum = i + 1;
-                    } else if (
-                      pagination.currentPage >=
-                      pagination.totalPages - 2
-                    ) {
-                      pageNum = pagination.totalPages - 4 + i;
-                    } else {
-                      pageNum = pagination.currentPage - 2 + i;
-                    }
+                {pagination.totalPages > 1 ? (
+                  Array.from(
+                    { length: Math.min(5, pagination.totalPages) },
+                    (_, i) => {
+                      let pageNum;
+                      if (pagination.totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (pagination.currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (
+                        pagination.currentPage >=
+                        pagination.totalPages - 2
+                      ) {
+                        pageNum = pagination.totalPages - 4 + i;
+                      } else {
+                        pageNum = pagination.currentPage - 2 + i;
+                      }
 
-                    return (
-                      <button
-                        key={pageNum}
-                        onClick={() => handlePageChange(pageNum)}
-                        className={`px-3 py-2 text-sm font-medium rounded-lg min-w-[40px] ${
-                          pagination.currentPage === pageNum
-                            ? "bg-accent-500 text-white"
-                            : "text-gray-700 hover:bg-gray-100"
-                        }`}
-                      >
-                        {pageNum}
-                      </button>
-                    );
-                  }
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => handlePageChange(pageNum)}
+                          className={`px-3 py-2 text-sm font-medium rounded-lg min-w-[40px] ${
+                            pagination.currentPage === pageNum
+                              ? "bg-accent-500 text-white"
+                              : "text-gray-700 hover:bg-gray-100"
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    }
+                  )
+                ) : (
+                  <span className="px-3 py-2 text-sm font-medium text-gray-500">
+                    Page 1 of 1
+                  </span>
                 )}
               </div>
               <button
                 onClick={() => handlePageChange(pagination.currentPage + 1)}
-                disabled={!pagination.hasNextPage || jobsLoading}
+                disabled={
+                  !pagination.hasNextPage ||
+                  jobsLoading ||
+                  pagination.totalPages <= 1
+                }
                 className="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm font-medium min-w-[44px]"
               >
                 Next
@@ -418,12 +546,46 @@ const JobManagementTable: React.FC = () => {
                 &times;
               </button>
               <div className="p-4 sm:p-6 lg:p-8">
-                <JobCreate />
+                <JobCreate
+                  properties={properties}
+                  onClose={() => setShowCreateModal(false)}
+                />
               </div>
             </div>
           </div>,
           document.body
         )}
+
+      {/* Job View/Edit Modal */}
+      {viewEditModalOpen && (
+        <JobViewEditModal
+          isOpen={viewEditModalOpen}
+          onClose={handleCloseViewEditModal}
+          job={selectedJob}
+          properties={properties}
+        />
+      )}
+
+      {/* Cancel Job Confirmation Modal */}
+      <ConfirmModal
+        isOpen={cancelConfirmOpen}
+        onCancel={cancelCancelJob}
+        onConfirm={confirmCancelJob}
+        title="Cancel Job"
+        message={`Are you sure you want to cancel the job "${jobToCancel?.title}"? This action cannot be undone.`}
+        confirmText="Cancel Job"
+        cancelText="Keep Job"
+      />
+
+      {/* No Property Confirmation Modal */}
+      <ConfirmModal
+        isOpen={noPropertyConfirmOpen}
+        onCancel={handleNoPropertyCancel}
+        onConfirm={handleNoPropertyConfirm}
+        title="No Properties Found"
+        message="You need to create at least one property before creating a job request. Please create a property first and then try creating a job."
+        default={true}
+      />
     </div>
   );
 };

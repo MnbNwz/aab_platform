@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ImageViewerModal from "./ImageViewerModal";
 
 interface PropertyViewModalProps {
@@ -25,15 +25,65 @@ const PropertyViewModal: React.FC<PropertyViewModalProps> = ({
   onClose,
   property,
 }) => {
+  // Early return before any hooks to avoid Rules of Hooks violation
+  if (!isOpen || !property) return null;
+
   const [carouselIdx, setCarouselIdx] = useState(0);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerImg, setViewerImg] = useState("");
+  const [imageLoading, setImageLoading] = useState<boolean[]>([]);
+  const [imageError, setImageError] = useState<boolean[]>([]);
 
-  if (!isOpen || !property) return null;
+  // Initialize loading states when images change
+  useEffect(() => {
+    if (property?.images) {
+      setImageLoading(new Array(property.images.length).fill(true));
+      setImageError(new Array(property.images.length).fill(false));
+    }
+  }, [property?.images]);
+
+  // Reset carousel index when property changes
+  useEffect(() => {
+    setCarouselIdx(0);
+  }, [property?.title]);
 
   const images = property.images || [];
   const showPrev = images.length > 1 && carouselIdx > 0;
   const showNext = images.length > 1 && carouselIdx < images.length - 1;
+
+  const handleImageLoad = (index: number) => {
+    setImageLoading((prev) => {
+      const newLoading = [...prev];
+      newLoading[index] = false;
+      return newLoading;
+    });
+  };
+
+  const handleImageError = (index: number) => {
+    setImageLoading((prev) => {
+      const newLoading = [...prev];
+      newLoading[index] = false;
+      return newLoading;
+    });
+    setImageError((prev) => {
+      const newError = [...prev];
+      newError[index] = true;
+      return newError;
+    });
+  };
+
+  // Add timeout for slow loading images
+  useEffect(() => {
+    if (images.length > 0 && imageLoading[carouselIdx]) {
+      const timeout = setTimeout(() => {
+        if (imageLoading[carouselIdx]) {
+          handleImageError(carouselIdx);
+        }
+      }, 10000); // 10 second timeout
+
+      return () => clearTimeout(timeout);
+    }
+  }, [carouselIdx, imageLoading, images.length]);
 
   return (
     <div
@@ -79,8 +129,8 @@ const PropertyViewModal: React.FC<PropertyViewModalProps> = ({
                 <span
                   className={`inline-block px-2 py-1 rounded text-xs font-bold ${
                     property.isActive
-                      ? "bg-accent-100 text-accent-800"
-                      : "bg-primary-200 text-primary-800"
+                      ? "bg-green-100 text-green-800"
+                      : "bg-orange-100 text-orange-800"
                   }`}
                 >
                   {property.isActive ? "Active" : "Inactive"}
@@ -168,20 +218,44 @@ const PropertyViewModal: React.FC<PropertyViewModalProps> = ({
                     <div
                       className="relative w-full max-w-md sm:max-w-lg lg:max-w-xl group cursor-pointer"
                       onClick={() => {
-                        setViewerImg(images[carouselIdx]);
-                        setViewerOpen(true);
+                        if (!imageError[carouselIdx]) {
+                          setViewerImg(images[carouselIdx]);
+                          setViewerOpen(true);
+                        }
                       }}
                     >
-                      <img
-                        src={images[carouselIdx]}
-                        alt={`Property image ${carouselIdx + 1}`}
-                        className="w-full h-48 sm:h-64 lg:h-80 object-cover rounded-lg border border-primary-200 shadow-lg group-hover:opacity-90 transition-opacity"
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black bg-opacity-40 rounded-lg">
-                        <span className="text-white text-sm sm:text-base font-semibold">
-                          Click to view full screen
-                        </span>
-                      </div>
+                      {imageLoading[carouselIdx] && (
+                        <div className="w-full h-48 sm:h-64 lg:h-80 flex items-center justify-center bg-gray-100 rounded-lg border border-primary-200">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-500"></div>
+                        </div>
+                      )}
+                      {imageError[carouselIdx] ? (
+                        <div className="w-full h-48 sm:h-64 lg:h-80 flex items-center justify-center bg-gray-100 rounded-lg border border-primary-200">
+                          <div className="text-center text-gray-500">
+                            <div className="text-4xl mb-2">📷</div>
+                            <div className="text-sm">Failed to load image</div>
+                          </div>
+                        </div>
+                      ) : (
+                        <img
+                          src={images[carouselIdx]}
+                          alt={`Property image ${carouselIdx + 1}`}
+                          className={`w-full h-48 sm:h-64 lg:h-80 object-cover rounded-lg border border-primary-200 shadow-lg group-hover:opacity-90 transition-opacity ${
+                            imageLoading[carouselIdx] ? "hidden" : ""
+                          }`}
+                          loading="lazy"
+                          onLoad={() => handleImageLoad(carouselIdx)}
+                          onError={() => handleImageError(carouselIdx)}
+                        />
+                      )}
+                      {!imageLoading[carouselIdx] &&
+                        !imageError[carouselIdx] && (
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black bg-opacity-40 rounded-lg">
+                            <span className="text-white text-sm sm:text-base font-semibold">
+                              Click to view full screen
+                            </span>
+                          </div>
+                        )}
                     </div>
                   </div>
 

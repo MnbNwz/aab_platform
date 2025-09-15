@@ -5,35 +5,35 @@ import { AuthenticatedRequest } from "../types/express";
 // Get current services (public)
 export const getServices = async (req: Request, res: Response) => {
   try {
-    // Get the latest services document
-    const latestServices = await ContractorServices.findOne()
-      .sort({ version: -1 })
+    // Get the first services document
+    const firstServices = await ContractorServices.findOne()
+      .sort({ version: 1 })
       .select("services version updatedAt");
 
-    if (!latestServices) {
+    if (!firstServices) {
       return res.status(200).json({
         success: true,
         data: {
           services: [],
           version: 0,
-          message: "No services available yet"
-        }
+          message: "No services available yet",
+        },
       });
     }
 
     res.status(200).json({
       success: true,
       data: {
-        services: latestServices.services,
-        version: latestServices.version,
-        lastUpdated: latestServices.updatedAt
-      }
+        services: firstServices.services,
+        version: firstServices.version,
+        lastUpdated: firstServices.updatedAt,
+      },
     });
   } catch (error) {
     console.error("Error fetching services:", error);
     res.status(500).json({
       success: false,
-      error: "Failed to fetch services"
+      error: "Failed to fetch services",
     });
   }
 };
@@ -47,24 +47,24 @@ export const createServices = async (req: AuthenticatedRequest, res: Response) =
     if (!services || !Array.isArray(services) || services.length === 0) {
       return res.status(400).json({
         success: false,
-        error: "Services array is required and must not be empty"
+        error: "Services array is required and must not be empty",
       });
     }
 
     // Validate service names
-    const invalidServices = services.filter(service => 
-      typeof service !== 'string' || service.trim().length === 0
+    const invalidServices = services.filter(
+      (service) => typeof service !== "string" || service.trim().length === 0,
     );
 
     if (invalidServices.length > 0) {
       return res.status(400).json({
         success: false,
-        error: "All services must be non-empty strings"
+        error: "All services must be non-empty strings",
       });
     }
 
     // Clean and normalize service names
-    const cleanServices = services.map(service => service.trim().toLowerCase());
+    const cleanServices = services.map((service) => service.trim().toLowerCase());
     const uniqueServices = [...new Set(cleanServices)];
 
     // Get the latest version number
@@ -91,15 +91,14 @@ export const createServices = async (req: AuthenticatedRequest, res: Response) =
         services: uniqueServices,
         version: newVersion,
         servicesCount: uniqueServices.length,
-        id: contractorServices._id
-      }
+        id: contractorServices._id,
+      },
     });
-
   } catch (error) {
     console.error("Error creating services:", error);
     res.status(500).json({
       success: false,
-      error: "Failed to create services"
+      error: "Failed to create services",
     });
   }
 };

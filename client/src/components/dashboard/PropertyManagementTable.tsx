@@ -191,8 +191,8 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
                   <span
                     className={`px-2 py-1 rounded text-xs font-bold flex-shrink-0 ${
                       property.isActive
-                        ? "bg-accent-100 text-accent-700"
-                        : "bg-primary-200 text-primary-700"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-orange-100 text-orange-700"
                     }`}
                   >
                     {property.isActive ? "Active" : "Inactive"}
@@ -238,8 +238,8 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
                   <button
                     className={`flex-1 px-3 py-2 rounded text-sm font-medium transition ${
                       property.isActive
-                        ? "bg-primary-200 text-primary-800 hover:bg-primary-300"
-                        : "bg-primary-100 text-primary-400 cursor-not-allowed"
+                        ? "bg-orange-100 text-orange-800 hover:bg-orange-200"
+                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
                     }`}
                     disabled={!property.isActive}
                     onClick={() => {
@@ -293,92 +293,89 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
                   </div>
                 </td>
               </tr>
+            ) : paginated.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="text-center text-gray-500 py-8">
+                  No properties found.
+                </td>
+              </tr>
             ) : (
-              <>
-                {paginated.map((property) => (
-                  <tr
-                    key={property._id}
-                    className={`hover:bg-gray-50 ${
-                      !property.isActive ? "opacity-60" : ""
-                    }`}
-                  >
-                    <td className="px-6 py-4 font-semibold text-gray-900 max-w-xs">
-                      <span className="block truncate" title={property.title}>
-                        {property.title.length > 40
-                          ? `${property.title.substring(0, 40)}...`
-                          : property.title}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-gray-700">
-                      {property.propertyType}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span
-                        className={`px-2 py-1 rounded text-xs font-bold ${
-                          property.isActive
-                            ? "bg-accent-100 text-accent-700"
-                            : "bg-primary-200 text-primary-700"
-                        }`}
+              paginated.map((property) => (
+                <tr
+                  key={property._id}
+                  className={`hover:bg-gray-50 ${
+                    !property.isActive ? "opacity-60" : ""
+                  }`}
+                >
+                  <td className="px-6 py-4 font-semibold text-gray-900 max-w-xs">
+                    <span className="block truncate" title={property.title}>
+                      {property.title.length > 40
+                        ? `${property.title.substring(0, 40)}...`
+                        : property.title}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-gray-700">
+                    {property.propertyType}
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <span
+                      className={`px-2 py-1 rounded text-xs font-bold ${
+                        property.isActive
+                          ? "bg-green-100 text-green-700"
+                          : "bg-orange-100 text-orange-700"
+                      }`}
+                    >
+                      {property.isActive ? "Active" : "Inactive"}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <div className="flex justify-center gap-2">
+                      <button
+                        className="text-accent-600 hover:underline text-sm"
+                        onClick={() => {
+                          const mapped = {
+                            ...property,
+                            dimensions: (property as any).dimensions || {
+                              length: 0,
+                              width: 0,
+                            },
+                            isActive:
+                              typeof property.isActive === "boolean"
+                                ? property.isActive
+                                : true,
+                            images: (property.images || []).filter(
+                              (img: any) => typeof img === "string"
+                            ),
+                          };
+                          setViewProperty(mapped as Property);
+                          setViewModalOpen(true);
+                        }}
                       >
-                        {property.isActive ? "Active" : "Inactive"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex justify-center gap-2">
-                        <button
-                          className="text-accent-600 hover:underline text-sm"
-                          onClick={() => {
-                            const mapped = {
-                              ...property,
-                              dimensions: (property as any).dimensions || {
-                                length: 0,
-                                width: 0,
-                              },
-                              isActive:
-                                typeof property.isActive === "boolean"
-                                  ? property.isActive
-                                  : true,
-                              images: (property.images || []).filter(
-                                (img: any) => typeof img === "string"
-                              ),
-                            };
-                            setViewProperty(mapped as Property);
-                            setViewModalOpen(true);
-                          }}
-                        >
-                          View
-                        </button>
-                        <span className="text-primary-300">|</span>
-                        <button
-                          className={`text-primary-600 text-sm ${
-                            property.isActive
-                              ? "hover:underline cursor-pointer"
-                              : "opacity-50 cursor-not-allowed"
-                          }`}
-                          disabled={!property.isActive}
-                          onClick={() => {
-                            if (
-                              property.isActive &&
-                              typeof property._id === "string"
-                            ) {
-                              setConfirmInactiveId(property._id);
-                            }
-                          }}
-                        >
-                          Inactive
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {paginated.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="text-center text-gray-500 py-8">
-                      No properties found.
-                    </td>
-                  </tr>
-                )}
-              </>
+                        View
+                      </button>
+                      <span className="text-primary-300">|</span>
+                      <button
+                        className={`text-sm ${
+                          property.isActive
+                            ? "text-orange-600 hover:underline cursor-pointer"
+                            : "text-gray-400 cursor-not-allowed"
+                        }`}
+                        disabled={!property.isActive}
+                        onClick={() => {
+                          if (
+                            property.isActive &&
+                            typeof property._id === "string"
+                          ) {
+                            setConfirmInactiveId(property._id);
+                          }
+                        }}
+                      >
+                        Inactive
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>
@@ -398,7 +395,7 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
         }}
       />
       {/* Pagination */}
-      {totalPages > 1 && (
+      {total > 0 && (
         <div className="px-4 sm:px-6 py-4 border-t border-gray-200">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="text-sm text-gray-700 order-2 sm:order-1">
@@ -408,42 +405,48 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
             <div className="flex items-center gap-2 order-1 sm:order-2">
               <button
                 onClick={() => setPage(page - 1)}
-                disabled={page === 1}
+                disabled={page === 1 || totalPages <= 1}
                 className="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm font-medium min-w-[44px]"
               >
                 Previous
               </button>
               <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (page <= 3) {
-                    pageNum = i + 1;
-                  } else if (page >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = page - 2 + i;
-                  }
+                {totalPages > 1 ? (
+                  Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (page <= 3) {
+                      pageNum = i + 1;
+                    } else if (page >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = page - 2 + i;
+                    }
 
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setPage(pageNum)}
-                      className={`px-3 py-2 text-sm font-medium rounded-lg min-w-[40px] ${
-                        page === pageNum
-                          ? "bg-accent-500 text-white"
-                          : "text-gray-700 hover:bg-gray-100"
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setPage(pageNum)}
+                        className={`px-3 py-2 text-sm font-medium rounded-lg min-w-[40px] ${
+                          page === pageNum
+                            ? "bg-accent-500 text-white"
+                            : "text-gray-700 hover:bg-gray-100"
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <span className="px-3 py-2 text-sm font-medium text-gray-500">
+                    Page 1 of 1
+                  </span>
+                )}
               </div>
               <button
                 onClick={() => setPage(page + 1)}
-                disabled={page === totalPages}
+                disabled={page === totalPages || totalPages <= 1}
                 className="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm font-medium min-w-[44px]"
               >
                 Next
@@ -454,14 +457,16 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
       )}
 
       {/* Property View Modal */}
-      <PropertyViewModal
-        isOpen={viewModalOpen}
-        onClose={() => {
-          setViewModalOpen(false);
-          setViewProperty(null);
-        }}
-        property={viewProperty}
-      />
+      {viewModalOpen && (
+        <PropertyViewModal
+          isOpen={viewModalOpen}
+          onClose={() => {
+            setViewModalOpen(false);
+            setViewProperty(null);
+          }}
+          property={viewProperty}
+        />
+      )}
     </div>
   );
 };

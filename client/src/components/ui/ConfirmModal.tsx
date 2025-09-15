@@ -10,6 +10,7 @@ interface ConfirmModalProps {
   onCancel: () => void;
   loading?: boolean;
   darkOverlay?: boolean;
+  default?: boolean; // When true, shows only OK button. When false, shows two buttons.
 }
 
 const ConfirmModal: React.FC<ConfirmModalProps> = ({
@@ -22,6 +23,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   onCancel,
   loading = false,
   darkOverlay = false,
+  default: isDefault = false,
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -57,21 +59,25 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
           {message}
         </p>
         <div className="flex w-full gap-3">
+          {!isDefault && (
+            <button
+              className="flex-1 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-colors"
+              onClick={onCancel}
+              disabled={loading}
+              tabIndex={0}
+            >
+              {cancelText}
+            </button>
+          )}
           <button
-            className="flex-1 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-colors"
-            onClick={onCancel}
-            disabled={loading}
-            tabIndex={0}
-          >
-            {cancelText}
-          </button>
-          <button
-            className="flex-1 py-2 rounded-lg bg-accent-500 hover:bg-accent-600 text-white font-semibold shadow-sm transition-colors"
+            className={`${
+              isDefault ? "w-full" : "flex-1"
+            } py-2 rounded-lg bg-accent-500 hover:bg-accent-600 text-white font-semibold shadow-sm transition-colors`}
             onClick={onConfirm}
             disabled={loading}
             tabIndex={0}
           >
-            {false ? confirmText : "Confirm"}
+            {isDefault ? "OK" : confirmText}
           </button>
         </div>
       </div>

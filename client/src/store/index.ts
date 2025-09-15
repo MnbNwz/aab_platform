@@ -8,6 +8,7 @@ import servicesReducer from "./slices/servicesSlice";
 import userManagementReducer from "./slices/userManagementSlice";
 import membershipReducer from "./slices/membershipSlice";
 import jobRequestsReducer from "./slices/jobRequestsSlice";
+import jobReducer from "./slices/jobSlice";
 import propertyReducer from "./slices/propertySlice";
 import adminProfileReducer from "./slices/adminProfileSlice";
 
@@ -21,6 +22,7 @@ export const store = configureStore({
     userManagement: userManagementReducer,
     membership: membershipReducer,
     jobRequests: jobRequestsReducer,
+    job: jobReducer,
     property: propertyReducer,
     adminProfile: adminProfileReducer,
   },

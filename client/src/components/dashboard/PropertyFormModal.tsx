@@ -85,15 +85,42 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
   // When picking new images, replace all
   const handleReplaceImages = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files ? Array.from(e.target.files) : [];
+
     if (files.length > 15) {
       setImageError("You can only select up to 15 images.");
       return;
     }
-    const validImages = files.filter((file) => file.type.startsWith("image/"));
+
+    // Check file types
+    const validImages = files.filter((file) => {
+      if (!file.type.startsWith("image/")) {
+        return false;
+      }
+      // Check for specific image types
+      const allowedTypes = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/webp",
+        "image/gif",
+      ];
+      return allowedTypes.includes(file.type);
+    });
+
     if (validImages.length !== files.length) {
-      setImageError("Only image files are allowed.");
+      setImageError("Only image files (JPEG, PNG, WebP, GIF) are allowed.");
       return;
     }
+
+    // Check file sizes (max 5MB per image)
+    const oversizedFiles = validImages.filter(
+      (file) => file.size > 5 * 1024 * 1024
+    );
+    if (oversizedFiles.length > 0) {
+      setImageError("Each image must be smaller than 5MB.");
+      return;
+    }
+
     setImageFiles(validImages);
     setCarouselIndex(0);
     setImageError("");
@@ -341,11 +368,11 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
               </div>
               <div className="md:col-span-2">
                 <label className="block text-primary-900 font-medium mb-1">
-                  Images (max 15)
+                  Images (max 15, max 5MB each, JPEG/PNG/WebP/GIF only)
                 </label>
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
                   multiple
                   required
                   onChange={handleReplaceImages}
