@@ -1,14 +1,17 @@
 import mongoose, { Schema } from "mongoose";
 import { IUser, GeoHome, Contractor, ApprovalStatus, PropertyType, Customer } from "./types/user";
 
-const CustomerSchema = new Schema<Customer>({
-  defaultPropertyType: {
-    type: String,
-    enum: ["domestic", "commercial"],
-    default: "domestic",
-    required: true,
+const CustomerSchema = new Schema<Customer>(
+  {
+    defaultPropertyType: {
+      type: String,
+      enum: ["domestic", "commercial"],
+      default: "domestic",
+      required: true,
+    },
   },
-}, { _id: false });
+  { _id: false },
+);
 
 const GeoHomeSchema = new Schema<GeoHome>({
   type: { type: String, enum: ["Point"], required: true },
@@ -44,6 +47,7 @@ const UserSchema = new Schema<IUser>(
       enum: ["pending", "approved", "rejected"] as ApprovalStatus[],
       default: "pending" as ApprovalStatus,
     },
+    profileImage: { type: String, required: false },
   },
   { timestamps: true },
 );

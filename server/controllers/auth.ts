@@ -1,9 +1,6 @@
 import { Request, Response } from "express";
 import { signup, signin } from "../services/auth";
 import S3Service from "../services/s3Service";
-import { User } from "../models/user";
-
-import { hashPassword } from "../utils/auth/password";
 
 export const signupController = async (req: Request & { files?: any[] }, res: Response) => {
   try {
@@ -110,45 +107,5 @@ export const getProfile = async (req: any, res: Response) => {
     res.status(500).json({
       error: error.message || "Failed to get profile",
     });
-  }
-};
-
-// Edit profile controller
-export const editProfile = async (req: any, res: Response) => {
-  try {
-    const userId = req.user?._id;
-    if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    // Only allow certain fields to be updated
-    const allowedUpdates = [
-      "firstName",
-      "lastName",
-      "phone",
-      "email",
-      "geoHome",
-      "customer",
-      "contractor",
-    ];
-    const updates: any = {};
-    for (const key of allowedUpdates) {
-      if (req.body[key] !== undefined) {
-        updates[key] = req.body[key];
-      }
-    }
-
-    // Optionally allow password change
-    if (req.body.password) {
-      updates.passwordHash = hashPassword(req.body.password);
-    }
-
-    const updatedUser = await User.findByIdAndUpdate(userId, updates, { new: true });
-    if (!updatedUser) {
-      return res.status(404).json({ error: "User not found" });
-    }
-    res.status(200).json({ message: "Profile updated successfully", user: updatedUser });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message || "Failed to update profile" });
   }
 };

@@ -141,7 +141,7 @@ export const UserStatsCards: React.FC<{
             >
               <IconComponent className="h-6 w-6 md:h-8 md:w-8 text-white" />
             </div>
-            <p
+            <div
               className={`text-2xl md:text-3xl font-extrabold ${card.textColor} mb-0.5 md:mb-1`}
             >
               {statsLoading ? (
@@ -149,7 +149,7 @@ export const UserStatsCards: React.FC<{
               ) : (
                 card.value.toLocaleString()
               )}
-            </p>
+            </div>
             <p className="text-xs md:text-sm font-semibold text-gray-600 text-center break-words max-w-[80px] md:max-w-none uppercase tracking-wide">
               {card.title}
             </p>

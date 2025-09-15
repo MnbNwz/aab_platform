@@ -1,5 +1,12 @@
 import MyProperties from "./MyProperties";
-import React, { useState } from "react";
+import React, {
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  memo,
+  useRef,
+} from "react";
 import { useSelector, useDispatch } from "react-redux";
 import {
   Users,
@@ -9,7 +16,6 @@ import {
   ShoppingCart,
   Briefcase,
 } from "lucide-react";
-import UserDropdown from "./ui/UserDropdown";
 import PageHeader from "./ui/PageHeader";
 import { logoutThunk } from "../store/thunks/authThunks";
 import Sidebar from "./dashboard/Sidebar";
@@ -17,381 +23,543 @@ import UserStatsCards from "./dashboard/UserStatsCards";
 import UserManagementTable from "./dashboard/UserManagementTable";
 import { AppDispatch, RootState } from "../store";
 import ProfileModal from "./ProfileModal";
+import ProfileViewModal from "./ProfileViewModal";
+import Settings from "./Settings";
 import JobManagementTable from "./dashboard/JobManagementTable";
 import type { User } from "../types";
 import { handleApiError } from "../services/apiService";
-import { updateProfileThunk } from "../store/thunks/userThunks";
+import {
+  updateProfileThunk,
+  changePasswordThunk,
+} from "../store/thunks/userThunks";
 import { showToast } from "../utils/toast";
+
+interface DashboardCardProps {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+  onClick?: () => void;
+  iconBgColor: string;
+  iconColor: string;
+  disabled?: boolean;
+}
+
+interface TabContentProps {
+  user: User;
+  activeTab: string;
+  handleLogout: () => void;
+  onProfile: () => void;
+  onProfileFromSettings: () => void;
+  onEmailChange?: (oldEmail: string, newEmail: string) => Promise<void>;
+  onPasswordChange?: (
+    currentPassword: string,
+    newPassword: string
+  ) => Promise<void>;
+  isMobileOpen: boolean;
+  onMobileToggle: () => void;
+  setActiveTab: (tab: string) => void;
+}
+
+// Reusable Dashboard Card Component
+const DashboardCard = memo<DashboardCardProps>(
+  ({
+    icon: Icon,
+    title,
+    description,
+    onClick,
+    iconBgColor,
+    iconColor,
+    disabled = false,
+  }) => (
+    <div
+      className={`bg-white rounded-lg shadow p-4 sm:p-6 cursor-pointer hover:bg-gray-50 transition-colors ${
+        disabled ? "opacity-50" : ""
+      }`}
+      onClick={disabled ? undefined : onClick}
+    >
+      <div className="flex items-center space-x-3 sm:space-x-4">
+        <div className={`${iconBgColor} p-2 sm:p-3 rounded-full flex-shrink-0`}>
+          <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${iconColor}`} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900">
+            {title}
+          </h3>
+          <p className="text-xs sm:text-sm text-gray-500">{description}</p>
+        </div>
+      </div>
+    </div>
+  )
+);
+
+DashboardCard.displayName = "DashboardCard";
+
+// Admin Quick Actions Component
+const AdminQuickActions = memo<{ onNavigateToUsers: () => void }>(
+  ({ onNavigateToUsers }) => {
+    const quickActions = useMemo(
+      () => [
+        {
+          icon: Users,
+          title: "Pending Approvals",
+          description: "Review user registrations",
+          onClick: onNavigateToUsers,
+          iconBgColor: "bg-blue-100",
+          iconColor: "text-blue-600",
+        },
+        {
+          icon: DollarSign,
+          title: "Revenue Reports",
+          description: "Coming soon",
+          iconBgColor: "bg-green-100",
+          iconColor: "text-green-600",
+          disabled: true,
+        },
+        {
+          icon: TrendingUp,
+          title: "Analytics",
+          description: "Coming soon",
+          iconBgColor: "bg-purple-100",
+          iconColor: "text-purple-600",
+          disabled: true,
+        },
+      ],
+      [onNavigateToUsers]
+    );
+
+    return (
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+        <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">
+          Quick Actions
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          {quickActions.map((action, index) => (
+            <DashboardCard key={index} {...action} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+);
+
+AdminQuickActions.displayName = "AdminQuickActions";
+
+const UserDashboardCards = memo<{
+  user: User;
+  onProfileClick: () => void;
+}>(({ user, onProfileClick }) => {
+  const userCards = useMemo(() => {
+    const isCustomer = user.role === "customer";
+    const isContractor = user.role === "contractor";
+
+    return [
+      {
+        icon: isCustomer ? ShoppingCart : Briefcase,
+        title: "Profile",
+        description: "Manage your account",
+        onClick: onProfileClick,
+        iconBgColor: "bg-blue-100",
+        iconColor: "text-blue-600",
+      },
+      // Conditional contractor services card
+      ...(isContractor
+        ? [
+            {
+              icon: Briefcase,
+              title: "Services",
+              description: "Manage your services",
+              iconBgColor: "bg-green-100",
+              iconColor: "text-green-600",
+            },
+          ]
+        : []),
+      {
+        icon: Calendar,
+        title: isCustomer ? "My Bookings" : "Appointments",
+        description: "View and manage bookings",
+        iconBgColor: "bg-purple-100",
+        iconColor: "text-purple-600",
+      },
+    ];
+  }, [user.role, onProfileClick]);
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      {userCards.map((card, index) => (
+        <DashboardCard key={index} {...card} />
+      ))}
+    </div>
+  );
+});
+
+UserDashboardCards.displayName = "UserDashboardCards";
+
+// Tab Content Wrapper Component
+const TabContentWrapper = memo<{
+  title: string;
+  subtitle: string;
+  user: User;
+  onLogout: () => void;
+  onProfile: () => void;
+  isMobileOpen: boolean;
+  onMobileToggle: () => void;
+  children: React.ReactNode;
+}>(
+  ({
+    title,
+    subtitle,
+    user,
+    onLogout,
+    onProfile,
+    isMobileOpen,
+    onMobileToggle,
+    children,
+  }) => (
+    <>
+      <PageHeader
+        title={title}
+        subtitle={subtitle}
+        user={user}
+        onLogout={onLogout}
+        onProfile={onProfile}
+        showHamburger={true}
+        onHamburgerClick={onMobileToggle}
+        isSidebarOpen={isMobileOpen}
+      />
+      <div className="flex-1 p-4 sm:p-6 lg:p-8 relative xl:px-16 lg:px-12 md:px-8 px-4">
+        {children}
+      </div>
+    </>
+  )
+);
+
+TabContentWrapper.displayName = "TabContentWrapper";
+
+// Main Dashboard Content Component
+const DashboardContent = memo<TabContentProps>(
+  ({
+    user,
+    activeTab,
+    handleLogout,
+    onProfile,
+    onProfileFromSettings,
+    onEmailChange,
+    onPasswordChange,
+    isMobileOpen,
+    onMobileToggle,
+    setActiveTab,
+  }) => {
+    const isAdmin = user.role === "admin";
+
+    const handleNavigateToUsers = useCallback(() => {
+      setActiveTab("users");
+    }, [setActiveTab]);
+
+    // Tab content configuration
+    const tabConfig = useMemo(() => {
+      const baseProps = {
+        user,
+        onLogout: handleLogout,
+        onProfile,
+        isMobileOpen,
+        onMobileToggle,
+      };
+
+      if (activeTab === "dashboard") {
+        return isAdmin
+          ? {
+              ...baseProps,
+              title: "Admin Dashboard",
+              subtitle: "Overview of the system",
+              children: (
+                <div className="space-y-6 md:space-y-8">
+                  <UserStatsCards onCardClick={() => {}} />
+                  <AdminQuickActions
+                    onNavigateToUsers={handleNavigateToUsers}
+                  />
+                </div>
+              ),
+            }
+          : {
+              ...baseProps,
+              title: `${user.role === "customer" ? "Customer" : "Contractor"} `,
+              subtitle: "Overview of the system",
+              children: (
+                <UserDashboardCards user={user} onProfileClick={onProfile} />
+              ),
+            };
+      }
+
+      const tabConfigs = {
+        users: isAdmin && {
+          ...baseProps,
+          title: "User Management",
+          subtitle: "Manage system users",
+          children: <UserManagementTable />,
+        },
+        properties: (user.role === "admin" || user.role === "customer") && {
+          ...baseProps,
+          title: "My Properties",
+          subtitle: "Manage your property listings",
+          children: <MyProperties userRole={user.role} />,
+        },
+        jobs: (user.role === "admin" || user.role === "customer") && {
+          ...baseProps,
+          title: "Job Management",
+          subtitle: "Manage job requests and assignments",
+          children: <JobManagementTable />,
+        },
+        settings: {
+          ...baseProps,
+          title: "Settings",
+          subtitle: "Manage your account preferences and business settings",
+          children: (
+            <Settings
+              user={user}
+              onProfileEdit={onProfileFromSettings}
+              onEmailChange={onEmailChange}
+              onPasswordChange={onPasswordChange}
+            />
+          ),
+        },
+      };
+
+      return tabConfigs[activeTab as keyof typeof tabConfigs] || null;
+    }, [
+      activeTab,
+      isAdmin,
+      user,
+      handleLogout,
+      onProfile,
+      isMobileOpen,
+      onMobileToggle,
+      handleNavigateToUsers,
+    ]);
+
+    // Render tab content or default
+    return tabConfig ? (
+      <TabContentWrapper {...tabConfig} />
+    ) : (
+      <div className="bg-white rounded-lg shadow p-8 text-center mt-8">
+        <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+          Feature Coming Soon
+        </h2>
+        <p className="text-gray-600">
+          We're working on building this feature. Stay tuned for updates!
+        </p>
+      </div>
+    );
+  }
+);
+
+DashboardContent.displayName = "DashboardContent";
 
 const Dashboard: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((state: RootState) => state.auth);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileViewOpen, setProfileViewOpen] = useState(false);
+  const [profileFromSettings, setProfileFromSettings] = useState(false);
+  const [displayUser, setDisplayUser] = useState<User | null>(null);
+  const hasManuallyUpdatedDisplayUser = useRef(false);
 
-  const handleLogout = () => {
+  useEffect(() => {
+    if (user && !hasManuallyUpdatedDisplayUser.current) {
+      setDisplayUser(user);
+    }
+  }, [user]);
+
+  const handleLogout = useCallback(() => {
     dispatch(logoutThunk());
-  };
+  }, [dispatch]);
 
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600">Loading user data...</p>
+  const handleMobileToggle = useCallback(() => {
+    setIsMobileOpen((prev) => !prev);
+  }, []);
+
+  const handleProfileViewOpen = useCallback(() => {
+    setProfileViewOpen(true);
+  }, []);
+
+  const handleProfileViewClose = useCallback(() => {
+    setProfileViewOpen(false);
+  }, []);
+
+  const handleProfileOpenFromSettings = useCallback(() => {
+    setProfileFromSettings(true);
+    setProfileOpen(true);
+  }, []);
+
+  const handleProfileClose = useCallback(() => {
+    setProfileOpen(false);
+  }, []);
+
+  const handleEmailChange = useCallback(
+    async (oldEmail: string, newEmail: string) => {
+      try {
+        // Validate that the old email matches the current user email
+        if (oldEmail !== user?.email) {
+          throw new Error("Current email does not match your account email");
+        }
+
+        const updatedUser = await dispatch(
+          updateProfileThunk({
+            userId: user!._id,
+            profileData: { email: newEmail },
+            successMessage: "Email updated successfully!",
+          })
+        ).unwrap();
+
+        // Update displayUser with the new email (this updates the user dropdown)
+        hasManuallyUpdatedDisplayUser.current = true;
+        if (updatedUser && updatedUser.email) {
+          setDisplayUser((prev) =>
+            prev ? { ...prev, email: updatedUser.email } : null
+          );
+        } else {
+          // Fallback: update with the new email directly
+          setDisplayUser((prev) =>
+            prev ? { ...prev, email: newEmail } : null
+          );
+        }
+      } catch (error) {
+        // Error is handled by the thunk
+        throw error; // Re-throw to let the modal handle it
+      }
+    },
+    [dispatch, user, displayUser]
+  );
+
+  const handlePasswordChange = useCallback(
+    async (currentPassword: string, newPassword: string) => {
+      try {
+        await dispatch(
+          changePasswordThunk({
+            currentPassword,
+            newPassword,
+          })
+        ).unwrap();
+      } catch (error) {
+        // Error is handled by the thunk
+        throw error; // Re-throw to let the modal handle it
+      }
+    },
+    [dispatch]
+  );
+
+  const handleSaveProfile = useCallback(
+    async (profileData: Partial<User>) => {
+      try {
+        await dispatch(
+          updateProfileThunk({ userId: user!._id, profileData })
+        ).unwrap();
+
+        // Update only the displayUser state for UI updates
+        // This prevents triggering global re-renders that cause white screen
+        hasManuallyUpdatedDisplayUser.current = true;
+        if (displayUser) {
+          setDisplayUser({ ...displayUser, ...profileData });
+        }
+      } catch (error) {
+        showToast.error(handleApiError(error));
+      }
+    },
+    [dispatch, user, displayUser]
+  );
+
+  // Memoized user role
+  const userRole = useMemo(
+    () => user?.role as "admin" | "customer" | "contractor",
+    [user?.role]
+  );
+
+  // Memoized access check
+  const canAccessDashboard = useMemo(
+    () =>
+      (user?.role === "admin" && user?.status === "active") ||
+      (user?.role !== "admin" &&
+        user?.status === "active" &&
+        user?.approval === "approved"),
+    [user?.role, user?.status, user?.approval]
+  );
+
+  // Conditional rendering for loading and access states
+  const renderState = useMemo(() => {
+    if (!user) {
+      return (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-gray-600">Loading user data...</p>
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  // Check if user is allowed to see dashboard
-  const canAccessDashboard =
-    (user.role === "admin" && user.status === "active") ||
-    (user.role !== "admin" &&
-      user.status === "active" &&
-      user.approval === "approved");
-
-  if (!canAccessDashboard) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-primary-800">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-primary-100">
-            Access Restricted
-          </h1>
-          <p className="text-primary-300 mt-2">
-            Please wait for your account to be approved.
-          </p>
+    if (!canAccessDashboard) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-primary-800">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-primary-100">
+              Access Restricted
+            </h1>
+            <p className="text-primary-300 mt-2">
+              Please wait for your account to be approved.
+            </p>
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
+
+    return null;
+  }, [user, canAccessDashboard]);
+
+  if (renderState) return renderState;
+
+  // At this point, user is guaranteed to be non-null due to renderState check
+  const userData = displayUser || user!;
 
   return (
     <div className="min-h-screen bg-primary-800 flex">
-      {/* Unified Sidebar for all user types */}
       <Sidebar
         activeTab={activeTab}
         onTabChange={setActiveTab}
         isMobileOpen={isMobileOpen}
-        onMobileToggle={() => setIsMobileOpen(!isMobileOpen)}
-        userRole={user.role as "admin" | "customer" | "contractor"}
+        onMobileToggle={handleMobileToggle}
+        userRole={userRole}
       />
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col bg-primary-50">
         <DashboardContent
-          user={user}
+          user={userData}
           activeTab={activeTab}
           handleLogout={handleLogout}
-          setActiveTab={setActiveTab}
+          onProfile={handleProfileViewOpen}
+          onProfileFromSettings={handleProfileOpenFromSettings}
+          onEmailChange={handleEmailChange}
+          onPasswordChange={handlePasswordChange}
           isMobileOpen={isMobileOpen}
-          onMobileToggle={() => setIsMobileOpen(!isMobileOpen)}
+          onMobileToggle={handleMobileToggle}
+          setActiveTab={setActiveTab}
         />
       </div>
+
+      <ProfileViewModal
+        isOpen={profileViewOpen}
+        onClose={handleProfileViewClose}
+        user={userData}
+      />
+
+      <ProfileModal
+        isOpen={profileOpen}
+        onClose={handleProfileClose}
+        onSave={handleSaveProfile}
+        user={userData}
+        showAllFields={profileFromSettings}
+      />
     </div>
   );
 };
 
-// Dashboard Content Component
-const DashboardContent: React.FC<{
-  user: any;
-  activeTab: string;
-  handleLogout: () => void;
-  setActiveTab: (tab: string) => void;
-  isMobileOpen: boolean;
-  onMobileToggle: () => void;
-}> = ({
-  user,
-  activeTab,
-  handleLogout,
-  setActiveTab,
-  isMobileOpen,
-  onMobileToggle,
-}) => {
-  const dispatch = useDispatch<AppDispatch>();
-  const isAdmin = user.role === "admin";
-  const [profileOpen, setLocalProfileOpen] = useState(false);
-
-  const handleProfileClose = () => {
-    setLocalProfileOpen(false);
-  };
-
-  const handleSaveProfile = async (profileData: Partial<User>) => {
-    try {
-      // Always use user._id for update
-      await dispatch(
-        updateProfileThunk({ userId: "user._id", profileData })
-      ).unwrap();
-      handleProfileClose();
-    } catch (error) {
-      showToast.error(handleApiError(error));
-    }
-  };
-
-  if (activeTab === "dashboard") {
-    if (isAdmin) {
-      return (
-        <div className="space-y-8">
-          <div className="flex items-center justify-between pt-4 pb-2">
-            <div>
-              <h1 className="text-3xl font-bold text-accent-500">
-                Admin Dashboard
-              </h1>
-              <p className="text-lg font-semibold text-accent-400 mt-2">
-                Overview of system statistics and user management
-              </p>
-            </div>
-            <div className="ml-4">
-              <UserDropdown
-                user={user}
-                onLogout={handleLogout}
-                onProfile={() => setLocalProfileOpen(true)}
-                onSettings={() => {}}
-              />
-            </div>
-          </div>
-
-          <UserStatsCards
-            onCardClick={(filter) => {
-              // setActiveTab("users");
-              // dispatch(setFilters({ ...filter, page: 1 }));
-            }}
-          />
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              Quick Actions
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div
-                className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
-                onClick={() => setActiveTab("users")}
-              >
-                <Users className="h-8 w-8 text-blue-600 mb-2" />
-                <h3 className="font-medium text-gray-900">Pending Approvals</h3>
-                <p className="text-sm text-gray-500">
-                  Review user registrations
-                </p>
-              </div>
-              <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer opacity-50">
-                <DollarSign className="h-8 w-8 text-green-600 mb-2" />
-                <h3 className="font-medium text-gray-900">Revenue Reports</h3>
-                <p className="text-sm text-gray-500">Coming soon</p>
-              </div>
-              <div className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer opacity-50">
-                <TrendingUp className="h-8 w-8 text-purple-600 mb-2" />
-                <h3 className="font-medium text-gray-900">Analytics</h3>
-                <p className="text-sm text-gray-500">Coming soon</p>
-              </div>
-            </div>
-          </div>
-          <ProfileModal
-            isOpen={profileOpen}
-            onClose={handleProfileClose}
-            onSave={handleSaveProfile}
-            user={user}
-          />
-        </div>
-      );
-    } else {
-      // Customer/Contractor Dashboard
-      return (
-        <div className="space-y-0 relative">
-          {/* UserDropdown absolute for <768px, static for md+ */}
-          <div className="block md:hidden">
-            <div className="absolute right-0 -top-2 md:top-8 z-10">
-              <UserDropdown
-                user={user}
-                onLogout={handleLogout}
-                onProfile={() => setLocalProfileOpen(true)}
-                onSettings={() => {}}
-              />
-            </div>
-          </div>
-          <div className="hidden md:flex items-center justify-between pt-8 pb-2">
-            <div>
-              <h1 className="text-3xl font-bold text-accent-500">
-                Welcome, {user.firstName}!
-              </h1>
-              <p className="text-lg font-semibold text-accent-400 mt-2">
-                {user.role === "customer" ? "Customer" : "Contractor"} Dashboard
-              </p>
-            </div>
-            {/* UserDropdown absolute for md+ */}
-            <div className="hidden md:block">
-              <div className="absolute right-0 top-0 z-10">
-                <UserDropdown
-                  user={user}
-                  onLogout={handleLogout}
-                  onProfile={() => setLocalProfileOpen(true)}
-                  onSettings={() => {}}
-                />
-              </div>
-            </div>
-          </div>
-          {/* Centered welcome text for <768px */}
-          <div className="md:hidden pt-12 pb-6 text-center">
-            <h1 className="text-3xl font-bold text-accent-500">
-              Welcome, {user.firstName}!
-            </h1>
-            <p className="text-lg font-semibold text-accent-400 mt-2">
-              {user.role === "customer" ? "Customer" : "Contractor"} Dashboard
-            </p>
-          </div>
-
-          {/* Tab content */}
-          {activeTab === "dashboard" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Profile Card */}
-              <div
-                className="bg-white rounded-lg shadow p-6 cursor-pointer hover:bg-gray-50"
-                onClick={() => setLocalProfileOpen(true)}
-              >
-                <div className="flex items-center space-x-4">
-                  <div className="bg-blue-100 p-3 rounded-full">
-                    {user.role === "customer" ? (
-                      <ShoppingCart className="h-6 w-6 text-blue-600" />
-                    ) : (
-                      <Briefcase className="h-6 w-6 text-blue-600" />
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      Profile
-                    </h3>
-                    <p className="text-sm text-gray-500">Manage your account</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Services Card (Contractor only) */}
-              {user.role === "contractor" && (
-                <div className="bg-white rounded-lg shadow p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="bg-green-100 p-3 rounded-full">
-                      <Briefcase className="h-6 w-6 text-green-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        Services
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        Manage your services
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Bookings Card */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center space-x-4">
-                  <div className="bg-purple-100 p-3 rounded-full">
-                    <Calendar className="h-6 w-6 text-purple-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {user.role === "customer"
-                        ? "My Bookings"
-                        : "Appointments"}
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      View and manage bookings
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          <ProfileModal
-            isOpen={profileOpen}
-            onClose={handleProfileClose}
-            onSave={handleSaveProfile}
-            user={user}
-          />
-        </div>
-      );
-    }
-  }
-
-  // Other tab content based on activeTab
-  if (activeTab === "users" && isAdmin) {
-    return (
-      <>
-        <PageHeader
-          title="User Management"
-          subtitle="Manage system users and permissions"
-          user={user}
-          onLogout={handleLogout}
-          onProfile={() => setLocalProfileOpen(true)}
-          showHamburger={true}
-          onHamburgerClick={onMobileToggle}
-          isSidebarOpen={isMobileOpen}
-        />
-        <div className="flex-1 p-4 sm:p-6 lg:p-8 relative xl:px-16 lg:px-12 md:px-8 px-4">
-          <UserManagementTable />
-        </div>
-      </>
-    );
-  }
-
-  if (
-    activeTab === "properties" &&
-    (user.role === "admin" || user.role === "customer")
-  ) {
-    return (
-      <>
-        <PageHeader
-          title="My Properties"
-          subtitle="Manage your property listings"
-          user={user}
-          onLogout={handleLogout}
-          onProfile={() => setLocalProfileOpen(true)}
-          showHamburger={true}
-          onHamburgerClick={onMobileToggle}
-          isSidebarOpen={isMobileOpen}
-        />
-        <div className="flex-1 p-4 sm:p-6 lg:p-8 relative xl:px-16 lg:px-12 md:px-8 px-4">
-          <MyProperties userRole={user.role} />
-        </div>
-      </>
-    );
-  }
-
-  // Show JobManagementTable for jobs tab (admin and customer)
-  if (
-    activeTab === "jobs" &&
-    (user.role === "admin" || user.role === "customer")
-  ) {
-    return (
-      <>
-        <PageHeader
-          title="Job Management"
-          subtitle="Manage job requests and assignments"
-          user={user}
-          onLogout={handleLogout}
-          onProfile={() => setLocalProfileOpen(true)}
-          showHamburger={true}
-          onHamburgerClick={onMobileToggle}
-          isSidebarOpen={isMobileOpen}
-        />
-        <div className="flex-1 p-4 sm:p-6 lg:p-8 relative xl:px-16 lg:px-12 md:px-8 px-4">
-          <JobManagementTable />
-        </div>
-      </>
-    );
-  }
-
-  // Default content for other tabs
-  return (
-    <div className="bg-white rounded-lg shadow p-8 text-center mt-8">
-      <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-        Feature Coming Soon
-      </h2>
-      <p className="text-gray-600">
-        We're working on building this feature. Stay tuned for updates!
-      </p>
-    </div>
-  );
-};
-
-export default Dashboard;
+export default memo(Dashboard);

@@ -59,7 +59,6 @@ const SignUpForm: React.FC = () => {
       !servicesLoading &&
       !servicesFetchFailed
     ) {
-      console.log("🎯 Fetching services for contractor role...");
       dispatch(getServicesThunk())
         .unwrap()
         .catch(() => setServicesFetchFailed(true));
@@ -135,10 +134,6 @@ const SignUpForm: React.FC = () => {
   // Handle redirect after successful registration
   useEffect(() => {
     if (isAuthenticated && user) {
-      console.log(
-        "🎯 Registration successful, navigating to dashboard for:",
-        user.role
-      );
       navigate("/dashboard", { replace: true });
     }
   }, [isAuthenticated, user, navigate]);

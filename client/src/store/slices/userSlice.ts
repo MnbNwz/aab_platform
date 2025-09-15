@@ -5,8 +5,8 @@ export interface ProfileFormState {
   role: UserRole;
   firstName: string;
   lastName: string;
-  status: UserStatus;
-  approval: UserApproval;
+  status?: UserStatus;
+  approval?: UserApproval;
   phone: string;
   geoHome: [number, number];
   contractor?: {

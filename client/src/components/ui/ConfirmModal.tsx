@@ -16,7 +16,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   isOpen,
   title = "Are you sure?",
   message,
-  confirmText = "Yes, Delete",
+  confirmText = "Confirm",
   cancelText = "Cancel",
   onConfirm,
   onCancel,
@@ -71,7 +71,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
             disabled={loading}
             tabIndex={0}
           >
-            {loading ? "Deleting..." : confirmText}
+            {false ? confirmText : "Confirm"}
           </button>
         </div>
       </div>

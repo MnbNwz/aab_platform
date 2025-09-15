@@ -6,7 +6,6 @@ import {
   getProfileThunk,
   restoreSessionThunk,
 } from "../thunks/authThunks";
-import { updateProfileThunk } from "../thunks/userThunks";
 import type { User, UserRole } from "../../types";
 
 export interface AuthState {
@@ -43,6 +42,10 @@ export const authSlice = createSlice({
 
     setInitialized: (state) => {
       state.isInitialized = true;
+    },
+
+    updateUser: (state, action: PayloadAction<User>) => {
+      state.user = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -150,25 +153,13 @@ export const authSlice = createSlice({
         state.isInitialized = true;
         // Don't set error for failed session restore
       });
-
-    // Update Profile
-    builder
-      .addCase(updateProfileThunk.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(updateProfileThunk.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.user = action.payload;
-        state.error = null;
-      })
-      .addCase(updateProfileThunk.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload || "Failed to update profile";
-        // Don't update user state on error
-      });
   },
 });
 
-export const { clearError, setLoginType, resetAuth, setInitialized } =
-  authSlice.actions;
+export const {
+  clearError,
+  setLoginType,
+  resetAuth,
+  setInitialized,
+  updateUser,
+} = authSlice.actions;

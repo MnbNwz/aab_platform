@@ -75,15 +75,9 @@ const makeRequest = async <T = any>(
   if (body instanceof FormData) {
     // Let browser set Content-Type with boundary
     delete headers["Content-Type"];
-    console.log("📦 Sending FormData (multipart/form-data)");
   } else if (body && typeof body === "object" && !(body instanceof Blob)) {
     headers["Content-Type"] = "application/json";
     body = JSON.stringify(body);
-    if (body) {
-      try {
-        console.log(`📦 Request Body:`, JSON.parse(body as string));
-      } catch {}
-    }
   } else if (body) {
     headers["Content-Type"] = "application/json";
   }
@@ -94,8 +88,6 @@ const makeRequest = async <T = any>(
     ...options,
     body,
   };
-
-  console.log(`📡 API Request: ${options.method || "GET"} ${url}`);
 
   try {
     const controller = new AbortController();
@@ -117,13 +109,9 @@ const makeRequest = async <T = any>(
       data = await response.text();
     }
 
-    console.log("API Response: " + response.status + " " + response.statusText);
-    console.log("Response Data:", data);
-
     // Handle different HTTP status codes
     if (response.status === 401) {
       // Unauthorized - let the component handle the error
-      console.log("🔒 Unauthorized request");
       throw createApiError(ERROR_MESSAGES.UNAUTHORIZED, 401);
     }
 
@@ -210,6 +198,13 @@ export const authApi = {
     const response = await put<{ user: User }>(`/api/user/${userId}`, userData);
     return response.data.user;
   },
+
+  changePassword: async (passwordData: {
+    currentPassword: string;
+    newPassword: string;
+  }): Promise<void> => {
+    await put("/api/user/change-password", passwordData);
+  },
 } as const;
 
 // Services API
@@ -224,6 +219,21 @@ const servicesApi = {
       version: number;
       lastUpdated: string;
     }>("/api/services");
+    return response.data!;
+  },
+
+  createServices: async (
+    services: string[]
+  ): Promise<{
+    services: string[];
+    version: number;
+    lastUpdated: string;
+  }> => {
+    const response = await post<{
+      services: string[];
+      version: number;
+      lastUpdated: string;
+    }>("/api/services", { services });
     return response.data!;
   },
 } as const;

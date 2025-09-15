@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -8,10 +8,77 @@
   body {
     @apply bg-gray-50 text-gray-900 font-sans;
     font-feature-settings: "rlig" 1, "calt" 1;
+    /* Prevent mobile zoom and layout shifts */
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
-  
+
   html {
     scroll-behavior: smooth;
+    /* Prevent mobile zoom */
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+  }
+
+  /* Prevent mobile zoom on input focus */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  /* Ensure sidebar maintains full height */
+  .sidebar-container {
+    height: 100vh !important;
+    max-height: 100vh !important;
+    min-height: 100vh !important;
+  }
+
+  /* Prevent mobile layout shifts and zoom */
+  @media screen and (max-width: 768px) {
+    body {
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Prevent zoom on mobile when sidebar opens */
+    .sidebar-container {
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Ensure proper mobile viewport handling */
+    .mobile-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 30;
+    }
+  }
+
+  /* Extra small screens (below 375px) */
+  @media screen and (max-width: 374px) {
+    /* Ensure header elements fit on very small screens */
+    .header-title {
+      font-size: 0.75rem !important; /* 12px */
+      line-height: 1rem !important;
+    }
+
+    .header-subtitle {
+      font-size: 0.625rem !important; /* 10px */
+      line-height: 0.75rem !important;
+    }
+
+    /* Compact spacing for very small screens */
+    .header-container {
+      padding: 0.5rem !important;
+    }
+
+    .header-gap {
+      gap: 0.25rem !important;
+    }
   }
 }
 
@@ -20,31 +87,31 @@
   .aas-card {
     @apply bg-white rounded-xl shadow-lg border border-neutral-200 p-6 transition-all duration-300 hover:shadow-xl;
   }
-  
+
   .aas-button-primary {
     @apply bg-accent-500 hover:bg-accent-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5;
   }
-  
+
   .aas-button-secondary {
     @apply bg-primary-800 hover:bg-primary-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg;
   }
-  
+
   .aas-input {
     @apply w-full px-4 py-3 rounded-lg border border-neutral-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-colors duration-200 bg-white;
   }
-  
+
   .aas-hero-bg {
     @apply bg-gradient-to-br from-primary-800 via-primary-900 to-primary-950;
   }
-  
+
   .aas-glass-card {
     @apply bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-6;
   }
-  
+
   .aas-section-title {
     @apply text-3xl md:text-4xl font-bold text-center mb-4;
   }
-  
+
   .aas-section-subtitle {
     @apply text-lg text-neutral-600 text-center max-w-3xl mx-auto mb-12;
   }

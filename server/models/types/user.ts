@@ -35,4 +35,9 @@ export interface IUser extends Document {
   contractor?: Contractor;
   geoHome: GeoHome;
   approval: ApprovalStatus;
+  profileImage?: string;
 }
+
+// DTO types for user operations
+export type CreateUserDTO = Partial<IUser>;
+export type UpdateUserDTO = Partial<IUser>;

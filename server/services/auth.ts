@@ -26,8 +26,18 @@ function cleanUserData(user: any) {
 
 // Signup function
 export async function signup(signupData: any) {
-  const { firstName, lastName, email, password, phone, role, customer, contractor, geoHome } =
-    signupData;
+  const {
+    firstName,
+    lastName,
+    email,
+    password,
+    phone,
+    role,
+    customer,
+    contractor,
+    geoHome,
+    profileImage,
+  } = signupData;
 
   // Validate required fields
   if (!firstName || !lastName) {
@@ -51,6 +61,7 @@ export async function signup(signupData: any) {
     status: "pending",
     approval: "pending", // Approval is now at user level
     geoHome,
+    profileImage: profileImage || null, // Always include profileImage field
   };
 
   // Add profile data
@@ -125,4 +136,38 @@ export async function signin(signinData: any) {
     accessToken,
     refreshToken,
   };
+}
+
+// Update user profile
+export async function updateProfile(userId: string, updateData: any) {
+  // Only allow certain fields to be updated
+  const allowedUpdates = [
+    "firstName",
+    "lastName",
+    "phone",
+    "email",
+    "geoHome",
+    "customer",
+    "contractor",
+    "profileImage",
+  ];
+
+  const updates: any = {};
+  for (const key of allowedUpdates) {
+    if (updateData[key] !== undefined) {
+      updates[key] = updateData[key];
+    }
+  }
+
+  // Optionally allow password change
+  if (updateData.password) {
+    updates.passwordHash = hashPassword(updateData.password);
+  }
+
+  const updatedUser = await User.findByIdAndUpdate(userId, updates, { new: true });
+  if (!updatedUser) {
+    throw new Error("User not found");
+  }
+
+  return updatedUser;
 }

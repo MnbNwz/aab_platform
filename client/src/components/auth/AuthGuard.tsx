@@ -11,7 +11,6 @@ const AuthGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   // If user is already authenticated, redirect to dashboard
   if (isAuthenticated && user) {
-    console.log("🔒 User already authenticated, redirecting to dashboard");
     return <Navigate to="/dashboard" replace />;
   }
 

@@ -37,7 +37,6 @@ const LoginForm: React.FC = () => {
   useEffect(() => {
     if (isAuthenticated && user) {
       // Redirect to dashboard
-      console.log("🎯 Navigating to dashboard for user:", user.role);
       navigate("/dashboard", { replace: true });
     }
   }, [isAuthenticated, user, navigate]);

@@ -10,6 +10,7 @@ interface UserDropdownProps {
     firstName?: string;
     lastName?: string;
     email?: string;
+    profileImage?: string;
   };
   onProfile?: () => void;
   onSettings?: () => void;
@@ -45,67 +46,120 @@ const UserDropdown: React.FC<UserDropdownProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [open]);
 
+  console.log("user", user);
+
   return (
     <div className="relative" ref={dropdownRef}>
       <button
-        className="flex items-center space-x-1 xs:space-x-2 bg-white border border-gray-200 rounded-full px-2 xs:px-3 py-1.5 xs:py-2 shadow hover:bg-gray-50 focus:outline-none"
+        className="flex items-center space-x-0.5 xs:space-x-1 sm:space-x-2 bg-white/20 backdrop-blur-sm border border-primary-300/50 rounded-lg px-1.5 xs:px-2 sm:px-3 h-8 xs:h-9 sm:h-10 shadow-md hover:bg-primary-300/20 hover:border-primary-200/70 focus:outline-none transition-all duration-200"
         onClick={() => setOpen((o) => !o)}
       >
-        <UserIcon className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 text-blue-600 flex-shrink-0" />
+        {user?.profileImage ? (
+          <img
+            src={user.profileImage}
+            alt={`${user?.firstName} ${user?.lastName}`}
+            className="h-3.5 w-3.5 xs:h-4 xs:w-4 sm:h-5 sm:w-5 rounded-full object-cover flex-shrink-0"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+              e.currentTarget.nextElementSibling?.classList.remove("hidden");
+            }}
+          />
+        ) : null}
+        <UserIcon
+          className={`h-3.5 w-3.5 xs:h-4 xs:w-4 sm:h-5 sm:w-5 text-accent-200 flex-shrink-0 ${
+            user?.profileImage ? "hidden" : ""
+          }`}
+        />
         <span
-          className="hidden sm:inline text-xs xs:text-sm font-medium text-gray-900 truncate max-w-20 xs:max-w-24 md:max-w-32 lg:max-w-40"
+          className="hidden xs:inline text-xs sm:text-sm font-medium text-primary-100 truncate max-w-16 xs:max-w-20 md:max-w-24 lg:max-w-32"
           title={user?.firstName}
         >
           {user?.firstName}
         </span>
+        <svg
+          className="h-2.5 w-2.5 xs:h-3 xs:w-3 sm:h-4 sm:w-4 text-accent-200 transition-transform duration-200"
+          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 9l-7 7-7-7"
+          />
+        </svg>
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-48 xs:w-56 bg-white border border-gray-200 rounded-2xl shadow-lg py-3 xs:py-4 px-3 xs:px-4 z-30 flex flex-col items-center">
-          <UserIcon className="h-8 w-8 xs:h-10 xs:w-10 text-blue-600 mb-2" />
+        <div className="absolute right-0 mt-3 w-56 bg-white/95 backdrop-blur-md border border-white/20 rounded-2xl shadow-2xl py-4 px-4 z-[60] flex flex-col items-center animate-in slide-in-from-top-2 duration-200">
+          <div className="w-12 h-12 rounded-full mb-3 shadow-lg overflow-hidden">
+            {user?.profileImage ? (
+              <img
+                src={user.profileImage}
+                alt={`${user?.firstName} ${user?.lastName}`}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                  e.currentTarget.nextElementSibling?.classList.remove(
+                    "hidden"
+                  );
+                }}
+              />
+            ) : null}
+            <div
+              className={`w-full h-full bg-gradient-to-br from-primary-500 to-accent-500 rounded-full flex items-center justify-center ${
+                user?.profileImage ? "hidden" : ""
+              }`}
+            >
+              <UserIcon className="h-6 w-6 text-white" />
+            </div>
+          </div>
           <div
-            className="text-base xs:text-lg font-semibold text-gray-900 mb-1 text-center truncate max-w-full px-2"
+            className="text-base font-semibold text-gray-900 mb-1 text-center truncate max-w-full px-2"
             title={`${user?.firstName} ${user?.lastName}`}
           >
             {user?.firstName} {user?.lastName}
           </div>
           <div
-            className="text-xs xs:text-sm text-gray-500 mb-3 xs:mb-4 text-center truncate max-w-full px-2"
+            className="text-sm text-gray-600 mb-4 text-center truncate max-w-full px-2"
             title={user?.email}
           >
             {user?.email}
           </div>
           {onProfile && (
             <button
-              className="w-full flex items-center justify-center px-3 xs:px-4 py-1.5 xs:py-2 text-gray-700 hover:bg-gray-100 rounded-xl mb-1 xs:mb-2 text-sm xs:text-base"
+              className="w-full flex items-center justify-center px-4 py-3 text-gray-700 hover:bg-gradient-to-r hover:from-primary-50 hover:to-accent-50 rounded-xl mb-2 text-sm font-medium transition-all duration-200 hover:shadow-md"
               onClick={() => {
                 setOpen(false);
                 onProfile();
               }}
             >
+              <UserIcon className="h-4 w-4 mr-2" />
               {profileLabel}
             </button>
           )}
           {onSettings && (
             <button
-              className="w-full flex items-center justify-center px-3 xs:px-4 py-1.5 xs:py-2 text-gray-700 hover:bg-gray-100 rounded-xl mb-1 xs:mb-2 text-sm xs:text-base"
+              className="w-full flex items-center justify-center px-4 py-3 text-gray-700 hover:bg-gradient-to-r hover:from-primary-50 hover:to-accent-50 rounded-xl mb-2 text-sm font-medium transition-all duration-200 hover:shadow-md"
               onClick={() => {
                 setOpen(false);
                 onSettings();
               }}
             >
-              <SettingsIcon className="h-4 w-4 xs:h-5 xs:w-5 mr-1 xs:mr-2" />{" "}
+              <SettingsIcon className="h-4 w-4 mr-2" />
               {settingsLabel}
             </button>
           )}
           {onLogout && (
             <button
-              className="w-full flex items-center justify-center px-3 xs:px-4 py-1.5 xs:py-2 text-red-600 hover:bg-red-50 rounded-xl text-sm xs:text-base"
+              className="w-full flex items-center justify-center px-4 py-3 text-red-600 hover:bg-gradient-to-r hover:from-red-50 hover:to-red-100 rounded-xl text-sm font-medium transition-all duration-200 hover:shadow-md"
               onClick={() => {
                 setOpen(false);
                 onLogout();
               }}
             >
-              <LogOutIcon className="h-4 w-4 xs:h-5 xs:w-5 mr-1 xs:mr-2" />{" "}
+              <LogOutIcon className="h-4 w-4 mr-2" />
               {logoutLabel}
             </button>
           )}

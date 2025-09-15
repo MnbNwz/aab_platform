@@ -51,6 +51,7 @@ const seedAdmin = async () => {
       role: "admin",
       status: "active", // Admin is immediately active
       approval: "approved", // Admin is immediately approved
+      profileImage: null, // Initialize profile image as null
       geoHome: {
         type: "Point",
         coordinates: [-74.006, 40.7128], // NYC coordinates as default

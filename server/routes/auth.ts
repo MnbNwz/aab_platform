@@ -8,9 +8,9 @@ const router = Router();
 // Public routes
 router.post("/signup", upload.array("docs"), authController.signupController);
 router.post("/signin", authController.signinController);
-router.get("/profile", authenticate, authController.getProfile);
 
 // Protected routes
+router.get("/profile", authenticate, authController.getProfile);
 router.post("/logout", authenticate, authController.logout);
 
 export default router;

@@ -195,19 +195,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Mobile Overlay */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 bg-black/30 z-30 md:hidden"
+          className="mobile-overlay bg-black/30 md:hidden"
           onClick={onMobileToggle}
         />
       )}
 
       {/* Sidebar */}
       <div
-        className={`bg-primary-900 shadow-lg min-h-screen flex flex-col justify-between fixed md:sticky top-0 z-40 w-[280px] transition-transform duration-300 transform ${
+        className={`sidebar-container bg-primary-900 shadow-lg flex flex-col fixed md:sticky top-0 z-40 w-[240px] sm:w-[260px] md:w-[280px] transition-transform duration-300 transform ${
           isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
         {/* Site Icon at Top */}
-        <div className="flex items-center justify-center py-6">
+        <div className="flex items-center justify-center py-4 sm:py-6 flex-shrink-0">
           <img
             src="https://aasquebec.com/wp-content/uploads/2025/07/aasquebec-logo.svg"
             alt="Site Icon"
@@ -215,8 +215,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           />
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-2">
+        {/* Navigation - Scrollable */}
+        <nav className="flex-1 p-3 sm:p-4 space-y-2 overflow-y-auto">
           {menuItems.map((item) => {
             const IconComponent = item.icon;
             const isActive = activeTab === item.id;
@@ -244,7 +244,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </nav>
 
         {/* Bottom Actions */}
-        <div className="p-4 border-t border-primary-700">
+        <div className="p-3 sm:p-4 border-t border-primary-700 flex-shrink-0">
           <button
             onClick={handleLogout}
             className="w-full flex items-center space-x-3 p-3 rounded-lg text-accent-500 hover:bg-accent-100 transition-colors duration-200"

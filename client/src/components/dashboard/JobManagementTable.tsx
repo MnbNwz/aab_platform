@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState, AppDispatch } from "../../store";
 import {
@@ -20,7 +21,6 @@ const JobManagementTable: React.FC = () => {
 
   // Fetch jobs on mount and when filters change
   useEffect(() => {
-    console.log("jobs", jobs);
     !(jobs.length > 0) && dispatch(fetchJobRequestsThunk(filters));
   }, [dispatch, filters]);
 
@@ -84,21 +84,6 @@ const JobManagementTable: React.FC = () => {
             >
               <span>Filters</span>
             </button>
-          )}
-          {/* Job Create Modal */}
-          {showCreateModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-              <div className="bg-white rounded-lg shadow-lg px-24 py-8 w-full max-w-2xl relative">
-                <button
-                  className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-2xl font-bold"
-                  onClick={() => setShowCreateModal(false)}
-                  aria-label="Close"
-                >
-                  &times;
-                </button>
-                <JobCreate />
-              </div>
-            </div>
           )}
         </div>
       </div>
@@ -409,6 +394,36 @@ const JobManagementTable: React.FC = () => {
           <p className="text-red-700">Error loading jobs: {jobsError}</p>
         </div>
       )}
+
+      {/* Job Create Modal - Rendered as Portal */}
+      {showCreateModal &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-60 p-4"
+            style={{
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: "100vw",
+              height: "100vh",
+            }}
+          >
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative">
+              <button
+                className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl font-bold z-10"
+                onClick={() => setShowCreateModal(false)}
+                aria-label="Close"
+              >
+                &times;
+              </button>
+              <div className="p-4 sm:p-6 lg:p-8">
+                <JobCreate />
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

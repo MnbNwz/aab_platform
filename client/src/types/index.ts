@@ -6,6 +6,7 @@ export interface User {
   firstName: string;
   lastName: string;
   phone?: string;
+  profileImage?: string;
   role: UserRole;
   status: UserStatus;
   approval: UserApproval;
@@ -33,9 +34,9 @@ export interface User {
   updatedAt: string;
 }
 
-export type UserRole = 'admin' | 'customer' | 'contractor';
-export type UserStatus = 'pending' | 'active' | 'revoke';
-export type UserApproval = 'pending' | 'approved' | 'rejected';
+export type UserRole = "admin" | "customer" | "contractor";
+export type UserStatus = "pending" | "active" | "revoke";
+export type UserApproval = "pending" | "approved" | "rejected";
 
 // Authentication types
 export interface LoginCredentials {
@@ -123,7 +124,7 @@ export interface UserFilters {
   startDate?: string;
   endDate?: string;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 export interface UserUpdateData {
