@@ -339,44 +339,46 @@ const Settings: React.FC<SettingsProps> = ({
       });
     }
 
-    // Add membership section
-    baseSections.push({
-      id: "membership",
-      title: "Membership & Billing",
-      icon: CreditCard,
-      description: "Manage your subscription and payment information",
-      items: [
-        {
-          id: "current-plan",
-          label: "Current Plan",
-          description: "Your active membership tier",
-          type: "info",
-          value: "Standard", // This would come from user data
-        },
-        {
-          id: "auto-renewal",
-          label: "Auto-Renewal",
-          description: "Automatically renew your membership",
-          type: "toggle",
-          value: settings.autoRenewal,
-          onChange: (value) => handleDirectChange("autoRenewal", value),
-        },
-        {
-          id: "billing-history",
-          label: "Billing History",
-          description: "View your payment history and receipts",
-          type: "button",
-          onClick: () => {},
-        },
-        {
-          id: "payment-methods",
-          label: "Payment Methods",
-          description: "Manage your saved payment methods",
-          type: "button",
-          onClick: () => {},
-        },
-      ],
-    });
+    // Add membership section (exclude for admin users)
+    if (user.role !== "admin") {
+      baseSections.push({
+        id: "membership",
+        title: "Membership & Billing",
+        icon: CreditCard,
+        description: "Manage your subscription and payment information",
+        items: [
+          {
+            id: "current-plan",
+            label: "Current Plan",
+            description: "Your active membership tier",
+            type: "info",
+            value: "Standard", // This would come from user data
+          },
+          {
+            id: "auto-renewal",
+            label: "Auto-Renewal",
+            description: "Automatically renew your membership",
+            type: "toggle",
+            value: settings.autoRenewal,
+            onChange: (value) => handleDirectChange("autoRenewal", value),
+          },
+          {
+            id: "billing-history",
+            label: "Billing History",
+            description: "View your payment history and receipts",
+            type: "button",
+            onClick: () => {},
+          },
+          {
+            id: "payment-methods",
+            label: "Payment Methods",
+            description: "Manage your saved payment methods",
+            type: "button",
+            onClick: () => {},
+          },
+        ],
+      });
+    }
 
     return baseSections;
   }, [user, settings, onProfileEdit]);

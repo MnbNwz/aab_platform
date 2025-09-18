@@ -19,6 +19,7 @@ const ApprovalGuard: React.FC<{ children: React.ReactNode }> = ({
             user={user}
             onLogout={handleLogout}
             logoutLabel="Logout"
+            prominent={true}
           />
         </div>
         <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8 max-w-md w-full text-center border border-accent-200">

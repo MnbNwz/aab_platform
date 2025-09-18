@@ -56,6 +56,7 @@ const MembershipPlans: React.FC<Props> = ({ plans, onSelect }) => {
           user={user || {}}
           onProfile={() => setProfileModalOpen(true)}
           onLogout={() => dispatch(logoutThunk())}
+          prominent={true}
         />
       </div>
       <h2 className="text-xl xs:text-2xl sm:text-3xl font-extrabold text-accent-500 mb-1 xs:mb-2 text-center px-2 xs:px-4">
