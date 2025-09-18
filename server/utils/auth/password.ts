@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
+import { validatePassword as validatePasswordLib } from "@utils/validation";
 
 /**
  * Hash password using SHA-256
@@ -28,25 +29,25 @@ function getSecureRandomOffset(): number {
 export function generateAccessToken(userId: string, role: string): string {
   const now = Math.floor(Date.now() / 1000);
   const randomOffset = getSecureRandomOffset();
-  
+
   const payload = {
     userId,
     role,
-    type: 'access',
+    type: "access",
     iat: now + randomOffset, // Add random offset to make timing unpredictable
-    exp: now + (7 * 24 * 60 * 60), // Expires in 7 days
+    exp: now + 7 * 24 * 60 * 60, // Expires in 7 days - this is fine for JWT timestamps
     jti: crypto.randomUUID(), // Unique token ID for tracking/revocation
   };
-  
+
   const secret = process.env.JWT_SECRET;
   if (!secret) {
     throw new Error("JWT_SECRET environment variable is not set");
   }
-  
-  return jwt.sign(payload, secret, { 
-    algorithm: 'HS256',
-    issuer: 'aas-platform',
-    audience: 'aas-users'
+
+  return jwt.sign(payload, secret, {
+    algorithm: "HS256",
+    issuer: "aas-platform",
+    audience: "aas-users",
   });
 }
 
@@ -58,24 +59,24 @@ export function generateAccessToken(userId: string, role: string): string {
 export function generateRefreshToken(userId: string): string {
   const now = Math.floor(Date.now() / 1000);
   const randomOffset = getSecureRandomOffset();
-  
+
   const payload = {
     userId,
-    type: 'refresh',
+    type: "refresh",
     iat: now + randomOffset,
-    exp: now + (30 * 24 * 60 * 60), // Expires in 30 days
+    exp: now + 30 * 24 * 60 * 60, // Expires in 30 days
     jti: crypto.randomUUID(),
   };
-  
+
   const secret = process.env.JWT_SECRET;
   if (!secret) {
     throw new Error("JWT_SECRET environment variable is not set");
   }
-  
-  return jwt.sign(payload, secret, { 
-    algorithm: 'HS256',
-    issuer: 'aas-platform',
-    audience: 'aas-users'
+
+  return jwt.sign(payload, secret, {
+    algorithm: "HS256",
+    issuer: "aas-platform",
+    audience: "aas-users",
   });
 }
 
@@ -92,27 +93,29 @@ export function generateToken(userId: string, role: string): string {
  * @param token - JWT access token
  * @returns Decoded payload or null if invalid
  */
-export function verifyAccessToken(token: string): { userId: string; role: string; type: string; iat: number; exp: number; jti: string } | null {
+export function verifyAccessToken(
+  token: string,
+): { userId: string; role: string; type: string; iat: number; exp: number; jti: string } | null {
   try {
     const secret = process.env.JWT_SECRET;
     if (!secret) {
       throw new Error("JWT_SECRET environment variable is not set");
     }
-    
+
     const decoded = jwt.verify(token, secret, {
-      algorithms: ['HS256'],
-      issuer: 'aas-platform',
-      audience: 'aas-users'
+      algorithms: ["HS256"],
+      issuer: "aas-platform",
+      audience: "aas-users",
     }) as any;
-    
-    if (decoded.userId && decoded.type === 'access') {
+
+    if (decoded.userId && decoded.type === "access") {
       return {
         userId: decoded.userId,
         role: decoded.role,
         type: decoded.type,
         iat: decoded.iat,
         exp: decoded.exp,
-        jti: decoded.jti
+        jti: decoded.jti,
       };
     }
     return null;
@@ -127,26 +130,28 @@ export function verifyAccessToken(token: string): { userId: string; role: string
  * @param token - JWT refresh token
  * @returns Decoded payload or null if invalid
  */
-export function verifyRefreshToken(token: string): { userId: string; type: string; iat: number; exp: number; jti: string } | null {
+export function verifyRefreshToken(
+  token: string,
+): { userId: string; type: string; iat: number; exp: number; jti: string } | null {
   try {
     const secret = process.env.JWT_SECRET;
     if (!secret) {
       throw new Error("JWT_SECRET environment variable is not set");
     }
-    
+
     const decoded = jwt.verify(token, secret, {
-      algorithms: ['HS256'],
-      issuer: 'aas-platform',
-      audience: 'aas-users'
+      algorithms: ["HS256"],
+      issuer: "aas-platform",
+      audience: "aas-users",
     }) as any;
-    
-    if (decoded.userId && decoded.type === 'refresh') {
+
+    if (decoded.userId && decoded.type === "refresh") {
       return {
         userId: decoded.userId,
         type: decoded.type,
         iat: decoded.iat,
         exp: decoded.exp,
-        jti: decoded.jti
+        jti: decoded.jti,
       };
     }
     return null;
@@ -160,44 +165,30 @@ export function verifyRefreshToken(token: string): { userId: string; type: strin
  * Legacy function for backward compatibility
  * @deprecated Use verifyAccessToken instead
  */
-export function verifyToken(token: string): { userId: string; role: string; iat: number; exp: number } | null {
+export function verifyToken(
+  token: string,
+): { userId: string; role: string; iat: number; exp: number } | null {
   const result = verifyAccessToken(token);
   if (result) {
     return {
       userId: result.userId,
       role: result.role,
       iat: result.iat,
-      exp: result.exp
+      exp: result.exp,
     };
   }
   return null;
 }
 
 /**
- * Check if password meets security requirements
+ * Check if password meets security requirements using zxcvbn
  * @param password - Password to validate
  * @returns Validation result
  */
-export function validatePassword(password: string): { isValid: boolean; message?: string } {
-  if (password.length < 8) {
-    return { isValid: false, message: "Password must be at least 8 characters long" };
-  }
-  
-  if (!/(?=.*[a-z])/.test(password)) {
-    return { isValid: false, message: "Password must contain at least one lowercase letter" };
-  }
-  
-  if (!/(?=.*[A-Z])/.test(password)) {
-    return { isValid: false, message: "Password must contain at least one uppercase letter" };
-  }
-  
-  if (!/(?=.*\d)/.test(password)) {
-    return { isValid: false, message: "Password must contain at least one number" };
-  }
-  
-  if (!/(?=.*[@$!%*?&])/.test(password)) {
-    return { isValid: false, message: "Password must contain at least one special character (@$!%*?&)" };
-  }
-  
-  return { isValid: true };
+export function validatePassword(password: string): {
+  isValid: boolean;
+  message?: string;
+  score?: number;
+} {
+  return validatePasswordLib(password);
 }

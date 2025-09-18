@@ -1,2 +1,2 @@
 // Export config helpers from this folder
-export * from "./db";
+export * from "@config/db";

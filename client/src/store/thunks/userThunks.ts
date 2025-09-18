@@ -9,6 +9,12 @@ interface UpdateProfileParams {
   successMessage?: string;
 }
 
+interface UpdateProfileFormDataParams {
+  userId: string;
+  formData: FormData;
+  successMessage?: string;
+}
+
 interface ChangePasswordParams {
   currentPassword: string;
   newPassword: string;
@@ -25,6 +31,30 @@ export const updateProfileThunk = createAsyncThunk<
   async ({ userId, profileData, successMessage }, { rejectWithValue }) => {
     try {
       const response = await api.auth.updateProfile(userId, profileData);
+      showToast.success(successMessage || "Profile updated successfully!");
+      return response;
+    } catch (error) {
+      const errorMessage = handleApiError(error);
+      showToast.error(errorMessage);
+      return rejectWithValue(errorMessage);
+    }
+  }
+);
+
+export const updateProfileWithFormDataThunk = createAsyncThunk<
+  User,
+  UpdateProfileFormDataParams,
+  {
+    rejectValue: string;
+  }
+>(
+  "user/updateProfileWithFormData",
+  async ({ userId, formData, successMessage }, { rejectWithValue }) => {
+    try {
+      const response = await api.auth.updateProfileWithFormData(
+        userId,
+        formData
+      );
       showToast.success(successMessage || "Profile updated successfully!");
       return response;
     } catch (error) {

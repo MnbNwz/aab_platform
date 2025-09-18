@@ -6,6 +6,7 @@ import { getServicesThunk } from "../store/thunks/servicesThunks";
 import { useForm, Controller } from "react-hook-form";
 import { showToast } from "../utils/toast";
 import { X, Edit2, Save, XCircle, Settings } from "lucide-react";
+import ConfirmModal from "./ui/ConfirmModal";
 
 interface JobViewEditModalProps {
   isOpen: boolean;
@@ -36,12 +37,29 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
     isInitialized,
   } = useSelector((state: RootState) => state.services);
   const user = useSelector((state: RootState) => state.auth.user);
-  const { updateLoading, cancelLoading } = useSelector(
+  const { updateLoading, cancelLoading, currentJob } = useSelector(
     (state: RootState) => state.job
   );
 
   const [isEditing, setIsEditing] = useState(false);
   const [jobType, setJobType] = useState<string>("");
+  const [hasChanges, setHasChanges] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean;
+    type: "save" | "cancel" | "edit" | "close" | "cancelJob" | null;
+    message: string;
+    title: string;
+    confirmText: string;
+  }>({
+    open: false,
+    type: null,
+    message: "",
+    title: "",
+    confirmText: "",
+  });
+
+  // Use updated job from Redux if available, otherwise use prop
+  const displayJob = currentJob?._id === job._id ? currentJob : job;
 
   const {
     control,
@@ -61,34 +79,15 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
     },
   });
 
-  // Map custom categories to valid contractor services
-  const mapCategoryToService = (category: string): string => {
-    const categoryMap: { [key: string]: string } = {
-      solar: "electrical",
-      insulation: "general",
-      energy: "electrical",
-      plumbing: "plumbing",
-      bathroom: "plumbing",
-      kitchen: "general",
-      electrical: "electrical",
-      lighting: "electrical",
-      wiring: "electrical",
-      hvac: "hvac",
-      heating: "hvac",
-      cooling: "hvac",
-      ventilation: "hvac",
-      general: "general",
-      maintenance: "general",
-      repair: "general",
-      renovation: "general",
-      roofing: "roofing",
-      carpentry: "carpentry",
-      painting: "painting",
-      landscaping: "landscaping",
-      default: "general",
-    };
-    return categoryMap[category.toLowerCase()] || "general";
-  };
+  // Watch specific form fields for change detection
+  const watchedValues = watch([
+    "title",
+    "description",
+    "category",
+    "estimate",
+    "property",
+    "timeline",
+  ]);
 
   // Load services on mount
   useEffect(() => {
@@ -111,55 +110,140 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
 
   // Reset form when job changes
   useEffect(() => {
-    if (job) {
+    if (displayJob) {
+      // Use displayJob.service if it exists and is valid, otherwise use first available service
+      const categoryValue =
+        displayJob.service && services.includes(displayJob.service)
+          ? displayJob.service
+          : services.length > 0
+          ? services[0]
+          : "";
+
       reset({
-        title: job.title || "",
-        description: job.description || "",
-        category: job.category || "",
-        estimate: job.estimate?.toString() || "",
-        property: job.property || "",
-        timeline: job.timeline?.toString() || "",
+        title: displayJob.title || "",
+        description: displayJob.description || "",
+        category: categoryValue,
+        estimate: displayJob.estimate?.toString() || "",
+        property: displayJob.property || "",
+        timeline: displayJob.timeline?.toString() || "",
       });
     }
-  }, [job, reset]);
+  }, [displayJob, reset, services]);
 
   // Set property value when job changes (for edit mode)
   useEffect(() => {
-    if (job && job.property) {
-      setValue("property", job.property);
+    if (displayJob && displayJob.property) {
+      setValue("property", displayJob.property);
     }
-  }, [job, setValue]);
+  }, [displayJob, setValue]);
 
   // Set default category when services load
   useEffect(() => {
-    if (services.length > 0 && !job?.category) {
+    if (services.length > 0 && !displayJob?.service) {
       setValue("category", services[0]);
     }
-  }, [services, setValue, job?.category]);
+  }, [services, setValue, displayJob?.service]);
+
+  // Detect changes in form values
+  useEffect(() => {
+    if (!isEditing || !displayJob) return;
+
+    const originalValues = {
+      title: displayJob.title || "",
+      description: displayJob.description || "",
+      category: displayJob.service || "",
+      estimate: displayJob.estimate?.toString() || "",
+      property: displayJob.property || "",
+      timeline: displayJob.timeline?.toString() || "",
+    };
+
+    const [title, description, category, estimate, property, timeline] =
+      watchedValues;
+
+    const hasFormChanges =
+      title !== originalValues.title ||
+      description !== originalValues.description ||
+      category !== originalValues.category ||
+      estimate !== originalValues.estimate ||
+      property !== originalValues.property ||
+      timeline !== originalValues.timeline;
+
+    setHasChanges(hasFormChanges);
+  }, [watchedValues, displayJob, isEditing]);
 
   if (!isOpen || !job) return null;
 
-  const canEdit = job.status === "open";
-  const isAdmin = user?.role === "admin";
-  const isCustomer = user?.role === "customer";
+  const canEdit = displayJob.status === "open";
 
-  const onSubmit = async (data: JobFormInputs) => {
+  const onSubmit = async () => {
     if (!canEdit || !jobType) return;
+
+    // Prevent submission if services are still loading
+    if (servicesLoading) {
+      showToast.error("Services are still loading. Please wait and try again.");
+      return;
+    }
+
+    // Show confirmation modal for save action
+    setConfirmModal({
+      open: true,
+      type: "save",
+      title: "Save Changes",
+      message: "Are you sure you want to save these changes to the job?",
+      confirmText: "Yes, Save",
+    });
+    return;
+  };
+
+  const handleConfirmSave = async (data: JobFormInputs) => {
+    if (!canEdit || !jobType) return;
+
+    // Validate required fields
+    if (!data.category || data.category.trim() === "") {
+      showToast.error("Please select a service category");
+      return;
+    }
+    if (!data.estimate || data.estimate.trim() === "") {
+      showToast.error("Please enter an estimated budget");
+      return;
+    }
+    if (!data.timeline || data.timeline.trim() === "") {
+      showToast.error("Please enter a timeline");
+      return;
+    }
 
     const jobData: any = {
       title: data.title,
       description: data.description,
-      service: mapCategoryToService(data.category),
+      service: data.category, // Send the original category as service
       type: jobType,
+      createdBy: user?._id || user?.id,
     };
 
-    if (data.estimate && data.estimate.trim() !== "") {
+    if (
+      data.estimate &&
+      typeof data.estimate === "string" &&
+      data.estimate.trim() !== ""
+    ) {
       jobData.estimate = parseFloat(data.estimate);
     }
-    if (data.property && data.property.trim() !== "") {
-      jobData.property = data.property;
+    if (data.property) {
+      // Handle both string and object property values
+      if (typeof data.property === "string" && data.property.trim() !== "") {
+        jobData.property = data.property;
+      } else if (
+        typeof data.property === "object" &&
+        data.property &&
+        "_id" in data.property
+      ) {
+        jobData.property = (data.property as any)._id;
+      }
     }
-    if (data.timeline && data.timeline.trim() !== "") {
+    if (
+      data.timeline &&
+      typeof data.timeline === "string" &&
+      data.timeline.trim() !== ""
+    ) {
       jobData.timeline = parseInt(data.timeline);
     }
 
@@ -169,10 +253,35 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
     if (updateJobThunk.fulfilled.match(result)) {
       showToast.success("Job updated successfully!");
       setIsEditing(false);
+
+      // Reset form with updated job data from Redux
+      const updatedJob = result.payload;
+      reset({
+        title: updatedJob.title || "",
+        description: updatedJob.description || "",
+        category: updatedJob.service || "", // Use service field as category
+        estimate: updatedJob.estimate?.toString() || "",
+        property: updatedJob.property || "",
+        timeline: updatedJob.timeline?.toString() || "",
+      });
+
+      // Close the modal after successful edit
+      onClose();
     }
   };
 
-  const handleCancelJob = async () => {
+  const handleCancelJob = () => {
+    setConfirmModal({
+      open: true,
+      type: "cancelJob",
+      title: "Cancel Job",
+      message:
+        "Are you sure you want to cancel this job? This action cannot be undone.",
+      confirmText: "Yes, Cancel Job",
+    });
+  };
+
+  const handleConfirmCancelJob = async () => {
     const result = await dispatch(cancelJobThunk(job._id));
     if (cancelJobThunk.fulfilled.match(result)) {
       showToast.success("Job cancelled successfully!");
@@ -182,11 +291,58 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
 
   const handleEdit = () => {
     setIsEditing(true);
+    setHasChanges(false);
   };
 
   const handleCancelEdit = () => {
+    if (hasChanges) {
+      setConfirmModal({
+        open: true,
+        type: "cancel",
+        title: "Cancel Edit",
+        message: "You have unsaved changes. Are you sure you want to cancel?",
+        confirmText: "Yes, Cancel",
+      });
+      return;
+    }
     setIsEditing(false);
+    setHasChanges(false);
     reset();
+  };
+
+  const handleConfirmCancelEdit = () => {
+    setIsEditing(false);
+    setHasChanges(false);
+    reset();
+  };
+
+  const handleConfirmAction = async () => {
+    const { type } = confirmModal;
+
+    switch (type) {
+      case "save":
+        // Get current form data and call handleConfirmSave
+        const formData = watch();
+        await handleConfirmSave(formData);
+        break;
+      case "cancelJob":
+        await handleConfirmCancelJob();
+        break;
+      case "cancel":
+        handleConfirmCancelEdit();
+        break;
+      case "close":
+        onClose();
+        break;
+    }
+
+    setConfirmModal({
+      open: false,
+      type: null,
+      message: "",
+      title: "",
+      confirmText: "",
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -228,6 +384,11 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
               <div>
                 <h2 className="text-xl font-bold text-white">
                   {isEditing ? "Edit Job" : "Job Details"}
+                  {isEditing && hasChanges && (
+                    <span className="ml-2 text-yellow-300 text-sm font-normal">
+                      (Unsaved changes)
+                    </span>
+                  )}
                 </h2>
                 <p className="text-white text-opacity-90 text-sm">
                   {isEditing
@@ -237,7 +398,20 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
               </div>
             </div>
             <button
-              onClick={onClose}
+              onClick={() => {
+                if (isEditing && hasChanges) {
+                  setConfirmModal({
+                    open: true,
+                    type: "close",
+                    title: "Close Modal",
+                    message:
+                      "You have unsaved changes. Are you sure you want to close without saving?",
+                    confirmText: "Yes, Close",
+                  });
+                  return;
+                }
+                onClose();
+              }}
               className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
             >
               <X className="w-6 h-6 text-white" />
@@ -253,7 +427,7 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-primary-900 font-medium mb-2">
-                    Title *
+                    Title <span className="text-red-500">*</span>
                   </label>
                   <Controller
                     name="title"
@@ -288,7 +462,7 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
 
                 <div>
                   <label className="block text-primary-900 font-medium mb-2">
-                    Service Category *
+                    Service Category <span className="text-red-500">*</span>
                   </label>
                   <Controller
                     name="category"
@@ -299,8 +473,13 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
                         {...field}
                         className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-primary-900"
                         required
+                        disabled={servicesLoading}
                       >
-                        <option value="">Select service category</option>
+                        <option value="">
+                          {servicesLoading
+                            ? "Loading services..."
+                            : "Select service category"}
+                        </option>
                         {services.map((cat) => (
                           <option key={cat} value={cat}>
                             {cat.charAt(0).toUpperCase() + cat.slice(1)}
@@ -319,7 +498,7 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
 
               <div>
                 <label className="block text-primary-900 font-medium mb-2">
-                  Description *
+                  Description <span className="text-red-500">*</span>
                 </label>
                 <Controller
                   name="description"
@@ -359,6 +538,9 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
                 <div>
                   <label className="block text-primary-900 font-medium mb-2">
                     Select Property
+                    <span className="text-sm text-gray-500 font-normal ml-2">
+                      (Cannot be changed after job creation)
+                    </span>
                   </label>
                   <Controller
                     name="property"
@@ -366,7 +548,8 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
                     render={({ field }) => (
                       <select
                         {...field}
-                        className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-primary-900"
+                        className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-gray-100 text-gray-500 cursor-not-allowed"
+                        disabled={true}
                       >
                         <option value="">
                           No specific property - General job request
@@ -392,37 +575,58 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-primary-900 font-medium mb-2">
-                    Estimated Budget (USD)
+                    Estimated Budget (USD){" "}
+                    <span className="text-red-500">*</span>
                   </label>
                   <Controller
                     name="estimate"
                     control={control}
+                    rules={{
+                      required: "Estimated budget is required",
+                      validate: (value) => {
+                        if (!value || value.trim() === "") {
+                          return "Estimated budget is required";
+                        }
+                        const num = parseFloat(value);
+                        if (isNaN(num) || num <= 0) {
+                          return "Budget must be a positive number";
+                        }
+                        return true;
+                      },
+                    }}
                     render={({ field }) => (
                       <input
                         {...field}
                         className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-primary-900 placeholder-gray-500"
                         type="number"
                         min={0}
-                        placeholder="Optional"
+                        placeholder="e.g., 5000"
                       />
                     )}
                   />
+                  {errors.estimate && (
+                    <span className="text-red-500 text-xs mt-1">
+                      {errors.estimate.message}
+                    </span>
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-primary-900 font-medium mb-2">
-                    Timeline (Days)
+                    Timeline (Days) <span className="text-red-500">*</span>
                   </label>
                   <Controller
                     name="timeline"
                     control={control}
                     rules={{
+                      required: "Timeline is required",
                       validate: (value) => {
-                        if (value && value.trim() !== "") {
-                          const num = parseInt(value);
-                          if (isNaN(num) || num < 1) return "Minimum 1 day";
-                          if (num > 365) return "Maximum 365 days";
+                        if (!value || value.trim() === "") {
+                          return "Timeline is required";
                         }
+                        const num = parseInt(value);
+                        if (isNaN(num) || num < 1) return "Minimum 1 day";
+                        if (num > 365) return "Maximum 365 days";
                         return true;
                       },
                     }}
@@ -456,18 +660,27 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
                 </button>
                 <button
                   type="submit"
-                  disabled={updateLoading}
-                  className="px-6 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  disabled={updateLoading || !hasChanges}
+                  className={`px-6 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 ${
+                    hasChanges
+                      ? "bg-accent-500 text-white hover:bg-accent-600"
+                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  }`}
                 >
                   {updateLoading ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       <span>Saving...</span>
                     </>
-                  ) : (
+                  ) : hasChanges ? (
                     <>
                       <Save className="w-4 h-4" />
                       <span>Save Changes</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>No Changes Made</span>
                     </>
                   )}
                 </button>
@@ -488,7 +701,7 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
                         Title:
                       </span>
                       <p className="text-primary-900 font-medium">
-                        {job.title}
+                        {displayJob.title}
                       </p>
                     </div>
                     <div>
@@ -496,7 +709,7 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
                         Service:
                       </span>
                       <p className="text-primary-900 font-medium">
-                        {job.service}
+                        {displayJob.service}
                       </p>
                     </div>
                     <div>
@@ -505,10 +718,10 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
                       </span>
                       <span
                         className={`inline-block px-2 py-1 rounded-full text-xs font-medium border ${getTypeColor(
-                          job.type
+                          displayJob.type
                         )}`}
                       >
-                        {job.type === "regular"
+                        {displayJob.type === "regular"
                           ? "Regular Job"
                           : "Off-Market Job"}
                       </span>
@@ -527,30 +740,30 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
                       </span>
                       <span
                         className={`inline-block px-2 py-1 rounded-full text-xs font-medium border ml-2 ${getStatusColor(
-                          job.status
+                          displayJob.status
                         )}`}
                       >
-                        {job.status.charAt(0).toUpperCase() +
-                          job.status.slice(1)}
+                        {displayJob.status.charAt(0).toUpperCase() +
+                          displayJob.status.slice(1)}
                       </span>
                     </div>
-                    {job.timeline && (
+                    {displayJob.timeline && (
                       <div>
                         <span className="text-sm font-medium text-accent-700">
                           Timeline:
                         </span>
                         <p className="text-accent-900 font-medium">
-                          {job.timeline} days
+                          {displayJob.timeline} days
                         </p>
                       </div>
                     )}
-                    {job.estimate && (
+                    {displayJob.estimate && (
                       <div>
                         <span className="text-sm font-medium text-accent-700">
                           Estimate:
                         </span>
                         <p className="text-accent-900 font-medium">
-                          ${job.estimate.toLocaleString()}
+                          ${displayJob.estimate.toLocaleString()}
                         </p>
                       </div>
                     )}
@@ -564,19 +777,19 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
                   Description
                 </h3>
                 <p className="text-gray-700 leading-relaxed">
-                  {job.description}
+                  {displayJob.description}
                 </p>
               </div>
 
               {/* Property Info */}
-              {job.property && properties.length > 0 && (
+              {displayJob.property && properties.length > 0 && (
                 <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
                   <h3 className="text-lg font-semibold text-blue-900 mb-3">
                     Associated Property
                   </h3>
                   {(() => {
                     const property = properties.find(
-                      (p) => p._id === job.property
+                      (p) => p._id === displayJob.property
                     );
                     return property ? (
                       <div className="space-y-2">
@@ -635,6 +848,26 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
           )}
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.open}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmText={confirmModal.confirmText}
+        cancelText="Cancel"
+        onConfirm={handleConfirmAction}
+        onCancel={() =>
+          setConfirmModal({
+            open: false,
+            type: null,
+            message: "",
+            title: "",
+            confirmText: "",
+          })
+        }
+        loading={updateLoading || cancelLoading}
+      />
     </div>
   );
 };

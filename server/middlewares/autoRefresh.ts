@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
-import { verifyAccessToken, verifyRefreshToken, generateAccessToken } from "../utils/auth";
-import { User } from "../models/user";
+import { verifyAccessToken, verifyRefreshToken, generateAccessToken } from "@utils/auth";
+import { User } from "@models/user";
 
 /**
  * Middleware that automatically handles token refresh when access token expires
@@ -10,15 +10,19 @@ export const autoRefreshToken = async (req: any, res: Response, next: NextFuncti
   try {
     let accessToken: string | undefined;
     let refreshToken: string | undefined;
-    
+
     // Get tokens from cookies
     if (req.cookies) {
       accessToken = req.cookies.accessToken;
       refreshToken = req.cookies.refreshToken;
     }
-    
+
     // If no access token, try to get from headers (fallback for API clients)
-    if (!accessToken && req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+    if (
+      !accessToken &&
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer ")
+    ) {
       accessToken = req.headers.authorization.substring(7);
     }
 
@@ -38,8 +42,8 @@ export const autoRefreshToken = async (req: any, res: Response, next: NextFuncti
       const refreshDecoded = verifyRefreshToken(refreshToken);
       if (!refreshDecoded) {
         // Refresh token is also invalid - clear cookies and let auth fail
-        res.clearCookie('accessToken');
-        res.clearCookie('refreshToken');
+        res.clearCookie("accessToken");
+        res.clearCookie("refreshToken");
         return next();
       }
 
@@ -47,19 +51,19 @@ export const autoRefreshToken = async (req: any, res: Response, next: NextFuncti
       const user = await User.findById(refreshDecoded.userId);
       if (!user || user.status === "revoke") {
         // User doesn't exist or is revoked - clear cookies and let auth fail
-        res.clearCookie('accessToken');
-        res.clearCookie('refreshToken');
+        res.clearCookie("accessToken");
+        res.clearCookie("refreshToken");
         return next();
       }
 
       // Generate new access token
       const newAccessToken = generateAccessToken(user._id.toString(), user.role);
-      
+
       // Set new access token in cookie
-      res.cookie('accessToken', newAccessToken, {
+      res.cookie("accessToken", newAccessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
@@ -68,7 +72,7 @@ export const autoRefreshToken = async (req: any, res: Response, next: NextFuncti
       req.cookies.accessToken = newAccessToken;
 
       console.log(`Auto-refreshed token for user: ${user._id}`);
-      
+
       // Continue with the refreshed token
       return next();
     }

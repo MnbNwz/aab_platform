@@ -1,4 +1,4 @@
-import { CreateUserDTO, UpdateUserDTO } from "../../models/types/user";
+import { CreateUserDTO, UpdateUserDTO } from "@models/types/user";
 
 export type CreateUserRequest = CreateUserDTO;
 export type UpdateUserRequest = UpdateUserDTO;

@@ -1,4 +1,4 @@
-import { ContractorServices } from "../models/service";
+import { ContractorServices } from "@models/service";
 
 /**
  * Validates that the provided services exist in the current services table
@@ -14,7 +14,7 @@ export async function validateContractorServices(services: string[]): Promise<{
     return {
       isValid: false,
       invalidServices: [],
-      validServices: []
+      validServices: [],
     };
   }
 
@@ -27,19 +27,19 @@ export async function validateContractorServices(services: string[]): Promise<{
     return {
       isValid: false,
       invalidServices: services,
-      validServices: []
+      validServices: [],
     };
   }
 
   // Normalize both arrays for comparison
-  const normalizedInput = services.map(service => service.trim().toLowerCase());
-  const availableServices = latestServices.services.map(service => service.toLowerCase());
-  
+  const normalizedInput = services.map((service) => service.trim().toLowerCase());
+  const availableServices = latestServices.services.map((service) => service.toLowerCase());
+
   // Check which services are valid/invalid
   const validServices: string[] = [];
   const invalidServices: string[] = [];
 
-  normalizedInput.forEach(service => {
+  normalizedInput.forEach((service) => {
     if (availableServices.includes(service)) {
       validServices.push(service);
     } else {
@@ -50,7 +50,7 @@ export async function validateContractorServices(services: string[]): Promise<{
   return {
     isValid: invalidServices.length === 0,
     invalidServices,
-    validServices
+    validServices,
   };
 }
 

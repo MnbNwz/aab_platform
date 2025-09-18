@@ -1,6 +1,6 @@
-import { Property, IProperty } from "../models/property";
+import { Property, IProperty } from "@models/property";
 import { Types } from "mongoose";
-import S3Service from "./s3Service";
+import S3Upload from "@utils/s3Upload";
 
 interface PropertyInput {
   userId: Types.ObjectId;
@@ -36,7 +36,7 @@ export const createProperty = async ({ userId, body, files }: PropertyInput) => 
     if (files.length > 15) {
       throw new Error("Maximum 15 images allowed");
     }
-    const s3 = new S3Service();
+    const s3 = S3Upload;
     for (const file of files) {
       const key = `property_${userId}_${Date.now()}_${file.originalname}`;
       const url = await s3.uploadFile(key, file.buffer, file.mimetype);
@@ -131,7 +131,7 @@ export const updateProperty = async (
     if (files.length > 15) {
       throw new Error("Maximum 15 images allowed");
     }
-    const s3 = new S3Service();
+    const s3 = S3Upload;
     images = [];
     for (const file of files) {
       const key = `property_images/${userId}_${Date.now()}_${file.originalname}`;

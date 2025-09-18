@@ -1,5 +1,12 @@
 import mongoose, { Schema } from "mongoose";
-import { IUser, GeoHome, Contractor, ApprovalStatus, PropertyType, Customer } from "./types/user";
+import {
+  IUser,
+  GeoHome,
+  Contractor,
+  ApprovalStatus,
+  PropertyType,
+  Customer,
+} from "@models/types/user";
 
 const CustomerSchema = new Schema<Customer>(
   {
@@ -48,6 +55,14 @@ const UserSchema = new Schema<IUser>(
       default: "pending" as ApprovalStatus,
     },
     profileImage: { type: String, required: false },
+    // Stripe fields
+    stripeCustomerId: { type: String },
+    stripeConnectAccountId: { type: String },
+    stripeConnectStatus: {
+      type: String,
+      enum: ["pending", "active", "rejected", "disabled"],
+      default: "pending",
+    },
   },
   { timestamps: true },
 );

@@ -1,23 +1,25 @@
 import crypto from "crypto";
+import {
+  validateEmail as validateEmailLib,
+  validatePhone as validatePhoneLib,
+} from "@utils/validation";
 
 /**
- * Validate email format
+ * Validate email format using comprehensive validation
  * @param email - Email to validate
  * @returns True if valid email format
  */
 export function validateEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
+  return validateEmailLib(email).isValid;
 }
 
 /**
- * Validate phone number format
+ * Validate phone number format using comprehensive validation
  * @param phone - Phone number to validate
  * @returns True if valid phone format
  */
 export function validatePhone(phone: string): boolean {
-  const phoneRegex = /^\+?[\d\s\-()]+$/;
-  return phoneRegex.test(phone) && phone.replace(/\D/g, '').length >= 10;
+  return validatePhoneLib(phone).isValid;
 }
 
 /**
@@ -38,5 +40,5 @@ export function sanitizeUser(user: any): any {
  * @returns Random string
  */
 export function generateRandomString(length: number = 32): string {
-  return crypto.randomBytes(length).toString('hex');
+  return crypto.randomBytes(length).toString("hex");
 }

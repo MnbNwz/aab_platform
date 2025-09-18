@@ -1,5 +1,5 @@
-import { UserRole } from "../../models/types/user";
-import { SanitizedUser } from "../../types/auth";
+import { UserRole } from "@models/types/user";
+import { SanitizedUser } from "@schemas/auth";
 import { Request } from "express";
 
 export interface AuthenticatedRequest extends Request {

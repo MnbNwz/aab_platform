@@ -1,5 +1,5 @@
-import { User } from "../../models/user";
-import { UserRole, UserStatus, ApprovalStatus } from "../../models/types/user";
+import { User } from "@models/user";
+import { UserRole, UserStatus, ApprovalStatus } from "@models/types/user";
 
 // Interface for user filtering
 export interface UserFilters {
@@ -16,7 +16,7 @@ export interface PaginationOptions {
   page: number;
   limit: number;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 // Interface for user update
@@ -28,7 +28,7 @@ export interface UserUpdateData {
 
 // Get all users with filtering and pagination
 export async function getAllUsers(filters: UserFilters = {}, pagination: PaginationOptions) {
-  const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = pagination;
+  const { page = 1, limit = 10, sortBy = "createdAt", sortOrder = "desc" } = pagination;
   const skip = (page - 1) * limit;
 
   // Build query
@@ -52,8 +52,8 @@ export async function getAllUsers(filters: UserFilters = {}, pagination: Paginat
   // Search filter (email or phone)
   if (filters.search) {
     query.$or = [
-      { email: { $regex: filters.search, $options: 'i' } },
-      { phone: { $regex: filters.search, $options: 'i' } }
+      { email: { $regex: filters.search, $options: "i" } },
+      { phone: { $regex: filters.search, $options: "i" } },
     ];
   }
 
@@ -70,17 +70,17 @@ export async function getAllUsers(filters: UserFilters = {}, pagination: Paginat
 
   // Sort options
   const sortOptions: any = {};
-  sortOptions[sortBy] = sortOrder === 'asc' ? 1 : -1;
+  sortOptions[sortBy] = sortOrder === "asc" ? 1 : -1;
 
   // Execute query
   const [users, totalCount] = await Promise.all([
     User.find(query)
-      .select('-passwordHash') // Exclude password hash
+      .select("-passwordHash") // Exclude password hash
       .sort(sortOptions)
       .skip(skip)
       .limit(limit)
       .lean(),
-    User.countDocuments(query)
+    User.countDocuments(query),
   ]);
 
   // Calculate pagination info
@@ -96,14 +96,14 @@ export async function getAllUsers(filters: UserFilters = {}, pagination: Paginat
       totalCount,
       hasNextPage,
       hasPrevPage,
-      limit
-    }
+      limit,
+    },
   };
 }
 
 // Get user by ID
 export async function getUserById(userId: string) {
-  const user = await User.findById(userId).select('-passwordHash').lean();
+  const user = await User.findById(userId).select("-passwordHash").lean();
   if (!user) {
     throw new Error("User not found");
   }
@@ -131,9 +131,9 @@ export async function updateUser(userId: string, updateData: UserUpdateData) {
   // These fields have been removed from user profiles
 
   await user.save();
-  
+
   // Return user without password hash
-  const updatedUser = await User.findById(userId).select('-passwordHash').lean();
+  const updatedUser = await User.findById(userId).select("-passwordHash").lean();
   return updatedUser;
 }
 
@@ -159,53 +159,55 @@ export async function getUserStats() {
         _id: null,
         totalUsers: { $sum: 1 },
         activeUsers: {
-          $sum: { $cond: [{ $eq: ["$status", "active"] }, 1, 0] }
+          $sum: { $cond: [{ $eq: ["$status", "active"] }, 1, 0] },
         },
         pendingUsers: {
-          $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] }
+          $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] },
         },
         revokedUsers: {
-          $sum: { $cond: [{ $eq: ["$status", "revoke"] }, 1, 0] }
+          $sum: { $cond: [{ $eq: ["$status", "revoke"] }, 1, 0] },
         },
         customers: {
-          $sum: { $cond: [{ $eq: ["$role", "customer"] }, 1, 0] }
+          $sum: { $cond: [{ $eq: ["$role", "customer"] }, 1, 0] },
         },
         contractors: {
-          $sum: { $cond: [{ $eq: ["$role", "contractor"] }, 1, 0] }
+          $sum: { $cond: [{ $eq: ["$role", "contractor"] }, 1, 0] },
         },
         admins: {
-          $sum: { $cond: [{ $eq: ["$role", "admin"] }, 1, 0] }
-        }
-      }
-    }
+          $sum: { $cond: [{ $eq: ["$role", "admin"] }, 1, 0] },
+        },
+      },
+    },
   ]);
 
-  return stats[0] || {
-    totalUsers: 0,
-    activeUsers: 0,
-    pendingUsers: 0,
-    revokedUsers: 0,
-    customers: 0,
-    contractors: 0,
-    admins: 0
-  };
+  return (
+    stats[0] || {
+      totalUsers: 0,
+      activeUsers: 0,
+      pendingUsers: 0,
+      revokedUsers: 0,
+      customers: 0,
+      contractors: 0,
+      admins: 0,
+    }
+  );
 }
 
 // Bulk approve users
 export async function bulkApproveUsers(userIds: string[]) {
   const result = await User.updateMany(
     { _id: { $in: userIds } },
-    { 
-      $set: { 
+    {
+      $set: {
         status: "active",
-        approval: "approved" // Now at user level
-      }
-    }
+        approval: "approved", // Now at user level
+      },
+    },
   );
 
   return {
     message: `${result.modifiedCount} users approved successfully`,
-    modifiedCount: result.modifiedCount
+    modifiedCount: result.modifiedCount,
   };
 }
 
@@ -213,16 +215,16 @@ export async function bulkApproveUsers(userIds: string[]) {
 export async function bulkRejectUsers(userIds: string[]) {
   const result = await User.updateMany(
     { _id: { $in: userIds } },
-    { 
-      $set: { 
+    {
+      $set: {
         status: "revoke",
-        approval: "rejected" // Now at user level
-      }
-    }
+        approval: "rejected", // Now at user level
+      },
+    },
   );
 
   return {
     message: `${result.modifiedCount} users rejected successfully`,
-    modifiedCount: result.modifiedCount
+    modifiedCount: result.modifiedCount,
   };
 }

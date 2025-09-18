@@ -1,5 +1,5 @@
 import { Response, NextFunction } from "express";
-import { User } from "../models/user";
+import { User } from "@models/user";
 
 // Admin authorization middleware
 export const requireAdmin = async (req: any, res: Response, next: NextFunction) => {
@@ -7,14 +7,14 @@ export const requireAdmin = async (req: any, res: Response, next: NextFunction) 
     // Check if user is authenticated (should be handled by auth middleware first)
     if (!req.user) {
       return res.status(401).json({
-        error: "Authentication required"
+        error: "Authentication required",
       });
     }
 
     // Check if user role is admin
     if (req.user.role !== "admin") {
       return res.status(403).json({
-        error: "Admin access required"
+        error: "Admin access required",
       });
     }
 
@@ -22,7 +22,7 @@ export const requireAdmin = async (req: any, res: Response, next: NextFunction) 
     const user = await User.findById(req.user._id);
     if (!user) {
       return res.status(401).json({
-        error: "User not found"
+        error: "User not found",
       });
     }
 
@@ -30,14 +30,14 @@ export const requireAdmin = async (req: any, res: Response, next: NextFunction) 
     // For other operations, admin must be active
     if (user.status === "revoke") {
       return res.status(403).json({
-        error: "Account has been revoked"
+        error: "Account has been revoked",
       });
     }
 
     next();
   } catch (error: any) {
     res.status(500).json({
-      error: "Authorization failed"
+      error: "Authorization failed",
     });
   }
 };
@@ -47,12 +47,12 @@ export const requireAdminOrSelf = async (req: any, res: Response, next: NextFunc
   try {
     if (!req.user) {
       return res.status(401).json({
-        error: "Authentication required"
+        error: "Authentication required",
       });
     }
 
     const { userId } = req.params;
-    
+
     // Admin can access any user's data
     if (req.user.role === "admin") {
       return next();
@@ -64,11 +64,11 @@ export const requireAdminOrSelf = async (req: any, res: Response, next: NextFunc
     }
 
     return res.status(403).json({
-      error: "Access denied"
+      error: "Access denied",
     });
   } catch (error: any) {
     res.status(500).json({
-      error: "Authorization failed"
+      error: "Authorization failed",
     });
   }
 };

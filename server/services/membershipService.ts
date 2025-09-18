@@ -1,5 +1,5 @@
-import { MembershipPlan, IMembershipPlan } from "../models/membershipPlan";
-import { UserMembership, IUserMembership } from "../models/userMembership";
+import { MembershipPlan, IMembershipPlan } from "@models/membershipPlan";
+import { UserMembership, IUserMembership } from "@models/userMembership";
 import mongoose from "mongoose";
 
 // Securely get a plan by ID, with validation

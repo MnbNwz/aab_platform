@@ -1,8 +1,8 @@
 import dotenv from "dotenv";
 import mongoose from "mongoose";
-import { User } from "../models/user";
-import { connectDB } from "../config/db";
-import { hashPassword, validatePassword, validateEmail } from "../utils/auth";
+import { User } from "@models/user";
+import { connectDB } from "@config/db";
+import { hashPassword, validatePassword, validateEmail } from "@utils/auth";
 
 // Load environment variables
 dotenv.config();
@@ -56,6 +56,10 @@ const seedAdmin = async () => {
         type: "Point",
         coordinates: [-74.006, 40.7128], // NYC coordinates as default
       },
+      // Initialize Stripe fields
+      stripeCustomerId: null,
+      stripeConnectAccountId: null,
+      stripeConnectStatus: "pending",
     });
 
     await adminUser.save();

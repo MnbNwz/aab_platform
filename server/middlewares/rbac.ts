@@ -9,3 +9,7 @@ export const requireRole = (roles: string[]) => {
     next();
   };
 };
+
+export const requireContractor = requireRole(["contractor"]);
+export const requireCustomer = requireRole(["customer"]);
+export const requireAdmin = requireRole(["admin"]);

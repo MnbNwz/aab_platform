@@ -1,13 +1,13 @@
 import { Request, Response } from "express";
-import { signup, signin } from "../services/auth";
-import S3Service from "../services/s3Service";
+import { signup, signin } from "@services/auth";
+import S3Upload from "@utils/s3Upload";
 
 export const signupController = async (req: Request & { files?: any[] }, res: Response) => {
   try {
     const signupData = req.body;
     // If files are present (contractor docs), upload to S3 and add URLs to contractor.docs
     if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-      const s3 = new S3Service();
+      const s3 = S3Upload;
       const docUrls = [];
       for (const file of req.files) {
         // Use a unique key for each file (e.g., contractor_email/timestamp_filename)

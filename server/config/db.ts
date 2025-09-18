@@ -1,27 +1,18 @@
 import mongoose from "mongoose";
-import { Logger } from "winston";
+import { logErrorWithContext } from "@utils/logger";
 
 let dbInstance: typeof mongoose | null = null;
 
-export const connectDB = async (logger?: Logger) => {
+export const connectDB = async () => {
   if (dbInstance) return dbInstance;
   try {
     dbInstance = await mongoose.connect(process.env.MONGO_URI as string, {
       serverSelectionTimeoutMS: 5000, // polling timeout
     });
-    const styledMsg = "\x1b[32m\u2714 MongoDB connected\x1b[0m"; // green with checkmark
-    if (logger) {
-      logger.info(styledMsg);
-    } else {
-      console.info(styledMsg);
-    }
+    console.log("MongoDB connected successfully");
     return dbInstance;
   } catch (err) {
-    if (logger) {
-      logger.error("MongoDB connection error:", err);
-    } else {
-      console.error("MongoDB connection error:", err);
-    }
+    logErrorWithContext(err as Error, { operation: "mongodb_connection" });
     throw err;
   }
 };

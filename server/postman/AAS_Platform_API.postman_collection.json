@@ -151,7 +151,20 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "auth", "profile"]
             },
-            "description": "Get current authenticated user's profile - returns user object with firstName, lastName, role-specific data, and approval status. Uses cached data for improved performance."
+            "description": "Get current authenticated user's profile - returns user object with firstName, lastName, role-specific data, approval status, and Stripe fields (stripeCustomerId, stripeConnectAccountId, stripeConnectStatus). Uses cached data for improved performance."
+          }
+        },
+        {
+          "name": "Get User Profile with Stripe Fields",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "profile"]
+            },
+            "description": "Get user profile including new Stripe integration fields:\n- stripeCustomerId: Stripe customer ID (null if not created)\n- stripeConnectAccountId: Stripe Connect account ID (null if not created)\n- stripeConnectStatus: Status of Stripe Connect account (pending/active/rejected/disabled)"
           }
         },
         {
@@ -459,6 +472,1122 @@
               "path": ["api", "services"]
             },
             "description": "Example: Expanded services list with more specialized categories"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payment Management",
+      "item": [
+        {
+          "name": "Create Membership Checkout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planId\": \"PLAN_ID_HERE\",\n  \"stripePriceId\": \"price_customer_basic_monthly\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/membership/checkout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "membership", "checkout"]
+            },
+            "description": "Create Stripe checkout session for membership purchase"
+          }
+        },
+        {
+          "name": "Confirm Membership Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"cs_test_1234567890\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/membership/confirm",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "membership", "confirm"]
+            },
+            "description": "Confirm membership payment after successful Stripe checkout"
+          }
+        },
+        {
+          "name": "Cancel Membership Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"User requested cancellation\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/membership/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "membership", "cancel"]
+            },
+            "description": "Cancel active membership and process refund"
+          }
+        },
+        {
+          "name": "Create Job Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jobRequestId\": \"JOB_REQUEST_ID\",\n  \"contractorId\": \"CONTRACTOR_ID\",\n  \"totalAmount\": 1500.00,\n  \"description\": \"Kitchen renovation project\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/job/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "job", "create"]
+            },
+            "description": "Create a new job payment with deposit, pre-start, and completion phases"
+          }
+        },
+        {
+          "name": "Process Job Deposit",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"PAYMENT_ID\",\n  \"paymentMethodId\": \"pm_card_visa\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/job/deposit",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "job", "deposit"]
+            },
+            "description": "Process the initial 15% deposit payment for a job"
+          }
+        },
+        {
+          "name": "Process Job Pre-Start Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"PAYMENT_ID\",\n  \"paymentMethodId\": \"pm_card_visa\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/job/prestart",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "job", "prestart"]
+            },
+            "description": "Process the 25% pre-start payment before work begins"
+          }
+        },
+        {
+          "name": "Process Job Completion Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"PAYMENT_ID\",\n  \"paymentMethodId\": \"pm_card_visa\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/job/completion",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "job", "completion"]
+            },
+            "description": "Process the final 60% completion payment after work is finished"
+          }
+        },
+        {
+          "name": "Process Job Refund",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"PAYMENT_ID\",\n  \"reason\": \"Work not completed as specified\",\n  \"refundAmount\": 500.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/job/refund",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "job", "refund"]
+            },
+            "description": "Process a refund for a job payment"
+          }
+        },
+        {
+          "name": "Create Off-Market Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 2000.00,\n  \"description\": \"Custom renovation project\",\n  \"contractorId\": \"CONTRACTOR_ID\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/offmarket/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "offmarket", "create"]
+            },
+            "description": "Create an off-market payment for custom projects"
+          }
+        },
+        {
+          "name": "Process Off-Market Deposit",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"PAYMENT_ID\",\n  \"paymentMethodId\": \"pm_card_visa\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/offmarket/deposit",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "offmarket", "deposit"]
+            },
+            "description": "Process deposit payment for off-market project"
+          }
+        },
+        {
+          "name": "Request Financing",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"PAYMENT_ID\",\n  \"financingAmount\": 1500.00,\n  \"termMonths\": 12\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/offmarket/financing",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "offmarket", "financing"]
+            },
+            "description": "Request financing for an off-market payment"
+          }
+        },
+        {
+          "name": "Process Financing Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"PAYMENT_ID\",\n  \"paymentMethodId\": \"pm_card_visa\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/offmarket/financing/pay",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "offmarket", "financing", "pay"]
+            },
+            "description": "Process financing payment for off-market project"
+          }
+        },
+        {
+          "name": "Process Off-Market Refund",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"PAYMENT_ID\",\n  \"reason\": \"Project cancelled\",\n  \"refundAmount\": 1000.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/offmarket/refund",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "offmarket", "refund"]
+            },
+            "description": "Process refund for off-market payment"
+          }
+        },
+        {
+          "name": "Setup Contractor Connect",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"country\": \"US\",\n  \"type\": \"express\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/connect/setup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "connect", "setup"]
+            },
+            "description": "Setup Stripe Connect account for contractor"
+          }
+        },
+        {
+          "name": "Get Contractor Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/connect/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "connect", "dashboard"]
+            },
+            "description": "Get contractor's Stripe Connect dashboard data"
+          }
+        },
+        {
+          "name": "Get Connect Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/connect/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "connect", "status"]
+            },
+            "description": "Get contractor's Stripe Connect account status"
+          }
+        },
+        {
+          "name": "Get Payment History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/history?page=1&limit=10&type=all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "history"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page"
+                },
+                {
+                  "key": "type",
+                  "value": "all",
+                  "description": "Payment type: all, membership, job, offmarket"
+                }
+              ]
+            },
+            "description": "Get user's payment history with filtering"
+          }
+        },
+        {
+          "name": "Get Payment Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/details/{{paymentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "details", "{{paymentId}}"]
+            },
+            "description": "Get detailed information about a specific payment"
+          }
+        },
+        {
+          "name": "Get Payment Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "stats"]
+            },
+            "description": "Get payment statistics and analytics"
+          }
+        },
+        {
+          "name": "Stripe Webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Stripe-Signature",
+                "value": "t=1234567890,v1=signature_here"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"evt_1234567890\",\n  \"object\": \"event\",\n  \"type\": \"payment_intent.succeeded\",\n  \"data\": {\n    \"object\": {\n      \"id\": \"pi_1234567890\",\n      \"amount\": 150000,\n      \"currency\": \"usd\",\n      \"status\": \"succeeded\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/webhook/stripe",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "webhook", "stripe"]
+            },
+            "description": "Stripe webhook endpoint for payment events"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Job Request Management",
+      "item": [
+        {
+          "name": "Create Job Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Kitchen Renovation\",\n  \"description\": \"Complete kitchen renovation including cabinets, countertops, and appliances\",\n  \"property\": \"PROPERTY_ID\",\n  \"service\": \"solar\",\n  \"estimate\": 15000,\n  \"type\": \"regular\",\n  \"timeline\": 30\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/jobRequest",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobRequest"]
+            },
+            "description": "Create a new job request for contractors to bid on. Use valid services from /api/services endpoint. Timeline is in days."
+          }
+        },
+        {
+          "name": "Get Job Requests",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/jobRequest?page=1&limit=10&status=open&serviceType=general",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobRequest"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page"
+                },
+                {
+                  "key": "status",
+                  "value": "open",
+                  "description": "Filter by status: open, in_progress, completed, cancelled"
+                },
+                {
+                  "key": "serviceType",
+                  "value": "general",
+                  "description": "Filter by service type"
+                }
+              ]
+            },
+            "description": "Get job requests with filtering and pagination"
+          }
+        },
+        {
+          "name": "Get Job Request by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/jobRequest/{{jobRequestId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobRequest", "{{jobRequestId}}"]
+            },
+            "description": "Get specific job request details by ID. Returns timelineHistory array for status tracking."
+          }
+        },
+        {
+          "name": "Get Job Request with Timeline History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/jobRequest/{{jobRequestId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobRequest", "{{jobRequestId}}"]
+            },
+            "description": "Get job request with complete timeline history showing all status changes, dates, and who made the changes. Includes timelineHistory array with status, date, and by fields."
+          }
+        },
+        {
+          "name": "Update Job Request",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Kitchen Renovation\",\n  \"description\": \"Updated description with additional requirements\",\n  \"budget\": 18000,\n  \"preferredEndDate\": \"2024-03-15\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/jobRequest/{{jobRequestId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobRequest", "{{jobRequestId}}"]
+            },
+            "description": "Update an existing job request"
+          }
+        },
+        {
+          "name": "Cancel Job Request",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Project cancelled by customer\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/jobRequest/{{jobRequestId}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobRequest", "{{jobRequestId}}", "cancel"]
+            },
+            "description": "Cancel an existing job request"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Property Management",
+      "item": [
+        {
+          "name": "Create Property",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "multipart/form-data"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "address",
+                  "value": "123 Main Street, New York, NY 10001",
+                  "type": "text"
+                },
+                {
+                  "key": "propertyType",
+                  "value": "domestic",
+                  "type": "text"
+                },
+                {
+                  "key": "bedrooms",
+                  "value": "3",
+                  "type": "text"
+                },
+                {
+                  "key": "bathrooms",
+                  "value": "2",
+                  "type": "text"
+                },
+                {
+                  "key": "squareFootage",
+                  "value": "1500",
+                  "type": "text"
+                },
+                {
+                  "key": "yearBuilt",
+                  "value": "2010",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Beautiful family home with modern amenities",
+                  "type": "text"
+                },
+                {
+                  "key": "images",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/property",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "property"]
+            },
+            "description": "Create a new property with up to 15 images"
+          }
+        },
+        {
+          "name": "Get User Properties",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/property?page=1&limit=10&propertyType=domestic",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "property"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page"
+                },
+                {
+                  "key": "propertyType",
+                  "value": "domestic",
+                  "description": "Filter by property type: domestic, commercial"
+                }
+              ]
+            },
+            "description": "Get all properties for the authenticated user"
+          }
+        },
+        {
+          "name": "Get Property by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/property/{{propertyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "property", "{{propertyId}}"]
+            },
+            "description": "Get specific property details by ID"
+          }
+        },
+        {
+          "name": "Update Property",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "multipart/form-data"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "address",
+                  "value": "123 Updated Street, New York, NY 10001",
+                  "type": "text"
+                },
+                {
+                  "key": "bedrooms",
+                  "value": "4",
+                  "type": "text"
+                },
+                {
+                  "key": "bathrooms",
+                  "value": "3",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Updated description with new details",
+                  "type": "text"
+                },
+                {
+                  "key": "images",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/property/{{propertyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "property", "{{propertyId}}"]
+            },
+            "description": "Update an existing property with new images"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bid Management",
+      "item": [
+        {
+          "name": "Get Job Bids",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/bid/job/{{jobRequestId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "bid", "job", "{{jobRequestId}}"]
+            },
+            "description": "Get all bids for a specific job request"
+          }
+        },
+        {
+          "name": "Accept Bid",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"acceptedAt\": \"2024-01-15T10:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/bid/{{bidId}}/accept",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "bid", "{{bidId}}", "accept"]
+            },
+            "description": "Accept a bid for a job request. This will:\n1. Mark the selected bid as 'accepted'\n2. Reject all other bids for the same job\n3. Update job status to 'inprogress'\n4. Add entry to timelineHistory array\n5. Set acceptedBid field on job request"
+          }
+        },
+        {
+          "name": "Accept Bid - Complete Workflow",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"acceptedAt\": \"2024-01-15T10:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/bid/{{bidId}}/accept",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "bid", "{{bidId}}", "accept"]
+            },
+            "description": "Complete bid acceptance workflow. After accepting:\n- Check job request status (should be 'inprogress')\n- Check acceptedBid field (should contain bid ID)\n- Check timelineHistory (should have new 'accepted' entry)\n- Check other bids status (should be 'rejected')"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contractor Management",
+      "item": [
+        {
+          "name": "Create Bid",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jobRequestId\": \"JOB_REQUEST_ID\",\n  \"bidAmount\": 12000,\n  \"message\": \"Professional kitchen renovation with high-quality materials\",\n  \"timeline\": {\n    \"startDate\": \"2024-02-01\",\n    \"endDate\": \"2024-03-15\"\n  },\n  \"materials\": [\n    \"High-quality materials\",\n    \"Professional tools\",\n    \"Safety equipment\"\n  ],\n  \"warranty\": \"5 years\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/contractor/bid",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contractor", "bid"]
+            },
+            "description": "Create a bid for a job request (contractor only). Timeline must be an object with startDate and endDate."
+          }
+        },
+        {
+          "name": "Get Contractor Bids",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/contractor/bids?page=1&limit=10&status=all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contractor", "bids"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page"
+                },
+                {
+                  "key": "status",
+                  "value": "all",
+                  "description": "Filter by status: all, pending, accepted, rejected"
+                }
+              ]
+            },
+            "description": "Get all bids created by the contractor"
+          }
+        },
+        {
+          "name": "Get Job Bids (Contractor)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/contractor/bids/job/{{jobRequestId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contractor", "bids", "job", "{{jobRequestId}}"]
+            },
+            "description": "Get bids for a specific job request (contractor view)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "User Management",
+      "item": [
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"phone\": \"+1234567890\",\n  \"role\": \"customer\",\n  \"geoHome\": {\n    \"type\": \"Point\",\n    \"coordinates\": [-74.006, 40.7128]\n  },\n  \"customer\": {\n    \"defaultPropertyType\": \"domestic\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/user",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user"]
+            },
+            "description": "Create a new user account"
+          }
+        },
+        {
+          "name": "Get Admin Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/get-admins",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user", "get-admins"]
+            },
+            "description": "Get all admin users"
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"OldPassword123!\",\n  \"newPassword\": \"NewPassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/user/change-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user", "change-password"]
+            },
+            "description": "Change user password"
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user", "{{userId}}"]
+            },
+            "description": "Get user details by ID"
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "multipart/form-data"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "firstName",
+                  "value": "John",
+                  "type": "text"
+                },
+                {
+                  "key": "lastName",
+                  "value": "Doe",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "john.doe@example.com",
+                  "type": "text"
+                },
+                {
+                  "key": "phone",
+                  "value": "+1234567890",
+                  "type": "text"
+                },
+                {
+                  "key": "profileImage",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/user/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user", "{{userId}}"]
+            },
+            "description": "Update user profile with optional profile image"
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user", "{{userId}}"]
+            },
+            "description": "Delete user account"
+          }
+        },
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/user?page=1&limit=10&role=customer",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page"
+                },
+                {
+                  "key": "role",
+                  "value": "customer",
+                  "description": "Filter by role: customer, contractor, admin"
+                }
+              ]
+            },
+            "description": "List users with pagination and filtering"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Complete Workflow Testing",
+      "item": [
+        {
+          "name": "1. Create Property",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Test Property\",\n  \"propertyType\": \"house\",\n  \"location\": {\n    \"type\": \"Point\",\n    \"coordinates\": [-74.006, 40.7128]\n  },\n  \"area\": 1500,\n  \"areaUnit\": \"sqft\",\n  \"totalRooms\": 6,\n  \"bedrooms\": 3,\n  \"bathrooms\": 2,\n  \"kitchens\": 1,\n  \"description\": \"Test property for workflow testing\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/property",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "property"]
+            },
+            "description": "Step 1: Create a property for the workflow. Save the property ID for next steps."
+          }
+        },
+        {
+          "name": "2. Create Job Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Complete Workflow Test\",\n  \"description\": \"Testing complete job request and bid workflow\",\n  \"property\": \"PROPERTY_ID_FROM_STEP_1\",\n  \"service\": \"solar\",\n  \"estimate\": 10000,\n  \"type\": \"regular\",\n  \"timeline\": 30\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/jobRequest",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobRequest"]
+            },
+            "description": "Step 2: Create a job request using the property from step 1. Save the job request ID for next steps."
+          }
+        },
+        {
+          "name": "3. Create Bid (Contractor)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jobRequestId\": \"JOB_REQUEST_ID_FROM_STEP_2\",\n  \"bidAmount\": 9500,\n  \"message\": \"Professional service with warranty\",\n  \"timeline\": {\n    \"startDate\": \"2024-02-01\",\n    \"endDate\": \"2024-03-02\"\n  },\n  \"materials\": [\"Professional materials\", \"Safety equipment\"],\n  \"warranty\": \"10 years\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/contractor/bid",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contractor", "bid"]
+            },
+            "description": "Step 3: Create a bid as contractor. Save the bid ID for next steps."
+          }
+        },
+        {
+          "name": "4. Accept Bid (Customer)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"acceptedAt\": \"2024-01-15T10:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/bid/BID_ID_FROM_STEP_3/accept",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "bid", "BID_ID_FROM_STEP_3", "accept"]
+            },
+            "description": "Step 4: Accept the bid as customer. This triggers the complete workflow with status updates and timeline history."
+          }
+        },
+        {
+          "name": "5. Verify Complete Workflow",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/jobRequest/JOB_REQUEST_ID_FROM_STEP_2",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobRequest", "JOB_REQUEST_ID_FROM_STEP_2"]
+            },
+            "description": "Step 5: Verify the complete workflow worked correctly. Check:\n- status: should be 'inprogress'\n- acceptedBid: should contain the bid ID\n- timelineHistory: should have 'accepted' entry with date and user"
           }
         }
       ]

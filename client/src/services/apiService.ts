@@ -122,7 +122,7 @@ const makeRequest = async <T = any>(
 
     if (!response.ok) {
       throw createApiError(
-        data?.message || ERROR_MESSAGES.GENERIC_ERROR,
+        data?.message || data?.error || ERROR_MESSAGES.GENERIC_ERROR,
         response.status,
         data?.errors
       );
@@ -195,8 +195,16 @@ export const authApi = {
     userId: string,
     userData: Partial<User>
   ): Promise<User> => {
-    const response = await put<{ user: User }>(`/api/user/${userId}`, userData);
-    return response.data.user;
+    const response = await put<User>(`/api/user/${userId}`, userData);
+    return response.data;
+  },
+
+  updateProfileWithFormData: async (
+    userId: string,
+    formData: FormData
+  ): Promise<User> => {
+    const response = await put<User>(`/api/user/${userId}`, formData);
+    return response.data;
   },
 
   changePassword: async (passwordData: {

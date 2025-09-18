@@ -1,6 +1,6 @@
 import express from "express";
-import * as bidController from "../controllers/bidController";
-import { authenticate, requireContractor } from "../middlewares/auth";
+import * as bidController from "@controllers/bidController";
+import { authenticate, requireContractor } from "@middlewares/auth";
 
 const router = express.Router();
 

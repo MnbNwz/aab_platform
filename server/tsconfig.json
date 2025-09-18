@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-  "module": "Node16",
-  "moduleResolution": "node16",
+    "module": "CommonJS",
+    "moduleResolution": "node",
     // "ignoreDeprecations": "6.0", // Removed invalid value
     "lib": ["ES2022"],
 
@@ -19,10 +19,11 @@
     "noUncheckedIndexedAccess": false,
     "noImplicitOverride": false,
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": false,
     "resolveJsonModule": true,
-    "typeRoots": ["./types", "../shared/types"],
+    "typeRoots": ["../shared/types"],
     "baseUrl": "./",
     "paths": {
       "@/*": ["./*"],
@@ -31,7 +32,10 @@
       "@models/*": ["models/*"],
       "@middlewares/*": ["middlewares/*"],
       "@routes/*": ["routes/*"],
-      "@types/*": ["types/*"],
+      "@services/*": ["services/*"],
+      "@utils/*": ["utils/*"],
+      "@types/*": ["schemas/*"],
+      "@schemas/*": ["schemas/*"],
       "@shared/*": ["../shared/*"]
     }
   },

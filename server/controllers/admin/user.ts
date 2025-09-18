@@ -10,8 +10,8 @@ import {
   UserFilters,
   PaginationOptions,
   UserUpdateData,
-} from "../../services/admin/user";
-import { UserRole, UserStatus, ApprovalStatus } from "../../models/types/user";
+} from "@services/admin/user";
+import { UserRole, UserStatus, ApprovalStatus } from "@models/types/user";
 
 // Get all users with filtering and pagination
 export const getUsersController = async (req: Request, res: Response) => {

@@ -1,14 +1,15 @@
-import { JobRequest } from "../models/jobRequest";
-import { ContractorServices } from "../models/service";
+import { JobRequest } from "@models/jobRequest";
+import { ContractorServices } from "@models/service";
 import { FilterQuery } from "mongoose";
+import { validateJobRequestCreation } from "@services/propertyTypeEnforcement";
 
 // Helper function to get available services from database
 export const getAvailableServices = async (): Promise<string[]> => {
   try {
-    const firstServices = await ContractorServices.findOne()
-      .sort({ version: 1 })
+    const latestServices = await ContractorServices.findOne()
+      .sort({ version: -1 })
       .select("services");
-    return firstServices ? firstServices.services : [];
+    return latestServices ? latestServices.services : [];
   } catch (error) {
     console.error("Error fetching services:", error);
     return [];
@@ -23,6 +24,19 @@ export const validateService = async (service: string): Promise<boolean> => {
 
 // Create a new job request
 export const createJobRequest = async (jobData: any) => {
+  // Validate property type enforcement for customers
+  if (jobData.createdBy && jobData.property) {
+    const propertyValidation = await validateJobRequestCreation(
+      jobData.createdBy,
+      jobData.property,
+      jobData,
+    );
+
+    if (!propertyValidation.isValid) {
+      throw new Error(propertyValidation.reason || "Property validation failed");
+    }
+  }
+
   // Validate service
   const availableServices = await getAvailableServices();
   if (!jobData.service || !availableServices.includes(jobData.service)) {

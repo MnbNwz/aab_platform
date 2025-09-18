@@ -31,49 +31,6 @@ const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
   const user = useSelector((state: RootState) => state.auth.user);
   const [jobType, setJobType] = useState<string>("");
 
-  // Map custom categories to valid contractor services
-  const mapCategoryToService = (category: string): string => {
-    const categoryMap: { [key: string]: string } = {
-      // Solar and energy related
-      solar: "electrical",
-      insulation: "general",
-      energy: "electrical",
-
-      // Plumbing related
-      plumbing: "plumbing",
-      bathroom: "plumbing",
-      kitchen: "general",
-
-      // Electrical related
-      electrical: "electrical",
-      lighting: "electrical",
-      wiring: "electrical",
-
-      // HVAC related
-      hvac: "hvac",
-      heating: "hvac",
-      cooling: "hvac",
-      ventilation: "hvac",
-
-      // General construction
-      general: "general",
-      maintenance: "general",
-      repair: "general",
-      renovation: "general",
-
-      // Specific trades
-      roofing: "roofing",
-      carpentry: "carpentry",
-      painting: "painting",
-      landscaping: "landscaping",
-
-      // Default fallback
-      default: "general",
-    };
-
-    return categoryMap[category.toLowerCase()] || "general";
-  };
-
   const { createLoading, error } = useSelector((state: RootState) => state.job);
 
   const {
@@ -134,22 +91,80 @@ const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
       return;
     }
 
+    // Prevent submission if services are still loading
+    if (servicesLoading) {
+      showToast.error("Services are still loading. Please wait and try again.");
+      return;
+    }
+
+    // Call the create function directly
+    await handleConfirmCreate(data);
+  };
+
+  const handleConfirmCreate = async (data: JobFormInputs) => {
+    if (!jobType) {
+      return;
+    }
+
+    // Contractors cannot create jobs
+    if (user?.role === "contractor") {
+      return;
+    }
+
+    // Prevent submission if services are still loading
+    if (servicesLoading) {
+      showToast.error("Services are still loading. Please wait and try again.");
+      return;
+    }
+
+    // Validate required fields
+    if (!data.category || data.category.trim() === "") {
+      showToast.error("Please select a service category");
+      return;
+    }
+    if (!data.estimate || data.estimate.trim() === "") {
+      showToast.error("Please enter an estimated budget");
+      return;
+    }
+    if (!data.timeline || data.timeline.trim() === "") {
+      showToast.error("Please enter a timeline");
+      return;
+    }
+
     // Prepare job data as JSON object
     const jobData: any = {
       title: data.title,
       description: data.description,
-      service: mapCategoryToService(data.category), // Map category to valid contractor service
+      service: data.category, // Send the original category as service
       type: jobType,
+      createdBy: user?._id || user?.id,
     };
 
     // Add optional fields only if they have values
-    if (data.estimate && data.estimate.trim() !== "") {
+    if (
+      data.estimate &&
+      typeof data.estimate === "string" &&
+      data.estimate.trim() !== ""
+    ) {
       jobData.estimate = parseFloat(data.estimate);
     }
-    if (data.property && data.property.trim() !== "") {
-      jobData.property = data.property;
+    if (data.property) {
+      // Handle both string and object property values
+      if (typeof data.property === "string" && data.property.trim() !== "") {
+        jobData.property = data.property;
+      } else if (
+        typeof data.property === "object" &&
+        data.property &&
+        "_id" in data.property
+      ) {
+        jobData.property = (data.property as any)._id;
+      }
     }
-    if (data.timeline && data.timeline.trim() !== "") {
+    if (
+      data.timeline &&
+      typeof data.timeline === "string" &&
+      data.timeline.trim() !== ""
+    ) {
       jobData.timeline = parseInt(data.timeline);
     }
 
@@ -195,7 +210,7 @@ const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
         )}
         <div>
           <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
-            Title *
+            Title <span className="text-red-500">*</span>
           </label>
           <Controller
             name="title"
@@ -224,7 +239,7 @@ const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
         </div>
         <div>
           <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
-            Description *
+            Description <span className="text-red-500">*</span>
           </label>
           <Controller
             name="description"
@@ -293,7 +308,7 @@ const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
-              Service Category *
+              Service Category <span className="text-red-500">*</span>
             </label>
             <Controller
               name="category"
@@ -304,8 +319,13 @@ const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
                   {...field}
                   className="w-full rounded-lg px-3 py-2 sm:py-3 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm sm:text-base text-primary-900"
                   required
+                  disabled={servicesLoading}
                 >
-                  <option value="">Select service category</option>
+                  <option value="">
+                    {servicesLoading
+                      ? "Loading services..."
+                      : "Select service category"}
+                  </option>
                   {services.map((cat) => (
                     <option key={cat} value={cat}>
                       {cat.charAt(0).toUpperCase() + cat.slice(1)}
@@ -326,39 +346,59 @@ const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
           </div>
           <div>
             <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
-              Estimated Budget (USD)
+              Estimated Budget (USD) <span className="text-red-500">*</span>
             </label>
             <Controller
               name="estimate"
               control={control}
+              rules={{
+                required: "Estimated budget is required",
+                validate: (value) => {
+                  if (!value || value.trim() === "") {
+                    return "Estimated budget is required";
+                  }
+                  const num = parseFloat(value);
+                  if (isNaN(num) || num <= 0) {
+                    return "Budget must be a positive number";
+                  }
+                  return true;
+                },
+              }}
               render={({ field }) => (
                 <input
                   {...field}
                   className="w-full rounded-lg px-3 py-2 sm:py-3 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm sm:text-base text-primary-900 placeholder-gray-500"
                   type="number"
                   min={0}
-                  placeholder="Optional"
+                  placeholder="e.g., 5000"
                 />
               )}
             />
+            {errors.estimate && (
+              <span className="text-red-500 text-xs mt-1">
+                {errors.estimate.message}
+              </span>
+            )}
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
-              Timeline (Days)
+              Timeline (Days) <span className="text-red-500">*</span>
             </label>
             <Controller
               name="timeline"
               control={control}
               rules={{
+                required: "Timeline is required",
                 validate: (value) => {
-                  if (value && value.trim() !== "") {
-                    const num = parseInt(value);
-                    if (isNaN(num) || num < 1) return "Minimum 1 day";
-                    if (num > 365) return "Maximum 365 days";
+                  if (!value || value.trim() === "") {
+                    return "Timeline is required";
                   }
+                  const num = parseInt(value);
+                  if (isNaN(num) || num < 1) return "Minimum 1 day";
+                  if (num > 365) return "Maximum 365 days";
                   return true;
                 },
               }}

@@ -2,8 +2,8 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import mongoose from "mongoose";
-import { MembershipPlan } from "../models/membershipPlan";
-import { connectDB } from "../config/db";
+import { MembershipPlan } from "@models/membershipPlan";
+import { connectDB } from "@config/db";
 
 // Annual discount rate
 const ANNUAL_DISCOUNT_RATE = 15; // 15%
@@ -18,17 +18,17 @@ const membershipPlans = [
       "Basic property management",
       "5 service requests per month",
       "Standard support",
-      "Basic dashboard access"
+      "Basic dashboard access",
     ],
     monthlyPrice: 100, // $1.00
     yearlyPrice: 1200, // $12.00 (before discount)
     annualDiscountRate: ANNUAL_DISCOUNT_RATE,
     duration: 30,
     stripePriceIdMonthly: "price_customer_basic_monthly", // Replace with real Stripe Price ID
-    stripePriceIdYearly: "price_customer_basic_yearly",   // Replace with real Stripe Price ID
+    stripePriceIdYearly: "price_customer_basic_yearly", // Replace with real Stripe Price ID
   },
   {
-    name: "Standard Customer Plan", 
+    name: "Standard Customer Plan",
     description: "Enhanced features for active homeowners",
     userType: "customer",
     tier: "standard",
@@ -37,7 +37,7 @@ const membershipPlans = [
       "15 service requests per month",
       "Priority support",
       "Maintenance scheduling",
-      "Advanced analytics"
+      "Advanced analytics",
     ],
     monthlyPrice: 200, // $2.00
     yearlyPrice: 2400, // $24.00 (before discount)
@@ -49,7 +49,7 @@ const membershipPlans = [
   {
     name: "Premium Customer Plan",
     description: "Complete solution for property owners",
-    userType: "customer", 
+    userType: "customer",
     tier: "premium",
     features: [
       "Unlimited service requests",
@@ -57,7 +57,7 @@ const membershipPlans = [
       "Advanced maintenance scheduling",
       "Full analytics suite",
       "Priority contractor matching",
-      "Emergency services"
+      "Emergency services",
     ],
     monthlyPrice: 300, // $3.00
     yearlyPrice: 3600, // $36.00 (before discount)
@@ -75,7 +75,7 @@ const membershipPlans = [
       "Job management",
       "Basic analytics",
       "Customer communication tools",
-      "Payment processing"
+      "Payment processing",
     ],
     monthlyPrice: 100, // $1.00
     yearlyPrice: 1200, // $12.00 (before discount)
@@ -88,14 +88,14 @@ const membershipPlans = [
     name: "Standard Contractor Plan",
     description: "Advanced tools for growing businesses",
     userType: "contractor",
-    tier: "standard", 
+    tier: "standard",
     features: [
       "Advanced job management",
       "Detailed analytics",
       "Enhanced customer tools",
       "Payment processing",
       "Lead generation",
-      "Scheduling tools"
+      "Scheduling tools",
     ],
     monthlyPrice: 200, // $2.00
     yearlyPrice: 2400, // $24.00 (before discount)
@@ -116,7 +116,7 @@ const membershipPlans = [
       "Priority payment processing",
       "Premium lead generation",
       "Advanced scheduling & routing",
-      "24/7 business support"
+      "24/7 business support",
     ],
     monthlyPrice: 300, // $3.00
     yearlyPrice: 3600, // $36.00 (before discount)
@@ -124,25 +124,27 @@ const membershipPlans = [
     duration: 30,
     stripePriceIdMonthly: "price_contractor_premium_monthly",
     stripePriceIdYearly: "price_contractor_premium_yearly",
-  }
+  },
 ];
 
 export const seedMembershipPlans = async () => {
   try {
     console.log("Starting membership plans seeding...");
-    
+
     // Clear existing plans
     await MembershipPlan.deleteMany({});
     console.log("Cleared existing membership plans");
-    
+
     // Insert new plans
     const createdPlans = await MembershipPlan.insertMany(membershipPlans);
     console.log(`Created ${createdPlans.length} membership plans:`);
-    
-    createdPlans.forEach(plan => {
-      console.log(`- ${plan.name} (${plan.userType} - ${plan.tier}) - Monthly: $${plan.monthlyPrice/100}, Yearly: $${plan.yearlyPrice/100} (${plan.annualDiscountRate}% discount)`);
+
+    createdPlans.forEach((plan) => {
+      console.log(
+        `- ${plan.name} (${plan.userType} - ${plan.tier}) - Monthly: $${plan.monthlyPrice / 100}, Yearly: $${plan.yearlyPrice / 100} (${plan.annualDiscountRate}% discount)`,
+      );
     });
-    
+
     return createdPlans;
   } catch (error) {
     console.error("Error seeding membership plans:", error);

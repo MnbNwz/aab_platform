@@ -1,7 +1,11 @@
 import { Request, Response } from "express";
-import * as userService from "../services/user";
-import { CreateUserRequest, UpdateUserRequest, ChangePasswordRequest } from "./types/user";
-import S3Service from "../services/s3Service";
+import * as userService from "@services/user";
+import {
+  CreateUserRequest,
+  UpdateUserRequest,
+  ChangePasswordRequest,
+} from "@controllers/types/user";
+import S3Upload from "@utils/s3Upload";
 
 export const createUser = async (req: Request, res: Response) => {
   try {
@@ -24,13 +28,37 @@ export const getUser = async (req: Request, res: Response) => {
 
 export const updateUser = async (req: Request & { file?: any }, res: Response) => {
   try {
+    let updateData: any = {};
+
+    // Handle file upload
     if (req.file) {
-      const s3 = new S3Service();
-      const profileImageUrl = await s3.uploadProfileImage(req.params.id, req.file);
-      req.body.profileImage = profileImageUrl;
+      const profileImageUrl = await S3Upload.uploadProfileImage(req.file);
+      updateData.profileImage = profileImageUrl;
     }
 
-    const user = await userService.updateUser(req.params.id, req.body as UpdateUserRequest);
+    // Handle other data - check if it's in userData field (JSON string) or individual fields
+    if (req.body.userData) {
+      // Mixed approach: userData is JSON string
+      const userData = JSON.parse(req.body.userData);
+      updateData = { ...updateData, ...userData };
+    } else {
+      // FormData approach: individual fields
+      const { userData, ...otherFields } = req.body;
+      updateData = { ...updateData, ...otherFields };
+
+      // Parse JSON fields if they exist
+      if (otherFields.geoHome && typeof otherFields.geoHome === "string") {
+        updateData.geoHome = JSON.parse(otherFields.geoHome);
+      }
+      if (otherFields.customer && typeof otherFields.customer === "string") {
+        updateData.customer = JSON.parse(otherFields.customer);
+      }
+      if (otherFields.contractor && typeof otherFields.contractor === "string") {
+        updateData.contractor = JSON.parse(otherFields.contractor);
+      }
+    }
+
+    const user = await userService.updateUser(req.params.id, updateData as UpdateUserRequest);
     if (!user) return res.status(404).json({ error: "User not found" });
     res.json(user);
   } catch (err) {

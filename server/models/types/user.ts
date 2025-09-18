@@ -4,7 +4,7 @@ export type UserRole = "admin" | "customer" | "contractor";
 export type UserStatus = "pending" | "active" | "revoke";
 export type PropertyType = "domestic" | "commercial";
 export type ApprovalStatus = "pending" | "approved" | "rejected";
-export type MembershipType = "standard" | "premium" | "platinum";
+export type MembershipType = "basic" | "standard" | "premium";
 
 export interface Customer {
   defaultPropertyType: PropertyType;
@@ -36,6 +36,10 @@ export interface IUser extends Document {
   geoHome: GeoHome;
   approval: ApprovalStatus;
   profileImage?: string;
+  // Stripe fields
+  stripeCustomerId?: string;
+  stripeConnectAccountId?: string;
+  stripeConnectStatus?: "pending" | "active" | "rejected" | "disabled";
 }
 
 // DTO types for user operations

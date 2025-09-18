@@ -1,16 +1,16 @@
 import { Request, Response } from "express";
-import { ContractorServices } from "../models/service";
-import { AuthenticatedRequest } from "../types/express";
+import { ContractorServices } from "@models/service";
+import { AuthenticatedRequest } from "@schemas/express";
 
 // Get current services (public)
 export const getServices = async (req: Request, res: Response) => {
   try {
-    // Get the first services document
-    const firstServices = await ContractorServices.findOne()
-      .sort({ version: 1 })
+    // Get the latest services document
+    const latestServices = await ContractorServices.findOne()
+      .sort({ version: -1 })
       .select("services version updatedAt");
 
-    if (!firstServices) {
+    if (!latestServices) {
       return res.status(200).json({
         success: true,
         data: {
@@ -24,9 +24,9 @@ export const getServices = async (req: Request, res: Response) => {
     res.status(200).json({
       success: true,
       data: {
-        services: firstServices.services,
-        version: firstServices.version,
-        lastUpdated: firstServices.updatedAt,
+        services: latestServices.services,
+        version: latestServices.version,
+        lastUpdated: latestServices.updatedAt,
       },
     });
   } catch (error) {

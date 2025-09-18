@@ -1,13 +1,13 @@
 import { Request, Response } from "express";
-import { Bid } from "../models/bid";
-import { JobRequest } from "../models/jobRequest";
-import { authenticate, requireContractor } from "../middlewares/auth";
+import { Bid } from "@models/bid";
+import { JobRequest } from "@models/jobRequest";
+import { authenticate, requireContractor } from "@middlewares/auth";
 
 // Create a new bid
 export const createBid = async (req: Request & { user?: any }, res: Response) => {
   try {
     const { jobRequestId, bidAmount, message, timeline, materials, warranty } = req.body;
-    const contractorId = req.user?.id;
+    const contractorId = req.user?._id;
 
     if (!contractorId) {
       return res.status(401).json({ success: false, message: "Authentication required" });
@@ -106,7 +106,7 @@ export const getJobBids = async (req: Request, res: Response) => {
 export const acceptBid = async (req: Request & { user?: any }, res: Response) => {
   try {
     const { bidId } = req.params;
-    const userId = req.user?.id;
+    const userId = req.user?._id;
 
     if (!userId) {
       return res.status(401).json({ success: false, message: "Authentication required" });
@@ -153,7 +153,7 @@ export const acceptBid = async (req: Request & { user?: any }, res: Response) =>
       acceptedBid: bidId,
       status: "inprogress",
       $push: {
-        timeline: {
+        timelineHistory: {
           status: "accepted",
           date: new Date(),
           by: userId,
@@ -171,7 +171,7 @@ export const acceptBid = async (req: Request & { user?: any }, res: Response) =>
 // Get contractor's bids
 export const getContractorBids = async (req: Request & { user?: any }, res: Response) => {
   try {
-    const contractorId = req.user?.id;
+    const contractorId = req.user?._id;
 
     if (!contractorId) {
       return res.status(401).json({ success: false, message: "Authentication required" });

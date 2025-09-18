@@ -14,7 +14,8 @@ import ChangePasswordModal from "./ChangePasswordModal";
 import ServicesManagement from "./ServicesManagement";
 import ImagePreviewModal from "./ImagePreviewModal";
 import { useDispatch } from "react-redux";
-import { updateProfileThunk } from "../store/thunks/userThunks";
+import { updateProfileWithFormDataThunk } from "../store/thunks/userThunks";
+import { buildProfileImageFormData } from "../utils/profileFormData";
 import { showToast } from "../utils/toast";
 import type { AppDispatch } from "../store";
 
@@ -133,37 +134,38 @@ const Settings: React.FC<SettingsProps> = ({
     setImagePreviewOpen(false);
 
     try {
-      // Convert file to base64
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const base64String = e.target?.result as string;
+      // Build FormData with the image file and all current user data
+      const formData = buildProfileImageFormData(user, selectedImage.file);
 
-          // Update profile with the new image
-          await dispatch(
-            updateProfileThunk({
-              userId: user._id,
-              profileData: { profileImage: base64String },
-            })
-          );
+      // Update profile with FormData
+      const result = await dispatch(
+        updateProfileWithFormDataThunk({
+          userId: user._id,
+          formData,
+          successMessage: "Profile picture updated successfully!",
+        })
+      );
 
-          // Update the display user in the parent component
-          if (onProfileImageUpdate) {
-            onProfileImageUpdate(base64String);
-          }
-
-          // Clean up the preview URL
-          URL.revokeObjectURL(selectedImage.url);
-          setSelectedImage(null);
-        } catch (error: any) {
-          showToast.error(error.message || "Failed to update profile picture");
-        } finally {
-          setIsUploadingPhoto(false);
+      if (updateProfileWithFormDataThunk.fulfilled.match(result)) {
+        // Only update on successful API response
+        if (onProfileImageUpdate) {
+          // Use the returned profileImage or fallback to the original
+          const newProfileImage =
+            result.payload?.profileImage || user.profileImage || "";
+          onProfileImageUpdate(newProfileImage);
         }
-      };
-      reader.readAsDataURL(selectedImage.file);
+      } else if (updateProfileWithFormDataThunk.rejected.match(result)) {
+        // Don't update state on error - just show error message
+        console.error("Profile image update failed:", result.payload);
+        showToast.error("Failed to update profile picture");
+      }
+
+      // Clean up the preview URL
+      URL.revokeObjectURL(selectedImage.url);
+      setSelectedImage(null);
     } catch (error: any) {
-      showToast.error(error.message || "Failed to process image");
+      showToast.error(error.message || "Failed to update profile picture");
+    } finally {
       setIsUploadingPhoto(false);
     }
   };

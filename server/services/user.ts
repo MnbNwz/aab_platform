@@ -1,8 +1,8 @@
-import { User } from "../models";
+import { User } from "@models/user";
 import { FilterQuery, UpdateQuery } from "mongoose";
-import { CreateUserDTO, UpdateUserDTO } from "../models/types/user";
-import { hashPassword } from "../utils/auth/password";
-import S3Service from "./s3Service";
+import { CreateUserDTO, UpdateUserDTO } from "@models/types/user";
+import { hashPassword } from "@utils/auth/password";
+import S3Upload from "@utils/s3Upload";
 
 export const createUser = async (userData: CreateUserDTO) => {
   return await User.create(userData);
@@ -24,7 +24,7 @@ const processProfileImage = async (userId: string, profileImage: string): Promis
   // If it's a base64 image, convert to S3 URL
   if (profileImage.startsWith("data:image/")) {
     try {
-      const s3 = new S3Service();
+      const s3 = S3Upload;
       const base64Data = profileImage.split(",")[1];
       const mimeType = profileImage.split(";")[0].split(":")[1];
 
@@ -39,7 +39,7 @@ const processProfileImage = async (userId: string, profileImage: string): Promis
       };
 
       // Upload to S3
-      const s3Url = await s3.uploadProfileImage(userId, fileObject);
+      const s3Url = await s3.uploadProfileImage(fileObject);
       console.log(`✅ Converted base64 image to S3 URL: ${s3Url}`);
       return s3Url;
     } catch (error) {

@@ -6,6 +6,10 @@ import {
   getProfileThunk,
   restoreSessionThunk,
 } from "../thunks/authThunks";
+import {
+  updateProfileThunk,
+  updateProfileWithFormDataThunk,
+} from "../thunks/userThunks";
 import type { User, UserRole } from "../../types";
 
 export interface AuthState {
@@ -152,6 +156,29 @@ export const authSlice = createSlice({
         state.user = null;
         state.isInitialized = true;
         // Don't set error for failed session restore
+      });
+
+    // Profile Updates - Update auth user when profile is updated
+    builder
+      .addCase(updateProfileThunk.fulfilled, (state, action) => {
+        if (
+          state.user &&
+          action.payload &&
+          action.payload._id &&
+          state.user._id === action.payload._id
+        ) {
+          state.user = action.payload;
+        }
+      })
+      .addCase(updateProfileWithFormDataThunk.fulfilled, (state, action) => {
+        if (
+          state.user &&
+          action.payload &&
+          action.payload._id &&
+          state.user._id === action.payload._id
+        ) {
+          state.user = action.payload;
+        }
       });
   },
 });

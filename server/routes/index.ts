@@ -1,18 +1,20 @@
 import { Router, Request, Response } from "express";
-import { autoRefreshToken } from "../middlewares/autoRefresh";
+import { autoRefreshToken } from "@middlewares/autoRefresh";
 
 const router = Router();
 
-import userRoutes from "./user";
-import authRoutes from "./auth";
-import adminRoutes from "./admin";
-import membershipRoutes from "./membership";
-import serviceRoutes from "./service";
-import jobRequestRoutes from "./jobRequest";
-import propertyRoutes from "./property";
-import bidRoutes from "./bid";
-import contractorRoutes from "./contractor";
-import { authenticate } from "@/middlewares";
+import userRoutes from "@routes/user";
+import authRoutes from "@routes/auth";
+import adminRoutes from "@routes/admin";
+import membershipRoutes from "@routes/membership";
+import serviceRoutes from "@routes/service";
+import jobRequestRoutes from "@routes/jobRequest";
+import propertyRoutes from "@routes/property";
+import bidRoutes from "@routes/bid";
+import contractorRoutes from "@routes/contractor";
+import paymentRoutes from "@routes/payment";
+import leadRoutes from "@routes/lead";
+import { authenticate } from "@middlewares/auth";
 
 // Apply auto-refresh middleware globally to all routes
 // This will automatically refresh expired access tokens using refresh tokens
@@ -29,6 +31,8 @@ router.use("/jobRequest", jobRequestRoutes);
 router.use("/property", propertyRoutes);
 router.use("/bid", bidRoutes);
 router.use("/contractor", contractorRoutes);
+router.use("/payment", paymentRoutes);
+router.use("/leads", leadRoutes);
 
 // Example route
 router.get("/", (req: Request, res: Response) => {

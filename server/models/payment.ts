@@ -15,12 +15,7 @@ export interface IPayment extends Document {
 
   // Billing details
   billingPeriod: "monthly" | "yearly";
-  billingType: {
-    type: string;
-    enum: ["recurring", "one_time"];
-    required: true;
-    default: "recurring";
-  };
+  billingType: "recurring" | "one_time";
   failureReason?: string;
 
   createdAt: Date;
@@ -49,6 +44,12 @@ const PaymentSchema: Schema<IPayment> = new Schema(
       type: String,
       enum: ["monthly", "yearly"],
       required: true,
+    },
+    billingType: {
+      type: String,
+      enum: ["recurring", "one_time"],
+      required: true,
+      default: "recurring",
     },
     failureReason: { type: String },
   },

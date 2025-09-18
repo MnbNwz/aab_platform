@@ -1,3 +1,4 @@
-// Export types from this folder
-export * from "./auth";
-export * from "./express";
+// Export types from schemas folder
+export * from "@schemas/auth";
+export * from "@schemas/express";
+export * from "@schemas/payment";

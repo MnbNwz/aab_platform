@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { AuthenticatedRequest } from "../middlewares/types";
-import * as jobRequestService from "../services/jobRequestService";
+import { AuthenticatedRequest } from "@middlewares/types";
+import * as jobRequestService from "@services/jobRequestService";
 
 const ALLOWED_TYPES = ["regular", "off_market", "commercial"];
 

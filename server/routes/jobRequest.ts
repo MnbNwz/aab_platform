@@ -5,8 +5,8 @@ import {
   getJobRequestById,
   updateJobRequest,
   cancelJobRequest,
-} from "../controllers/jobRequestController";
-import { authenticate } from "../middlewares/auth";
+} from "@controllers/jobRequestController";
+import { authenticate } from "@middlewares/auth";
 
 const router = Router();
 router.use(authenticate);

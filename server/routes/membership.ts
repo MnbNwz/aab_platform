@@ -1,6 +1,6 @@
 import express from "express";
-import { authenticate } from "../middlewares/auth";
-import { requireRole } from "../middlewares/rbac";
+import { authenticate } from "@middlewares/auth";
+import { requireRole } from "@middlewares/rbac";
 import {
   getAllPlansController,
   getPlansByUserTypeController,
@@ -9,8 +9,8 @@ import {
   cancelMembershipController,
   getMembershipHistoryController,
   getMembershipStatsController,
-} from "../controllers/membershipController";
-import { createStripeSession } from "../controllers/stripeController";
+} from "@controllers/membershipController";
+import { createStripeSession } from "@controllers/stripeController";
 
 const router = express.Router();
 

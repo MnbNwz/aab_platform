@@ -1,4 +1,4 @@
-import { UserRole } from "@/models/types/user";
+import { UserRole } from "@models/types/user";
 
 export interface CustomerSignupData {
   defaultPropertyType: "domestic" | "commercial";

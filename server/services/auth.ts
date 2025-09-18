@@ -1,4 +1,4 @@
-import { User } from "../models/user";
+import { User } from "@models/user";
 import {
   hashPassword,
   generateAccessToken,
@@ -8,8 +8,8 @@ import {
   validateEmail,
   validatePhone,
   sanitizeUser,
-} from "../utils/auth";
-import { validateContractorServices } from "../utils/serviceValidation";
+} from "@utils/auth";
+import { validateContractorServices } from "@utils/serviceValidation";
 
 // Export the utility functions with the same name for backward compatibility
 export const verifyToken = utilVerifyToken;
@@ -62,6 +62,10 @@ export async function signup(signupData: any) {
     approval: "pending", // Approval is now at user level
     geoHome,
     profileImage: profileImage || null, // Always include profileImage field
+    // Initialize Stripe fields
+    stripeCustomerId: null,
+    stripeConnectAccountId: null,
+    stripeConnectStatus: "pending",
   };
 
   // Add profile data

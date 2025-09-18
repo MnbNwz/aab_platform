@@ -1,12 +1,5 @@
 import MyProperties from "./MyProperties";
-import React, {
-  useState,
-  useCallback,
-  useMemo,
-  useEffect,
-  memo,
-  useRef,
-} from "react";
+import React, { useState, useCallback, useMemo, memo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import {
   Users,
@@ -29,9 +22,10 @@ import JobManagementTable from "./dashboard/JobManagementTable";
 import type { User } from "../types";
 import { handleApiError } from "../services/apiService";
 import {
-  updateProfileThunk,
+  updateProfileWithFormDataThunk,
   changePasswordThunk,
 } from "../store/thunks/userThunks";
+import { buildProfileFormDataFromUser } from "../utils/profileFormData";
 import { showToast } from "../utils/toast";
 
 interface DashboardCardProps {
@@ -365,14 +359,8 @@ const Dashboard: React.FC = () => {
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileViewOpen, setProfileViewOpen] = useState(false);
   const [profileFromSettings, setProfileFromSettings] = useState(false);
-  const [displayUser, setDisplayUser] = useState<User | null>(null);
-  const hasManuallyUpdatedDisplayUser = useRef(false);
-
-  useEffect(() => {
-    if (user && !hasManuallyUpdatedDisplayUser.current) {
-      setDisplayUser(user);
-    }
-  }, [user]);
+  // Use Redux user directly - no need for local displayUser state
+  // since auth slice now updates when profile changes
 
   const handleLogout = useCallback(() => {
     dispatch(logoutThunk());
@@ -407,32 +395,27 @@ const Dashboard: React.FC = () => {
           throw new Error("Current email does not match your account email");
         }
 
-        const updatedUser = await dispatch(
-          updateProfileThunk({
+        // Build FormData for email update
+        const formData = buildProfileFormDataFromUser(user!, {
+          email: newEmail,
+        });
+
+        await dispatch(
+          updateProfileWithFormDataThunk({
             userId: user!._id,
-            profileData: { email: newEmail },
+            formData,
             successMessage: "Email updated successfully!",
           })
         ).unwrap();
 
-        // Update displayUser with the new email (this updates the user dropdown)
-        hasManuallyUpdatedDisplayUser.current = true;
-        if (updatedUser && updatedUser.email) {
-          setDisplayUser((prev) =>
-            prev ? { ...prev, email: updatedUser.email } : null
-          );
-        } else {
-          // Fallback: update with the new email directly
-          setDisplayUser((prev) =>
-            prev ? { ...prev, email: newEmail } : null
-          );
-        }
+        // Redux auth slice will automatically update the user state
+        // No need for manual displayUser updates
       } catch (error) {
         // Error is handled by the thunk
         throw error; // Re-throw to let the modal handle it
       }
     },
-    [dispatch, user, displayUser]
+    [dispatch, user]
   );
 
   const handlePasswordChange = useCallback(
@@ -452,37 +435,56 @@ const Dashboard: React.FC = () => {
     [dispatch]
   );
 
-  const handleProfileImageUpdate = useCallback(
-    (profileImage: string) => {
-      // Update displayUser with the new profile image
-      hasManuallyUpdatedDisplayUser.current = true;
-      setDisplayUser((prev) => {
-        const currentUser = prev || user!;
-        return { ...currentUser, profileImage };
-      });
-    },
-    [user]
-  );
+  const handleProfileImageUpdate = useCallback(() => {
+    // Redux auth slice will automatically update the user state
+    // No need for manual displayUser updates
+  }, []);
 
   const handleSaveProfile = useCallback(
     async (profileData: Partial<User>) => {
       try {
+        // Convert User data to ProfileFormDataParams format
+        const formDataParams: Partial<
+          import("../utils/profileFormData").ProfileFormDataParams
+        > = {
+          firstName: profileData.firstName,
+          lastName: profileData.lastName,
+          phone: profileData.phone,
+          email: profileData.email,
+          geoHome: profileData.geoHome
+            ? {
+                type: "Point" as const,
+                coordinates: profileData.geoHome.coordinates,
+              }
+            : undefined,
+          customer: profileData.customer
+            ? {
+                defaultPropertyType: profileData.customer
+                  .defaultPropertyType as "domestic" | "commercial",
+              }
+            : undefined,
+          contractor: profileData.contractor,
+        };
+
+        // Build FormData from the profile data
+        const formData = buildProfileFormDataFromUser(user!, formDataParams);
+
         await dispatch(
-          updateProfileThunk({ userId: user!._id, profileData })
+          updateProfileWithFormDataThunk({
+            userId: user!._id,
+            formData,
+            successMessage: "Profile updated successfully!",
+          })
         ).unwrap();
 
-        // Update only the displayUser state for UI updates
-        // This prevents triggering global re-renders that cause white screen
-        hasManuallyUpdatedDisplayUser.current = true;
-        setDisplayUser((prev) => {
-          const currentUser = prev || user!;
-          return { ...currentUser, ...profileData };
-        });
+        // Redux auth slice will automatically update the user state
+        // No need for manual displayUser updates
       } catch (error) {
+        // Don't update state on error - just show error message
         showToast.error(handleApiError(error));
       }
     },
-    [dispatch, user, displayUser]
+    [dispatch, user]
   );
 
   // Memoized user role
@@ -534,7 +536,7 @@ const Dashboard: React.FC = () => {
   if (renderState) return renderState;
 
   // At this point, user is guaranteed to be non-null due to renderState check
-  const userData = displayUser || user!;
+  const userData = user!;
 
   return (
     <div className="min-h-screen bg-primary-800 flex">

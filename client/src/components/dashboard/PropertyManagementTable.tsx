@@ -7,6 +7,7 @@ import type { RootState, AppDispatch } from "../../store";
 import { getMyPropertiesThunk } from "../../store/thunks/propertyThunks";
 import { setPropertyInactiveThunk } from "../../store/thunks/propertyThunks";
 import { searchPropertiesApi } from "../../services/propertyService";
+import { canEditProperty, hasActiveJobs } from "../../utils";
 
 interface Property {
   _id: string;

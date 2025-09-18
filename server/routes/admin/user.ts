@@ -1,13 +1,13 @@
 import { Router } from "express";
-import { authenticate } from "../../middlewares/auth";
-import { requireAdmin, requireAdminOrSelf } from "../../middlewares/admin";
+import { authenticate } from "@middlewares/auth";
+import { requireAdmin, requireAdminOrSelf } from "@middlewares/admin";
 import {
   getUsersController,
   getUserController,
   updateUserController,
   deleteUserController,
   getUserStatsController,
-} from "../../controllers/admin/user";
+} from "@controllers/admin/user";
 
 const router = Router();
 

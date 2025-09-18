@@ -1,8 +1,8 @@
 import "dotenv/config";
 import { Request, Response } from "express";
 import Stripe from "stripe";
-import { AuthenticatedRequest } from "../middlewares/types";
-import { getPlanById } from "../services/membershipService";
+import { AuthenticatedRequest } from "@middlewares/types";
+import { getPlanById } from "@services/membershipService";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
   apiVersion: "2025-08-27.basil",
@@ -20,12 +20,10 @@ export const createStripeSession = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: "Missing or invalid planId" });
     }
     if (!billingType || (billingType !== "recurring" && billingType !== "one-time")) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Invalid billingType (must be 'recurring' or 'one-time')",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid billingType (must be 'recurring' or 'one-time')",
+      });
     }
     if (!billingPeriod || (billingPeriod !== "monthly" && billingPeriod !== "yearly")) {
       return res

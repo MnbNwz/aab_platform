@@ -5,30 +5,29 @@ import compression from "compression";
 import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
-import winston from "winston";
 import dotenv from "dotenv";
-import { connectDB } from "./config/db";
-import apiRoutes from "./routes/index";
+import { connectDB } from "@config/db";
+import apiRoutes from "@routes/index";
+import { appLogger, errorLogger, logErrorWithContext } from "@utils/logger";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Winston logger setup
-const logger = winston.createLogger({
-  level: "info",
-  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
-  transports: [new winston.transports.Console()],
-});
+// Logger setup (using Pino from utils/logger)
 
 // Middlewares
 app.use(helmet());
 app.use(compression());
 app.use(cors({ origin: true, credentials: true }));
-app.use(express.json());
+app.use(express.json({ limit: "10mb" })); // Increased limit for other JSON data
 app.use(cookieParser());
-app.use(morgan("combined", { stream: { write: (msg: string) => logger.info(msg.trim()) } }));
+app.use(
+  morgan("combined", {
+    stream: { write: (msg: string) => appLogger.info({ request: msg.trim() }) },
+  }),
+);
 
 // Rate Limiting
 // const limiter = rateLimit({
@@ -40,7 +39,7 @@ app.use(morgan("combined", { stream: { write: (msg: string) => logger.info(msg.t
 // app.use(limiter);
 
 // MongoDB connection (singleton)
-connectDB(logger).catch((err: Error) => logger.error("MongoDB connection error:", err));
+connectDB().catch((err: Error) => logErrorWithContext(err, { operation: "database_connection" }));
 
 // Routes
 app.use("/api", apiRoutes);
@@ -52,10 +51,17 @@ app.use((req: Request, res: Response) => {
 
 // Error handler
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
-  logger.error(err.stack);
+  logErrorWithContext(err, {
+    operation: "express_error_handler",
+    requestId: req.headers["x-request-id"] as string,
+    additionalData: {
+      url: req.url,
+      method: req.method,
+    },
+  });
   res.status(500).json({ error: "Internal Server Error" });
 });
 
 app.listen(PORT, () => {
-  logger.info(`Server listening on port ${PORT}`);
+  appLogger.info({ port: PORT }, `Server listening on port ${PORT}`);
 });

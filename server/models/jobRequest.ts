@@ -21,6 +21,13 @@ const JobRequestSchema = new Schema({
     default: "pending",
   },
   timeline: { type: Number, required: true }, // timeline in days (e.g., 7, 14, 30)
+  timelineHistory: [
+    {
+      status: { type: String, required: true },
+      date: { type: Date, default: Date.now },
+      by: { type: Types.ObjectId, ref: "User", required: true },
+    },
+  ],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });
