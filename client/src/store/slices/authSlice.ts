@@ -5,6 +5,7 @@ import {
   logoutThunk,
   getProfileThunk,
   restoreSessionThunk,
+  verifyOTPThunk,
 } from "../thunks/authThunks";
 import {
   updateProfileThunk,
@@ -180,6 +181,16 @@ export const authSlice = createSlice({
           state.user = action.payload;
         }
       });
+
+    // OTP Verification - Update user when OTP is verified
+    builder.addCase(verifyOTPThunk.fulfilled, (state, action) => {
+      if (state.user && action.payload && action.payload.user) {
+        state.user = {
+          ...action.payload.user,
+          emailVerified: true,
+        };
+      }
+    });
   },
 });
 

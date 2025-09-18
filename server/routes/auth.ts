@@ -8,6 +8,9 @@ const router = Router();
 // Public routes
 router.post("/signup", upload.array("docs"), authController.signupController);
 router.post("/signin", authController.signinController);
+router.post("/verify-otp", authController.verifyOTPController);
+router.post("/resend-otp", authController.resendOTPController);
+router.get("/verification-state", authController.getVerificationStateController);
 
 // Protected routes
 router.get("/profile", authenticate, authController.getProfile);

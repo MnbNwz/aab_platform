@@ -3,6 +3,7 @@ import type {
   LoginCredentials,
   AuthResponse,
   User,
+  UserVerification,
   UserStats,
   UsersResponse,
   UserFilters,
@@ -212,6 +213,61 @@ export const authApi = {
     newPassword: string;
   }): Promise<void> => {
     await put("/api/user/change-password", passwordData);
+  },
+
+  verifyOTP: async (
+    email: string,
+    otpCode: string
+  ): Promise<{
+    message: string;
+    user: User;
+    userVerification: UserVerification;
+  }> => {
+    const response = await post<{
+      message: string;
+      user: User;
+      userVerification: UserVerification;
+    }>("/api/auth/verify-otp", {
+      email,
+      otpCode,
+    });
+    return response.data;
+  },
+
+  resendOTP: async (
+    email: string
+  ): Promise<{
+    message: string;
+    userVerification: UserVerification;
+  }> => {
+    const response = await post<{
+      message: string;
+      userVerification: UserVerification;
+    }>("/api/auth/resend-otp", { email });
+    return response.data;
+  },
+
+  getVerificationState: async (
+    email: string
+  ): Promise<{
+    email: string;
+    firstName: string;
+    isVerified: boolean;
+    message: string;
+    otpCode: string | null;
+    canResend: boolean;
+    cooldownSeconds: number;
+  }> => {
+    const response = await get<{
+      email: string;
+      firstName: string;
+      isVerified: boolean;
+      message: string;
+      otpCode: string | null;
+      canResend: boolean;
+      cooldownSeconds: number;
+    }>(`/api/auth/verification-state?email=${encodeURIComponent(email)}`);
+    return response.data;
   },
 } as const;
 

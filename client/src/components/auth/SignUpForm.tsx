@@ -134,6 +134,7 @@ const SignUpForm: React.FC = () => {
   // Handle redirect after successful registration
   useEffect(() => {
     if (isAuthenticated && user) {
+      // Redirect to dashboard - OTPVerificationGuard will handle email verification
       navigate("/dashboard", { replace: true });
     }
   }, [isAuthenticated, user, navigate]);

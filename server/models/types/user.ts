@@ -36,6 +36,15 @@ export interface IUser extends Document {
   geoHome: GeoHome;
   approval: ApprovalStatus;
   profileImage?: string;
+  // User verification object
+  userVerification: {
+    isVerified: boolean;
+    otpCode: string | null;
+    otpExpiresAt: Date | null;
+    lastSentAt: Date | null;
+    canResend: boolean;
+    cooldownSeconds: number;
+  };
   // Stripe fields
   stripeCustomerId?: string;
   stripeConnectAccountId?: string;

@@ -10,6 +10,14 @@ import {
   sanitizeUser,
 } from "@utils/auth";
 import { validateContractorServices } from "@utils/serviceValidation";
+import { generateOTPEmailContent } from "@utils/otp";
+import {
+  createInitialVerification,
+  updateVerificationForResend,
+  verifyOTPAndUpdate,
+  getVerificationStatus,
+} from "@utils/userVerification";
+import { sendEmail } from "@utils/email";
 
 // Export the utility functions with the same name for backward compatibility
 export const verifyToken = utilVerifyToken;
@@ -50,6 +58,9 @@ export async function signup(signupData: any) {
     throw new Error("User already exists");
   }
 
+  // Create user verification object
+  const userVerification = createInitialVerification();
+
   // Create user data
   const userData: any = {
     firstName,
@@ -62,6 +73,8 @@ export async function signup(signupData: any) {
     approval: "pending", // Approval is now at user level
     geoHome,
     profileImage: profileImage || null, // Always include profileImage field
+    // User verification object
+    userVerification,
     // Initialize Stripe fields
     stripeCustomerId: null,
     stripeConnectAccountId: null,
@@ -99,14 +112,32 @@ export async function signup(signupData: any) {
   const user = new User(userData);
   await user.save();
 
+  // Send OTP email
+  try {
+    const emailContent = generateOTPEmailContent(userVerification.otpCode, firstName);
+    await sendEmail(email, "Verify Your Email - AAS Platform", "otp_verification", {
+      otpCode: userVerification.otpCode,
+      firstName,
+      emailContent,
+    });
+  } catch (emailError) {
+    console.error("Failed to send OTP email:", emailError);
+    // Don't fail signup if email fails, just log it
+  }
+
   // Generate tokens
   const accessToken = generateAccessToken(user._id.toString(), user.role);
   const refreshToken = generateRefreshToken(user._id.toString());
+
+  // Get verification status for response
+  const verificationStatus = getVerificationStatus(user.userVerification);
 
   return {
     user: cleanUserData(user),
     accessToken,
     refreshToken,
+    message: "User created successfully. Please check your email for verification code.",
+    userVerification: verificationStatus,
   };
 }
 
@@ -124,6 +155,13 @@ export async function signin(signinData: any) {
   const hashedPassword = hashPassword(password);
   if (user.passwordHash !== hashedPassword) {
     throw new Error("Invalid email or password");
+  }
+
+  // Check if email is verified
+  if (!user.userVerification.isVerified) {
+    throw new Error(
+      "Please verify your email before signing in. Check your email for the verification code.",
+    );
   }
 
   // // Check if revoked
@@ -174,4 +212,100 @@ export async function updateProfile(userId: string, updateData: any) {
   }
 
   return updatedUser;
+}
+
+// OTP verification function
+export async function verifyOTPCode(email: string, otpCode: string) {
+  // Find user by email
+  const user = await User.findOne({ email });
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  // Verify OTP using the utility function
+  const { success, updatedVerification } = verifyOTPAndUpdate(user.userVerification, otpCode);
+
+  if (!success) {
+    throw new Error("Invalid or expired OTP code");
+  }
+
+  // Update user verification and status
+  user.userVerification = updatedVerification;
+  user.status = "active"; // Activate user after email verification
+  await user.save();
+
+  // Clear OTP data from memory (additional security)
+  user.userVerification.otpCode = null;
+  user.userVerification.otpExpiresAt = null;
+  user.userVerification.lastSentAt = null;
+
+  return {
+    message: "Email verified successfully! You can now sign in.",
+    user: cleanUserData(user),
+    userVerification: getVerificationStatus(user.userVerification),
+  };
+}
+
+// Resend OTP function
+export async function resendOTP(email: string) {
+  // Find user by email
+  const user = await User.findOne({ email });
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  // Check if user is already verified
+  if (user.userVerification.isVerified) {
+    throw new Error("Email is already verified");
+  }
+
+  // Update verification for resend
+  const updatedVerification = updateVerificationForResend(user.userVerification, 1);
+
+  // Check if still in cooldown
+  if (!updatedVerification.canResend) {
+    throw new Error(
+      `Please wait ${updatedVerification.cooldownSeconds} seconds before requesting a new verification code.`,
+    );
+  }
+
+  // Update user with new verification
+  user.userVerification = updatedVerification;
+  await user.save();
+
+  // Send new OTP email
+  try {
+    const emailContent = generateOTPEmailContent(updatedVerification.otpCode, user.firstName);
+    await sendEmail(email, "New Verification Code - AAS Platform", "otp_verification", {
+      otpCode: updatedVerification.otpCode,
+      firstName: user.firstName,
+      emailContent,
+    });
+  } catch (emailError) {
+    console.error("Failed to send OTP email:", emailError);
+    throw new Error("Failed to send verification email. Please try again.");
+  }
+
+  return {
+    message: "New verification code sent to your email.",
+    userVerification: getVerificationStatus(user.userVerification),
+  };
+}
+
+// Get verification state function
+export async function getVerificationState(email: string) {
+  // Find user by email
+  const user = await User.findOne({ email });
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  // Get verification status
+  const verificationStatus = getVerificationStatus(user.userVerification);
+
+  return {
+    email: user.email,
+    firstName: user.firstName,
+    ...verificationStatus,
+  };
 }

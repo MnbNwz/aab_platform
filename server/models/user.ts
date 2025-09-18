@@ -55,6 +55,15 @@ const UserSchema = new Schema<IUser>(
       default: "pending" as ApprovalStatus,
     },
     profileImage: { type: String, required: false },
+    // User verification object
+    userVerification: {
+      isVerified: { type: Boolean, default: false },
+      otpCode: { type: String, default: null },
+      otpExpiresAt: { type: Date, default: null },
+      lastSentAt: { type: Date, default: null },
+      canResend: { type: Boolean, default: true },
+      cooldownSeconds: { type: Number, default: 0 },
+    },
     // Stripe fields
     stripeCustomerId: { type: String },
     stripeConnectAccountId: { type: String },

@@ -1,4 +1,13 @@
 // User related types
+export interface UserVerification {
+  isVerified: boolean;
+  message: string;
+  otpCode: string | null;
+  canResend: boolean;
+  cooldownSeconds: number;
+  otpExpiresInSeconds: number;
+}
+
 export interface User {
   _id: string;
   id?: string; // For backward compatibility
@@ -10,6 +19,8 @@ export interface User {
   role: UserRole;
   status: UserStatus;
   approval: UserApproval;
+  emailVerified: boolean; // Email verification status
+  userVerification?: UserVerification; // OTP verification state
   isActive?: boolean; // For backward compatibility
   isVerified?: boolean; // For backward compatibility
   avatar?: string;

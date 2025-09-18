@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { signup, signin } from "@services/auth";
+import { signup, signin, verifyOTPCode, resendOTP, getVerificationState } from "@services/auth";
 import S3Upload from "@utils/s3Upload";
 
 export const signupController = async (req: Request & { files?: any[] }, res: Response) => {
@@ -34,8 +34,9 @@ export const signupController = async (req: Request & { files?: any[] }, res: Re
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
     res.status(201).json({
-      message: "User created successfully",
+      message: result.message,
       user: result.user,
+      userVerification: result.userVerification,
       // Don't send tokens in response body for security
     });
   } catch (error: any) {
@@ -106,6 +107,66 @@ export const getProfile = async (req: any, res: Response) => {
   } catch (error: any) {
     res.status(500).json({
       error: error.message || "Failed to get profile",
+    });
+  }
+};
+
+// OTP verification controller
+export const verifyOTPController = async (req: Request, res: Response) => {
+  try {
+    const { email, otpCode } = req.body;
+
+    if (!email || !otpCode) {
+      return res.status(400).json({
+        error: "Email and OTP code are required",
+      });
+    }
+
+    const result = await verifyOTPCode(email, otpCode);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({
+      error: error.message || "OTP verification failed",
+    });
+  }
+};
+
+// Resend OTP controller
+export const resendOTPController = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        error: "Email is required",
+      });
+    }
+
+    const result = await resendOTP(email);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({
+      error: error.message || "Failed to resend OTP",
+    });
+  }
+};
+
+// Get verification state controller
+export const getVerificationStateController = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.query;
+
+    if (!email || typeof email !== "string") {
+      return res.status(400).json({
+        error: "Email is required",
+      });
+    }
+
+    const result = await getVerificationState(email);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({
+      error: error.message || "Failed to get verification state",
     });
   }
 };

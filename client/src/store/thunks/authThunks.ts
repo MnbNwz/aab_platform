@@ -88,3 +88,36 @@ export const restoreSessionThunk = createAsyncThunk<
     return rejectWithValue("Session expired");
   }
 });
+
+// OTP Verification thunks - These are now handled by verificationThunks.ts
+// Keeping these for backward compatibility but they redirect to verification thunks
+export const verifyOTPThunk = createAsyncThunk<
+  AuthResponse,
+  { email: string; otp: string },
+  { rejectValue: string }
+>("auth/verifyOTP", async ({ email, otp }, { rejectWithValue }) => {
+  try {
+    const response = await api.auth.verifyOTP(email, otp);
+    showToast.success("Email verified successfully!");
+    return response;
+  } catch (error) {
+    const errorMessage = handleApiError(error);
+    showToast.error(errorMessage);
+    return rejectWithValue(errorMessage);
+  }
+});
+
+export const resendOTPThunk = createAsyncThunk<
+  void,
+  { email: string },
+  { rejectValue: string }
+>("auth/resendOTP", async ({ email }, { rejectWithValue }) => {
+  try {
+    await api.auth.resendOTP(email);
+    showToast.success("Verification code sent to your email!");
+  } catch (error) {
+    const errorMessage = handleApiError(error);
+    showToast.error(errorMessage);
+    return rejectWithValue(errorMessage);
+  }
+});

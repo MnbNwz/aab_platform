@@ -3,6 +3,7 @@ import { authSlice } from "./slices/authSlice";
 import { userSlice } from "./slices/userSlice";
 import { serviceSlice } from "./slices/serviceSlice";
 import { uiSlice } from "./slices/uiSlice";
+import verificationReducer from "./slices/verificationSlice";
 
 import servicesReducer from "./slices/servicesSlice";
 import userManagementReducer from "./slices/userManagementSlice";
@@ -18,6 +19,7 @@ export const store = configureStore({
     user: userSlice.reducer,
     service: serviceSlice.reducer,
     ui: uiSlice.reducer,
+    verification: verificationReducer,
     services: servicesReducer,
     userManagement: userManagementReducer,
     membership: membershipReducer,

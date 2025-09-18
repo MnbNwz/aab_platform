@@ -12,6 +12,8 @@ import { store } from "./store";
 import { restoreSessionThunk } from "./store/thunks/authThunks";
 import LoginForm from "./components/auth/LoginForm";
 import SignUpForm from "./components/auth/SignUpForm";
+import OTPVerification from "./components/auth/OTPVerification";
+import OTPVerificationGuard from "./components/auth/OTPVerificationGuard";
 import AuthGuard from "./components/auth/AuthGuard";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import Dashboard from "./components/Dashboard";
@@ -72,19 +74,29 @@ const AppContent: React.FC = () => {
             </AuthGuard>
           }
         />
+        <Route
+          path="/otp-verification"
+          element={
+            <AuthGuard>
+              <OTPVerification />
+            </AuthGuard>
+          }
+        />
 
         {/* Protected Routes - Single Dashboard for all roles */}
         <Route
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <RevokeStatusGate>
-                <PendingApproval>
-                  <MembershipGate>
-                    <Dashboard />
-                  </MembershipGate>
-                </PendingApproval>
-              </RevokeStatusGate>
+              <OTPVerificationGuard>
+                <RevokeStatusGate>
+                  <PendingApproval>
+                    <MembershipGate>
+                      <Dashboard />
+                    </MembershipGate>
+                  </PendingApproval>
+                </RevokeStatusGate>
+              </OTPVerificationGuard>
             </ProtectedRoute>
           }
         />
