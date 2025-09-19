@@ -7,6 +7,7 @@ import {
   Heart,
   Settings as SettingsIcon,
   Camera,
+  X,
 } from "lucide-react";
 import { User as UserType } from "../types";
 import ChangeEmailModal from "./ChangeEmailModal";
@@ -17,6 +18,10 @@ import { useDispatch } from "react-redux";
 import { updateProfileWithFormDataThunk } from "../store/thunks/userThunks";
 import { buildProfileImageFormData } from "../utils/profileFormData";
 import { showToast } from "../utils/toast";
+import {
+  smartCompress,
+  PROFILE_IMAGE_OPTIONS,
+} from "../utils/imageCompression";
 import type { AppDispatch } from "../store";
 
 interface SettingsProps {
@@ -65,7 +70,6 @@ const Settings: React.FC<SettingsProps> = ({
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [imagePreviewOpen, setImagePreviewOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<{
-    url: string;
     file: File;
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -103,7 +107,7 @@ const Settings: React.FC<SettingsProps> = ({
     }
   };
 
-  const handleProfilePhotoUpload = (
+  const handleProfilePhotoUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = event.target.files?.[0];
@@ -121,10 +125,22 @@ const Settings: React.FC<SettingsProps> = ({
       return;
     }
 
-    // Create preview URL and show preview modal
-    const imageUrl = URL.createObjectURL(file);
-    setSelectedImage({ url: imageUrl, file });
-    setImagePreviewOpen(true);
+    try {
+      // Compress the image silently
+      const compressionResult = await smartCompress(
+        file,
+        PROFILE_IMAGE_OPTIONS
+      );
+
+      // Set the compressed file directly
+      setSelectedImage({
+        file: compressionResult.compressedFile,
+      });
+      setImagePreviewOpen(true);
+    } catch (error) {
+      console.error("Image compression failed:", error);
+      showToast.error("Failed to process image. Please try again.");
+    }
   };
 
   const handleImagePreviewContinue = async () => {
@@ -160,8 +176,6 @@ const Settings: React.FC<SettingsProps> = ({
         showToast.error("Failed to update profile picture");
       }
 
-      // Clean up the preview URL
-      URL.revokeObjectURL(selectedImage.url);
       setSelectedImage(null);
     } catch (error: any) {
       showToast.error(error.message || "Failed to update profile picture");
@@ -171,18 +185,12 @@ const Settings: React.FC<SettingsProps> = ({
   };
 
   const handleImagePreviewCancel = () => {
-    if (selectedImage) {
-      URL.revokeObjectURL(selectedImage.url);
-      setSelectedImage(null);
-    }
+    setSelectedImage(null);
     setImagePreviewOpen(false);
   };
 
   const handleImagePreviewRetake = () => {
-    if (selectedImage) {
-      URL.revokeObjectURL(selectedImage.url);
-      setSelectedImage(null);
-    }
+    setSelectedImage(null);
     setImagePreviewOpen(false);
     // Trigger file input again
     fileInputRef.current?.click();
@@ -605,8 +613,36 @@ const Settings: React.FC<SettingsProps> = ({
             }
           }}
         >
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="p-4 sm:p-6">
+          <div
+            className="bg-white rounded-lg shadow-2xl w-full max-w-4xl mx-auto relative flex flex-col max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header with Close Button */}
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 flex-shrink-0">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-primary-100 rounded-lg">
+                  <SettingsIcon className="h-6 w-6 text-primary-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Services Management
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    Manage available services for contractors
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setServicesManagementOpen(false)}
+                className="text-primary-400 hover:text-primary-600 text-2xl font-bold p-2"
+                title="Close"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
               <ServicesManagement />
             </div>
           </div>
@@ -617,9 +653,7 @@ const Settings: React.FC<SettingsProps> = ({
       {selectedImage && (
         <ImagePreviewModal
           isOpen={imagePreviewOpen}
-          imageUrl={selectedImage.url}
-          fileName={selectedImage.file.name}
-          fileSize={selectedImage.file.size}
+          imageFile={selectedImage.file}
           onContinue={handleImagePreviewContinue}
           onCancel={handleImagePreviewCancel}
           onRetake={handleImagePreviewRetake}

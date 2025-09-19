@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import { createPortal } from "react-dom";
 import {
   UserCheck,
   UserX,
@@ -15,6 +16,8 @@ import {
   Phone,
   Calendar,
   User,
+  MoreVertical,
+  RotateCcw,
 } from "lucide-react";
 import type { RootState, AppDispatch } from "../../store";
 import type { UserFilters } from "../../types";
@@ -23,10 +26,122 @@ import {
   approveUserThunk,
   rejectUserThunk,
   revokeUserThunk,
+  updateUserThunk,
 } from "../../store/thunks/userManagementThunks";
 import { setFilters } from "../../store/slices/userManagementSlice";
 import Loader from "../ui/Loader";
 import ConfirmModal from "../ui/ConfirmModal";
+
+// User Actions Dropdown Modal Component
+interface UserActionsDropdownProps {
+  user: any;
+  isOpen: boolean;
+  onClose: () => void;
+  onApprove: () => void;
+  onReject: () => void;
+  onRevoke: () => void;
+  onUnrevoke: () => void;
+  isUpdating: boolean;
+  triggerRef: React.RefObject<HTMLButtonElement | null>;
+}
+
+const UserActionsDropdown: React.FC<UserActionsDropdownProps> = ({
+  user,
+  isOpen,
+  onClose,
+  onApprove,
+  onReject,
+  onRevoke,
+  onUnrevoke,
+  isUpdating,
+  triggerRef,
+}) => {
+  if (!isOpen || !triggerRef.current) return null;
+
+  const canApprove = user.approval === "pending";
+  const canReject = user.approval === "pending";
+  const canRevoke = user.role !== "admin" && user.status !== "revoke";
+  const canUnrevoke = user.role !== "admin" && user.status === "revoke";
+
+  // Calculate position relative to trigger button
+  const rect = triggerRef.current.getBoundingClientRect();
+  const dropdownStyle = {
+    position: "fixed" as const,
+    top: rect.bottom + 8,
+    left: rect.left - 150, // Offset to the left to avoid going off screen
+    zIndex: 999999, // Very high z-index
+  };
+
+  const dropdown = (
+    <div
+      data-dropdown-portal
+      className="w-48 bg-white rounded-lg shadow-2xl border border-gray-200 py-2"
+      style={dropdownStyle}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {canApprove && (
+        <button
+          onClick={() => {
+            onApprove();
+            onClose();
+          }}
+          disabled={isUpdating}
+          className="w-full flex items-center px-4 py-2 text-sm text-green-700 hover:bg-green-50 disabled:opacity-50 transition-colors"
+        >
+          <UserCheck className="h-4 w-4 mr-3" />
+          Approve User
+        </button>
+      )}
+      {canReject && (
+        <button
+          onClick={() => {
+            onReject();
+            onClose();
+          }}
+          disabled={isUpdating}
+          className="w-full flex items-center px-4 py-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50 transition-colors"
+        >
+          <UserX className="h-4 w-4 mr-3" />
+          Reject User
+        </button>
+      )}
+      {canRevoke && (
+        <button
+          onClick={() => {
+            onRevoke();
+            onClose();
+          }}
+          disabled={isUpdating}
+          className="w-full flex items-center px-4 py-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50 transition-colors"
+        >
+          <Trash2 className="h-4 w-4 mr-3" />
+          Delete User
+        </button>
+      )}
+      {canUnrevoke && (
+        <button
+          onClick={() => {
+            onUnrevoke();
+            onClose();
+          }}
+          disabled={isUpdating}
+          className="w-full flex items-center px-4 py-2 text-sm text-green-700 hover:bg-green-50 disabled:opacity-50 transition-colors"
+        >
+          <RotateCcw className="h-4 w-4 mr-3" />
+          Restore User
+        </button>
+      )}
+      {!canApprove && !canReject && !canRevoke && !canUnrevoke && (
+        <div className="px-4 py-2 text-sm text-gray-500">
+          No actions available
+        </div>
+      )}
+    </div>
+  );
+
+  // Render dropdown as portal to escape any z-index constraints
+  return createPortal(dropdown, document.body);
+};
 
 const UserManagementTable: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -45,8 +160,31 @@ const UserManagementTable: React.FC = () => {
   const [confirmModal, setConfirmModal] = useState<{
     open: boolean;
     userId: string | null;
-    action: null | "approve" | "reject" | "revoke";
+    action: null | "approve" | "reject" | "revoke" | "unrevoke";
   }>({ open: false, userId: null, action: null });
+
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [dropdownRefs] = useState<{
+    [key: string]: React.RefObject<HTMLButtonElement | null>;
+  }>({});
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        openDropdown &&
+        !(event.target as Element).closest("[data-dropdown-portal]")
+      ) {
+        setOpenDropdown(null);
+      }
+    };
+
+    if (openDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [openDropdown]);
 
   useEffect(() => {
     dispatch(fetchUsersThunk(filters));
@@ -73,17 +211,34 @@ const UserManagementTable: React.FC = () => {
   const handleRevokeUser = (userId: string) => {
     setConfirmModal({ open: true, userId, action: "revoke" });
   };
+  const handleUnrevokeUser = (userId: string) => {
+    setConfirmModal({ open: true, userId, action: "unrevoke" });
+  };
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     if (!confirmModal.userId || !confirmModal.action) return;
-    if (confirmModal.action === "approve") {
-      dispatch(approveUserThunk(confirmModal.userId));
-    } else if (confirmModal.action === "reject") {
-      dispatch(rejectUserThunk(confirmModal.userId));
-    } else if (confirmModal.action === "revoke") {
-      dispatch(revokeUserThunk(confirmModal.userId));
+
+    try {
+      if (confirmModal.action === "approve") {
+        await dispatch(approveUserThunk(confirmModal.userId)).unwrap();
+      } else if (confirmModal.action === "reject") {
+        await dispatch(rejectUserThunk(confirmModal.userId)).unwrap();
+      } else if (confirmModal.action === "revoke") {
+        await dispatch(revokeUserThunk(confirmModal.userId)).unwrap();
+      } else if (confirmModal.action === "unrevoke") {
+        await dispatch(
+          updateUserThunk({
+            userId: confirmModal.userId,
+            updateData: { status: "active" },
+          })
+        ).unwrap();
+      }
+    } catch (error) {
+      console.error(`${confirmModal.action} action failed:`, error);
     }
+
     setConfirmModal({ open: false, userId: null, action: null });
+    setOpenDropdown(null); // Close any open dropdowns
   };
 
   const getStatusBadge = (status: string, approval: string) => {
@@ -307,7 +462,7 @@ const UserManagementTable: React.FC = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {users.map((user) => (
-                  <tr key={user._id} className="hover:bg-gray-50">
+                  <tr key={user._id} className="hover:bg-gray-50 group">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-gray-900">
@@ -362,52 +517,50 @@ const UserManagementTable: React.FC = () => {
                       {new Date(user.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center space-x-2 min-h-[32px]">
-                        {user.approval === "pending" && (
-                          <>
-                            <button
-                              onClick={() => handleApproveUser(user._id)}
-                              disabled={updatingUsers[user._id]}
-                              className="text-green-600 hover:text-green-900 disabled:opacity-50 transition-colors duration-200"
-                              title="Approve user"
-                            >
-                              <UserCheck className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => handleRejectUser(user._id)}
-                              disabled={updatingUsers[user._id]}
-                              className="text-red-600 hover:text-red-900 disabled:opacity-50 transition-colors duration-200"
-                              title="Reject user"
-                            >
-                              <UserX className="h-4 w-4" />
-                            </button>
-                          </>
-                        )}
-                        {user.role !== "admin" && user.status !== "revoke" && (
-                          <button
-                            onClick={() => handleRevokeUser(user._id)}
-                            disabled={updatingUsers[user._id]}
-                            className="text-red-600 hover:text-red-900 disabled:opacity-50 transition-colors duration-200"
-                            title="Delete user"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
-                        {user.role === "admin" && (
-                          <span className="inline-block w-12" />
-                        )}
-                        {updatingUsers[user._id] && (
-                          <Loader size="small" color="primary" />
-                        )}
-                        {updateErrors[user._id] && (
+                      {updateErrors[user._id] ? (
+                        <div className="flex items-center justify-center">
                           <span
                             className="text-red-500 text-xs"
                             title={updateErrors[user._id]}
                           >
                             Error
                           </span>
-                        )}
-                      </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center">
+                          <button
+                            ref={(() => {
+                              if (!dropdownRefs[user._id]) {
+                                dropdownRefs[user._id] =
+                                  React.createRef<HTMLButtonElement>();
+                              }
+                              return dropdownRefs[user._id];
+                            })()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenDropdown(
+                                openDropdown === user._id ? null : user._id
+                              );
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                            title="More actions"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </button>
+
+                          <UserActionsDropdown
+                            user={user}
+                            isOpen={openDropdown === user._id}
+                            onClose={() => setOpenDropdown(null)}
+                            onApprove={() => handleApproveUser(user._id)}
+                            onReject={() => handleRejectUser(user._id)}
+                            onRevoke={() => handleRevokeUser(user._id)}
+                            onUnrevoke={() => handleUnrevokeUser(user._id)}
+                            isUpdating={updatingUsers[user._id]}
+                            triggerRef={dropdownRefs[user._id]}
+                          />
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -439,7 +592,7 @@ const UserManagementTable: React.FC = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {users.map((user) => (
-                  <tr key={user._id} className="hover:bg-gray-50">
+                  <tr key={user._id} className="hover:bg-gray-50 group">
                     <td className="px-4 py-4">
                       <div>
                         <div className="text-sm font-medium text-gray-900">
@@ -675,6 +828,8 @@ const UserManagementTable: React.FC = () => {
             ? "Reject User"
             : confirmModal.action === "revoke"
             ? "Delete User"
+            : confirmModal.action === "unrevoke"
+            ? "Restore User"
             : "Confirm Action"
         }
         message={
@@ -684,6 +839,8 @@ const UserManagementTable: React.FC = () => {
             ? "Are you sure you want to reject this user?"
             : confirmModal.action === "revoke"
             ? "Are you sure you want to delete this user? This action cannot be undone."
+            : confirmModal.action === "unrevoke"
+            ? "Are you sure you want to restore this user? This will reactivate their account."
             : "Are you sure you want to perform this action?"
         }
         confirmText={
@@ -693,6 +850,8 @@ const UserManagementTable: React.FC = () => {
             ? "Yes, Reject"
             : confirmModal.action === "revoke"
             ? "Yes, Delete"
+            : confirmModal.action === "unrevoke"
+            ? "Yes, Restore"
             : "Yes"
         }
         cancelText="Cancel"

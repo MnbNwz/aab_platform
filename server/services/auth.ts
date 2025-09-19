@@ -26,9 +26,17 @@ export const verifyAccessToken = utilVerifyAccessToken;
 // Clean user data (remove password) - now using sanitizeUser utility
 function cleanUserData(user: any) {
   const sanitized = sanitizeUser(user);
+
+  // Sanitize userVerification to remove sensitive OTP data
+  let cleanUserVerification = null;
+  if (user.userVerification) {
+    cleanUserVerification = getVerificationStatus(user.userVerification);
+  }
+
   return {
     ...sanitized,
     _id: sanitized._id.toString(),
+    userVerification: cleanUserVerification,
   };
 }
 
@@ -156,18 +164,6 @@ export async function signin(signinData: any) {
   if (user.passwordHash !== hashedPassword) {
     throw new Error("Invalid email or password");
   }
-
-  // Check if email is verified
-  if (!user.userVerification.isVerified) {
-    throw new Error(
-      "Please verify your email before signing in. Check your email for the verification code.",
-    );
-  }
-
-  // // Check if revoked
-  // if (user.status === "revoke") {
-  //   throw new Error("Account has been revoked");
-  // }
 
   // Generate tokens
   const accessToken = generateAccessToken(user._id.toString(), user.role);

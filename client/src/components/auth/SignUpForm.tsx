@@ -17,6 +17,7 @@ import {
   type CustomerRegistrationData,
   type ContractorRegistrationData,
 } from "../../schemas/authSchemas";
+import { useGeocoding } from "../../hooks/useGeocoding";
 
 type FormData = CustomerRegistrationData | ContractorRegistrationData;
 
@@ -45,6 +46,14 @@ const SignUpForm: React.FC = () => {
     lng: -73.935242,
     address: "New York, NY",
   });
+
+  // Get readable address from coordinates
+  const { address: locationAddress, loading: addressLoading } = useGeocoding(
+    selectedLocation.lat !== 0 && selectedLocation.lng !== 0
+      ? { lat: selectedLocation.lat, lng: selectedLocation.lng }
+      : null
+  );
+
   // For contractor docs
   const [contractorDocs, setContractorDocs] = useState<File[]>([]);
   const [docsError, setDocsError] = useState<string>("");
@@ -395,10 +404,18 @@ const SignUpForm: React.FC = () => {
                   className="w-full flex items-center justify-between rounded-lg px-4 py-3 border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-colors"
                 >
                   <span className="text-left">
-                    {selectedLocation.address ||
+                    {addressLoading ? (
+                      <span className="flex items-center space-x-2">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Loading address...</span>
+                      </span>
+                    ) : (
+                      locationAddress ||
+                      selectedLocation.address ||
                       `${selectedLocation.lat.toFixed(
-                        6
-                      )}, ${selectedLocation.lng.toFixed(6)}`}
+                        4
+                      )}, ${selectedLocation.lng.toFixed(4)}`
+                    )}
                   </span>
                   <span className="text-accent-400">
                     <MapPin className="h-5 w-5" />

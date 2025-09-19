@@ -4,6 +4,7 @@ import {
   Settings as SettingsIcon,
   LogOut as LogOutIcon,
 } from "lucide-react";
+import ImageViewerModal from "../dashboard/ImageViewerModal";
 
 interface UserDropdownProps {
   user: {
@@ -32,6 +33,7 @@ const UserDropdown: React.FC<UserDropdownProps> = ({
   prominent = false,
 }) => {
   const [open, setOpen] = useState(false);
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -60,15 +62,19 @@ const UserDropdown: React.FC<UserDropdownProps> = ({
         onClick={() => setOpen((o) => !o)}
       >
         {user?.profileImage ? (
-          <img
-            src={user.profileImage}
-            alt={`${user?.firstName} ${user?.lastName}`}
-            className="h-3.5 w-3.5 xs:h-4 xs:w-4 sm:h-5 sm:w-5 rounded-full object-cover flex-shrink-0"
-            onError={(e) => {
-              e.currentTarget.style.display = "none";
-              e.currentTarget.nextElementSibling?.classList.remove("hidden");
-            }}
-          />
+          <div className="relative group">
+            <img
+              src={user.profileImage}
+              alt={`${user?.firstName} ${user?.lastName}`}
+              className="h-3.5 w-3.5 xs:h-4 xs:w-4 sm:h-5 sm:w-5 rounded-full object-cover flex-shrink-0"
+              loading="eager"
+              onError={(e) => {
+                console.log("Image error, URL:", user.profileImage);
+                e.currentTarget.style.display = "none";
+                e.currentTarget.nextElementSibling?.classList.remove("hidden");
+              }}
+            />
+          </div>
         ) : null}
         <UserIcon
           className={`h-3.5 w-3.5 xs:h-4 xs:w-4 sm:h-5 sm:w-5 flex-shrink-0 ${
@@ -102,19 +108,27 @@ const UserDropdown: React.FC<UserDropdownProps> = ({
       </button>
       {open && (
         <div className="absolute right-0 mt-3 w-56 bg-white/95 backdrop-blur-md border border-white/20 rounded-2xl shadow-2xl py-4 px-4 z-[60] flex flex-col items-center animate-in slide-in-from-top-2 duration-200">
-          <div className="w-12 h-12 rounded-full mb-3 shadow-lg overflow-hidden">
+          <div className="w-12 h-12 rounded-full mb-3 shadow-lg overflow-hidden group cursor-pointer relative">
             {user?.profileImage ? (
-              <img
-                src={user.profileImage}
-                alt={`${user?.firstName} ${user?.lastName}`}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                  e.currentTarget.nextElementSibling?.classList.remove(
-                    "hidden"
-                  );
-                }}
-              />
+              <>
+                <img
+                  src={user.profileImage}
+                  alt={`${user?.firstName} ${user?.lastName}`}
+                  className="w-full h-full object-cover"
+                  loading="eager"
+                  onClick={() => {
+                    setImageViewerOpen(true);
+                  }}
+                  onError={(e) => {
+                    console.log("Large image error, URL:", user.profileImage);
+                    e.currentTarget.style.display = "none";
+                    e.currentTarget.nextElementSibling?.classList.remove(
+                      "hidden"
+                    );
+                  }}
+                />
+                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 pointer-events-none rounded-full"></div>
+              </>
             ) : null}
             <div
               className={`w-full h-full bg-gradient-to-br from-primary-500 to-accent-500 rounded-full flex items-center justify-center ${
@@ -173,6 +187,18 @@ const UserDropdown: React.FC<UserDropdownProps> = ({
             </button>
           )}
         </div>
+      )}
+
+      {/* Image Viewer Modal */}
+      {user?.profileImage && (
+        <ImageViewerModal
+          isOpen={imageViewerOpen}
+          onClose={() => {
+            setImageViewerOpen(false);
+          }}
+          imageUrl={user.profileImage}
+          altText={`${user?.firstName} ${user?.lastName} profile picture`}
+        />
       )}
     </div>
   );

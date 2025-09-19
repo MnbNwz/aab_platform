@@ -5,6 +5,7 @@ import { User, UserRole } from "../types";
 import { MapPin } from "lucide-react";
 import LocationSelector from "./LocationSelector";
 import { ProfileFormState } from "../store/slices/userSlice";
+import { useGeocoding } from "../hooks/useGeocoding";
 
 interface ProfileModalProps {
   user: User;
@@ -75,6 +76,13 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
     }
   );
   const [showConfirm, setShowConfirm] = useState(false);
+
+  // Get readable address from coordinates
+  const { address: locationAddress, loading: addressLoading } = useGeocoding(
+    user.role !== "admin" && form.geoHome[0] !== 0 && form.geoHome[1] !== 0
+      ? { lat: form.geoHome[1], lng: form.geoHome[0] }
+      : null
+  );
 
   // Function to check if form data has changed from original user data
   const hasFormChanged = (): boolean => {
@@ -351,11 +359,21 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
                       className="w-full flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-primary-200 hover:bg-primary-50"
                     >
                       <span className="text-left">
-                        {form.geoHome
-                          ? `${form.geoHome[1].toFixed(
-                              6
-                            )}, ${form.geoHome[0].toFixed(6)}`
-                          : "Click to update location"}
+                        {addressLoading ? (
+                          <span className="flex items-center space-x-2">
+                            <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+                            <span>Loading address...</span>
+                          </span>
+                        ) : locationAddress ? (
+                          locationAddress
+                        ) : form.geoHome &&
+                          (form.geoHome[0] !== 0 || form.geoHome[1] !== 0) ? (
+                          `${form.geoHome[1].toFixed(
+                            4
+                          )}, ${form.geoHome[0].toFixed(4)}`
+                        ) : (
+                          "Click to update location"
+                        )}
                       </span>
                       <MapPin className="h-5 w-5" />
                     </button>

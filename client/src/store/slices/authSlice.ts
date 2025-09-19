@@ -7,6 +7,7 @@ import {
   restoreSessionThunk,
   verifyOTPThunk,
 } from "../thunks/authThunks";
+import { setVerificationState } from "./verificationSlice";
 import {
   updateProfileThunk,
   updateProfileWithFormDataThunk,

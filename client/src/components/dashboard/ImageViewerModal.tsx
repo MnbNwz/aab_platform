@@ -4,12 +4,14 @@ interface ImageViewerModalProps {
   isOpen: boolean;
   onClose: () => void;
   imageUrl: string;
+  altText?: string;
 }
 
 const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
   isOpen,
   onClose,
   imageUrl,
+  altText = "Full image",
 }) => {
   if (!isOpen) return null;
   return (
@@ -29,7 +31,7 @@ const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
         </button>
         <img
           src={imageUrl}
-          alt="Full property"
+          alt={altText}
           className="max-h-[80vh] max-w-full rounded-lg shadow-2xl border-4 border-white object-contain"
         />
       </div>

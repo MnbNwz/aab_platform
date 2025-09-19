@@ -1,6 +1,6 @@
-import { createAsyncThunk } from '@reduxjs/toolkit';
-import { api, handleApiError } from '../../services/apiService';
-import type { UserFilters, UserUpdateData } from '../../types';
+import { createAsyncThunk } from "@reduxjs/toolkit";
+import { api, handleApiError } from "../../services/apiService";
+import type { UserFilters, UserUpdateData } from "../../types";
 import {
   setStatsLoading,
   setStats,
@@ -15,11 +15,11 @@ import {
   updateUserInList,
   setUpdateError,
   removeUserFromList,
-} from '../slices/userManagementSlice';
+} from "../slices/userManagementSlice";
 
 // Fetch user statistics
 export const fetchUserStatsThunk = createAsyncThunk(
-  'userManagement/fetchStats',
+  "userManagement/fetchStats",
   async (_, { dispatch, rejectWithValue }) => {
     try {
       dispatch(setStatsLoading(true));
@@ -36,7 +36,7 @@ export const fetchUserStatsThunk = createAsyncThunk(
 
 // Fetch users with filters
 export const fetchUsersThunk = createAsyncThunk(
-  'userManagement/fetchUsers',
+  "userManagement/fetchUsers",
   async (filters: UserFilters, { dispatch, rejectWithValue }) => {
     try {
       dispatch(setUsersLoading(true));
@@ -53,7 +53,7 @@ export const fetchUsersThunk = createAsyncThunk(
 
 // Fetch single user
 export const fetchUserThunk = createAsyncThunk(
-  'userManagement/fetchUser',
+  "userManagement/fetchUser",
   async (userId: string, { dispatch, rejectWithValue }) => {
     try {
       dispatch(setSelectedUserLoading(true));
@@ -70,14 +70,17 @@ export const fetchUserThunk = createAsyncThunk(
 
 // Update user
 export const updateUserThunk = createAsyncThunk(
-  'userManagement/updateUser',
+  "userManagement/updateUser",
   async (
     { userId, updateData }: { userId: string; updateData: UserUpdateData },
     { dispatch, rejectWithValue }
   ) => {
     try {
       dispatch(setUserUpdating({ userId, isUpdating: true }));
-      const updatedUser = await api.userManagement.updateUser(userId, updateData);
+      const updatedUser = await api.userManagement.updateUser(
+        userId,
+        updateData
+      );
       dispatch(updateUserInList(updatedUser));
       return updatedUser;
     } catch (error) {
@@ -90,7 +93,7 @@ export const updateUserThunk = createAsyncThunk(
 
 // Approve user (shortcut)
 export const approveUserThunk = createAsyncThunk(
-  'userManagement/approveUser',
+  "userManagement/approveUser",
   async (userId: string, { dispatch, rejectWithValue }) => {
     try {
       dispatch(setUserUpdating({ userId, isUpdating: true }));
@@ -107,7 +110,7 @@ export const approveUserThunk = createAsyncThunk(
 
 // Reject user (shortcut)
 export const rejectUserThunk = createAsyncThunk(
-  'userManagement/rejectUser',
+  "userManagement/rejectUser",
   async (userId: string, { dispatch, rejectWithValue }) => {
     try {
       dispatch(setUserUpdating({ userId, isUpdating: true }));
@@ -122,15 +125,18 @@ export const rejectUserThunk = createAsyncThunk(
   }
 );
 
-// Revoke user
+// Revoke user (update status to revoke, don't remove from list)
 export const revokeUserThunk = createAsyncThunk(
-  'userManagement/revokeUser',
+  "userManagement/revokeUser",
   async (userId: string, { dispatch, rejectWithValue }) => {
     try {
       dispatch(setUserUpdating({ userId, isUpdating: true }));
-      await api.userManagement.revokeUser(userId);
-      dispatch(removeUserFromList(userId));
-      return userId;
+      // Use updateUser instead of revokeUser to get the updated user back
+      const updatedUser = await api.userManagement.updateUser(userId, {
+        status: "revoke",
+      });
+      dispatch(updateUserInList(updatedUser));
+      return updatedUser;
     } catch (error) {
       const errorMessage = handleApiError(error);
       dispatch(setUpdateError({ userId, error: errorMessage }));

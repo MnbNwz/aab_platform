@@ -56,6 +56,15 @@ const seedAdmin = async () => {
         type: "Point",
         coordinates: [-74.006, 40.7128], // NYC coordinates as default
       },
+      // Admin is pre-verified (no OTP needed)
+      userVerification: {
+        isVerified: true,
+        otpCode: null,
+        otpExpiresAt: null,
+        lastSentAt: null,
+        canResend: false,
+        cooldownSeconds: 0,
+      },
       // Initialize Stripe fields
       stripeCustomerId: null,
       stripeConnectAccountId: null,

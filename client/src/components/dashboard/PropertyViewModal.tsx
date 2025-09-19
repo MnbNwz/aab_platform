@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import ImageViewerModal from "./ImageViewerModal";
+import { useGeocoding } from "../../hooks/useGeocoding";
 
 interface PropertyViewModalProps {
   isOpen: boolean;
@@ -31,6 +32,11 @@ const PropertyViewModal: React.FC<PropertyViewModalProps> = ({
   const [carouselIdx, setCarouselIdx] = useState(0);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerImg, setViewerImg] = useState("");
+
+  // Get readable address from coordinates
+  const { address: locationAddress, loading: addressLoading } = useGeocoding(
+    property.location?.coordinates
+  );
   const [imageLoading, setImageLoading] = useState<boolean[]>([]);
   const [imageError, setImageError] = useState<boolean[]>([]);
 
@@ -141,8 +147,17 @@ const PropertyViewModal: React.FC<PropertyViewModalProps> = ({
                   Location:
                 </span>
                 <span className="block text-primary-600 text-sm sm:text-base">
-                  {property.location?.coordinates[1]?.toFixed(6)},{" "}
-                  {property.location?.coordinates[0]?.toFixed(6)}
+                  {addressLoading ? (
+                    <span className="flex items-center space-x-2">
+                      <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+                      <span>Loading address...</span>
+                    </span>
+                  ) : (
+                    locationAddress ||
+                    `${property.location?.coordinates[1]?.toFixed(
+                      4
+                    )}, ${property.location?.coordinates[0]?.toFixed(4)}`
+                  )}
                 </span>
               </div>
             </div>

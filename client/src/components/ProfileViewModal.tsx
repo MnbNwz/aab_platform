@@ -1,6 +1,7 @@
 import React from "react";
 import { User } from "../types";
 import { MapPin, Phone, Mail, Shield, CheckCircle, X } from "lucide-react";
+import { useGeocoding } from "../hooks/useGeocoding";
 
 interface ProfileViewModalProps {
   user: User;
@@ -13,6 +14,13 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
   isOpen,
   onClose,
 }) => {
+  // Get readable address from coordinates
+  const { address: locationAddress, loading: addressLoading } = useGeocoding(
+    user.geoHome?.coordinates && user.geoHome.coordinates.length === 2
+      ? { lat: user.geoHome.coordinates[1], lng: user.geoHome.coordinates[0] }
+      : null
+  );
+
   if (!isOpen) return null;
 
   const getRoleColor = (role: string) => {
@@ -159,8 +167,17 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
                         Location
                       </p>
                       <p className="font-medium text-gray-900 text-xs xs:text-sm break-all">
-                        {user.geoHome.coordinates[1].toFixed(6)},{" "}
-                        {user.geoHome.coordinates[0].toFixed(6)}
+                        {addressLoading ? (
+                          <span className="flex items-center space-x-2">
+                            <div className="w-3 h-3 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+                            <span>Loading address...</span>
+                          </span>
+                        ) : (
+                          locationAddress ||
+                          `${user.geoHome.coordinates[1].toFixed(
+                            4
+                          )}, ${user.geoHome.coordinates[0].toFixed(4)}`
+                        )}
                       </p>
                     </div>
                   </div>

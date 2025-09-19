@@ -31,10 +31,34 @@ export const registerThunk = createAsyncThunk<
   AuthResponse,
   RegisterData | FormData,
   { rejectValue: string }
->("auth/register", async (userData, { rejectWithValue }) => {
+>("auth/register", async (userData, { rejectWithValue, dispatch }) => {
   try {
     // For FormData, log only keys
     const response = await api.auth.register(userData);
+
+    // If the response includes userVerification, set it immediately
+    if (response.user.userVerification) {
+      const { setVerificationState } = await import(
+        "../slices/verificationSlice"
+      );
+      dispatch(setVerificationState(response.user.userVerification));
+    } else {
+      // If no userVerification in response, set default unverified state
+      const { setVerificationState } = await import(
+        "../slices/verificationSlice"
+      );
+      dispatch(
+        setVerificationState({
+          isVerified: false,
+          message: "Please verify your email address",
+          otpCode: null,
+          canResend: true,
+          cooldownSeconds: 0,
+          otpExpiresInSeconds: 0,
+        })
+      );
+    }
+
     showToast.success("Account created successfully! Welcome to AAS Platform.");
     return response;
   } catch (error) {

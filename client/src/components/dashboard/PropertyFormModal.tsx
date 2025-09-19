@@ -4,6 +4,12 @@ import type { AppDispatch, RootState } from "../../store";
 import { createPropertyThunk } from "../../store/thunks/propertyThunks";
 import LocationSelector from "../LocationSelector";
 import { MapPin } from "lucide-react";
+import {
+  compressMultipleImages,
+  PROPERTY_IMAGE_OPTIONS,
+} from "../../utils/imageCompression";
+import { useGeocoding } from "../../hooks/useGeocoding";
+import { showToast } from "../../utils/toast";
 
 interface PropertyFormProps {
   isOpen: boolean;
@@ -36,6 +42,13 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [carouselIndex, setCarouselIndex] = useState(0);
+
+  // Get readable address from coordinates
+  const { address: locationAddress, loading: addressLoading } = useGeocoding(
+    form.location.coordinates[0] !== 0 || form.location.coordinates[1] !== 0
+      ? { lat: form.location.coordinates[1], lng: form.location.coordinates[0] }
+      : null
+  );
   const [imageError, setImageError] = useState<string>("");
   const [formError, setFormError] = useState<string>("");
 
@@ -83,7 +96,9 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
   };
 
   // When picking new images, replace all
-  const handleReplaceImages = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleReplaceImages = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const files = e.target.files ? Array.from(e.target.files) : [];
 
     if (files.length > 15) {
@@ -121,10 +136,28 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
       return;
     }
 
-    setImageFiles(validImages);
-    setCarouselIndex(0);
-    setImageError("");
-    setForm((prev) => ({ ...prev, images: validImages.map(() => "") }));
+    try {
+      setImageError("");
+
+      // Compress all images silently
+      const compressionResults = await compressMultipleImages(
+        validImages,
+        PROPERTY_IMAGE_OPTIONS
+      );
+
+      // Extract compressed files
+      const compressedFiles = compressionResults.map(
+        (result) => result.compressedFile
+      );
+
+      setImageFiles(compressedFiles);
+      setCarouselIndex(0);
+      setForm((prev) => ({ ...prev, images: compressedFiles.map(() => "") }));
+    } catch (error) {
+      console.error("Image compression failed:", error);
+      showToast.error("Failed to process images. Please try again.");
+      setImageError("Failed to process images. Please try again.");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -249,12 +282,21 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
                     className="w-full flex items-center justify-between rounded-lg px-4 py-3 border border-primary-200 bg-primary-50 text-primary-900 hover:bg-primary-100 transition-colors"
                   >
                     <span className="text-left">
-                      {form.location.coordinates[1] !== 0 ||
-                      form.location.coordinates[0] !== 0
-                        ? `${form.location.coordinates[1].toFixed(
-                            6
-                          )}, ${form.location.coordinates[0].toFixed(6)}`
-                        : "Choose on Map"}
+                      {addressLoading ? (
+                        <span className="flex items-center space-x-2">
+                          <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+                          <span>Loading address...</span>
+                        </span>
+                      ) : locationAddress ? (
+                        locationAddress
+                      ) : form.location.coordinates[1] !== 0 ||
+                        form.location.coordinates[0] !== 0 ? (
+                        `${form.location.coordinates[1].toFixed(
+                          4
+                        )}, ${form.location.coordinates[0].toFixed(4)}`
+                      ) : (
+                        "Choose on Map"
+                      )}
                     </span>
                     <span className="text-accent-500">
                       <MapPin className="h-5 w-5" />

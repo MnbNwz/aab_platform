@@ -1,11 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X, Check, RotateCcw, AlertCircle } from "lucide-react";
 
 interface ImagePreviewModalProps {
   isOpen: boolean;
-  imageUrl: string;
-  fileName: string;
-  fileSize: number;
+  imageFile: File;
   onContinue: () => void;
   onCancel: () => void;
   onRetake: () => void;
@@ -14,15 +12,25 @@ interface ImagePreviewModalProps {
 
 const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
   isOpen,
-  imageUrl,
-  fileName,
-  fileSize,
+  imageFile,
   onContinue,
   onCancel,
   onRetake,
   isUploading = false,
 }) => {
   const [showConfirm, setShowConfirm] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string>("");
+
+  // Create preview URL from File object
+  useEffect(() => {
+    if (imageFile) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPreviewUrl(e.target?.result as string);
+      };
+      reader.readAsDataURL(imageFile);
+    }
+  }, [imageFile]);
 
   if (!isOpen) return null;
 
@@ -37,14 +45,6 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
 
   const handleCancelConfirm = () => {
     setShowConfirm(false);
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   return (
@@ -69,7 +69,7 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
           <div className="relative">
             <div className="w-32 h-32 xs:w-40 xs:h-40 sm:w-48 sm:h-48 rounded-full overflow-hidden shadow-lg border-2 xs:border-4 border-gray-200">
               <img
-                src={imageUrl}
+                src={previewUrl}
                 alt="Profile preview"
                 className="w-full h-full object-cover"
               />
@@ -85,11 +85,10 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
           <div className="text-center space-y-1">
             <p
               className="text-xs xs:text-sm font-medium text-gray-900 truncate max-w-xs"
-              title={fileName}
+              title={imageFile.name}
             >
-              {fileName}
+              {imageFile.name}
             </p>
-            <p className="text-xs text-gray-500">{formatFileSize(fileSize)}</p>
           </div>
 
           {/* Instructions */}
@@ -174,7 +173,7 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 rounded-full overflow-hidden">
                     <img
-                      src={imageUrl}
+                      src={previewUrl}
                       alt="Profile preview"
                       className="w-full h-full object-cover"
                     />
@@ -182,12 +181,9 @@ const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
                   <div>
                     <p
                       className="text-sm font-medium text-gray-900 truncate"
-                      title={fileName}
+                      title={imageFile.name}
                     >
-                      {fileName}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {formatFileSize(fileSize)}
+                      {imageFile.name}
                     </p>
                   </div>
                 </div>

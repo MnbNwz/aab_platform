@@ -155,20 +155,6 @@ const ServicesManagement: React.FC<ServicesManagementProps> = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center space-x-3">
-        <div className="p-2 bg-primary-100 rounded-lg">
-          <Settings className="h-6 w-6 text-primary-600" />
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">
-            Services Management
-          </h3>
-          <p className="text-sm text-gray-500">
-            Manage available services for contractors
-          </p>
-        </div>
-      </div>
-
       {/* Add New Service */}
       <div className="bg-gray-50 rounded-lg p-4">
         <h4 className="text-sm font-medium text-gray-900 mb-3">
@@ -306,35 +292,33 @@ const ServicesManagement: React.FC<ServicesManagementProps> = () => {
         </div>
       </div>
 
-      {/* Action Buttons */}
-      {hasChanges && (
-        <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
-          <button
-            onClick={handleCancel}
-            disabled={isSubmitting}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="flex items-center space-x-2 px-6 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                <span>Updating...</span>
-              </>
-            ) : (
-              <>
-                <Check className="h-4 w-4" />
-                <span>Save Changes</span>
-              </>
-            )}
-          </button>
-        </div>
-      )}
+      {/* Action Buttons - Always visible, Cancel always enabled, Save enabled when changes exist */}
+      <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
+        <button
+          onClick={handleCancel}
+          disabled={isSubmitting}
+          className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleSubmit}
+          disabled={!hasChanges || isSubmitting}
+          className="flex items-center space-x-2 px-6 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isSubmitting ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              <span>Updating...</span>
+            </>
+          ) : (
+            <>
+              <Check className="h-4 w-4" />
+              <span>Save Changes</span>
+            </>
+          )}
+        </button>
+      </div>
 
       {/* Delete Confirmation Modal */}
       <ConfirmModal

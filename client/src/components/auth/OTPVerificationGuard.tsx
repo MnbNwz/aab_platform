@@ -51,8 +51,20 @@ const OTPVerificationGuard: React.FC<OTPVerificationGuardProps> = ({
     );
   }
 
+  // If userVerification is not loaded yet, show loading
+  if (!userVerification) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-primary-800">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-white text-lg">Checking verification status...</p>
+        </div>
+      </div>
+    );
+  }
+
   // If user verification is not verified, show OTP verification
-  if (userVerification && !userVerification.isVerified) {
+  if (!userVerification.isVerified) {
     return <OTPVerification email={user.email} />;
   }
 
