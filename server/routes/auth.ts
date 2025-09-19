@@ -11,6 +11,8 @@ router.post("/signin", authController.signinController);
 router.post("/verify-otp", authController.verifyOTPController);
 router.post("/resend-otp", authController.resendOTPController);
 router.get("/verification-state", authController.getVerificationStateController);
+router.post("/forgot-password", authController.forgotPasswordController);
+router.post("/reset-password", authController.resetPasswordController);
 
 // Protected routes
 router.get("/profile", authenticate, authController.getProfile);

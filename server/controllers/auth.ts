@@ -1,5 +1,13 @@
 import { Request, Response } from "express";
-import { signup, signin, verifyOTPCode, resendOTP, getVerificationState } from "@services/auth";
+import {
+  signup,
+  signin,
+  verifyOTPCode,
+  resendOTP,
+  getVerificationState,
+  forgotPassword,
+  resetPassword,
+} from "@services/auth";
 import S3Upload from "@utils/s3Upload";
 
 export const signupController = async (req: Request & { files?: any[] }, res: Response) => {
@@ -167,6 +175,46 @@ export const getVerificationStateController = async (req: Request, res: Response
   } catch (error: any) {
     res.status(400).json({
       error: error.message || "Failed to get verification state",
+    });
+  }
+};
+
+// Forgot password controller
+export const forgotPasswordController = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        error: "Email is required",
+      });
+    }
+
+    const result = await forgotPassword(email);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({
+      error: error.message || "Failed to process password reset request",
+    });
+  }
+};
+
+// Reset password controller
+export const resetPasswordController = async (req: Request, res: Response) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({
+        error: "Reset token and new password are required",
+      });
+    }
+
+    const result = await resetPassword(token, newPassword);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({
+      error: error.message || "Failed to reset password",
     });
   }
 };

@@ -64,6 +64,12 @@ const UserSchema = new Schema<IUser>(
       canResend: { type: Boolean, default: true },
       cooldownSeconds: { type: Number, default: 0 },
     },
+    // Password reset fields
+    passwordReset: {
+      token: { type: String, default: null },
+      expiresAt: { type: Date, default: null },
+      lastRequestedAt: { type: Date, default: null },
+    },
     // Stripe fields
     stripeCustomerId: { type: String },
     stripeConnectAccountId: { type: String },

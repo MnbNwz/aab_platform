@@ -178,6 +178,61 @@ const emailTemplates = {
       </html>
     `,
   }),
+  password_reset: (data: any) => ({
+    subject: "🔒 Password Reset - AAS Platform",
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Password Reset</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #dc3545; color: white; padding: 20px; text-align: center; }
+          .content { padding: 30px; background: #f9f9f9; }
+          .reset-button { 
+            display: inline-block; 
+            padding: 12px 24px; 
+            background: #dc3545; 
+            color: white; 
+            text-decoration: none; 
+            border-radius: 5px; 
+            margin: 20px 0; 
+          }
+          .footer { text-align: center; padding: 20px; color: #666; font-size: 14px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🔒 Password Reset</h1>
+          </div>
+          <div class="content">
+            <h2>Hello ${data.firstName}!</h2>
+            <p>You requested a password reset for your AAS Platform account.</p>
+            <p>Click the button below to reset your password:</p>
+            
+            <div style="text-align: center;">
+              <a href="${data.resetUrl}" class="reset-button">Reset Password</a>
+            </div>
+            
+            <p>Or copy and paste this link in your browser:</p>
+            <p style="word-break: break-all; background: #f0f0f0; padding: 10px; border-radius: 4px;">
+              ${data.resetUrl}
+            </p>
+            
+            <p><strong>This link will expire in 1 hour.</strong></p>
+            <p>If you didn't request this password reset, please ignore this email.</p>
+          </div>
+          <div class="footer">
+            <p>© 2025 AAS Platform. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+  }),
 };
 
 export const sendEmail = async (

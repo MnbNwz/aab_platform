@@ -45,6 +45,12 @@ export interface IUser extends Document {
     canResend: boolean;
     cooldownSeconds: number;
   };
+  // Password reset object
+  passwordReset: {
+    token: string | null;
+    expiresAt: Date | null;
+    lastRequestedAt: Date | null;
+  };
   // Stripe fields
   stripeCustomerId?: string;
   stripeConnectAccountId?: string;

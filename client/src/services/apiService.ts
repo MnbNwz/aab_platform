@@ -269,6 +269,29 @@ export const authApi = {
     }>(`/api/auth/verification-state?email=${encodeURIComponent(email)}`);
     return response.data;
   },
+
+  // Password Reset APIs
+  forgotPassword: async (email: string): Promise<{ message: string }> => {
+    const response = await post<{ message: string }>(
+      "/api/auth/forgot-password",
+      { email }
+    );
+    return response.data;
+  },
+
+  resetPassword: async (
+    token: string,
+    newPassword: string
+  ): Promise<{ message: string; user: User }> => {
+    const response = await post<{ message: string; user: User }>(
+      "/api/auth/reset-password",
+      {
+        token,
+        newPassword,
+      }
+    );
+    return response.data;
+  },
 } as const;
 
 // Services API

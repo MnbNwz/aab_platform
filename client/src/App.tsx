@@ -12,6 +12,8 @@ import { store } from "./store";
 import { restoreSessionThunk } from "./store/thunks/authThunks";
 import LoginForm from "./components/auth/LoginForm";
 import SignUpForm from "./components/auth/SignUpForm";
+import ForgotPassword from "./components/auth/ForgotPassword";
+import ResetPassword from "./components/auth/ResetPassword";
 import OTPVerification from "./components/auth/OTPVerification";
 import OTPVerificationGuard from "./components/auth/OTPVerificationGuard";
 import AuthGuard from "./components/auth/AuthGuard";
@@ -79,6 +81,22 @@ const AppContent: React.FC = () => {
           element={
             <AuthGuard>
               <OTPVerification />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/forgot-password"
+          element={
+            <AuthGuard>
+              <ForgotPassword />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <AuthGuard>
+              <ResetPassword />
             </AuthGuard>
           }
         />

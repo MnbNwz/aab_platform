@@ -5,3 +5,4 @@ export * from "@utils/email";
 export * from "@utils/s3Upload";
 export * from "@utils/otp";
 export * from "@utils/userVerification";
+export * from "@utils/passwordReset";

@@ -9,6 +9,7 @@ import {
   validatePhone,
   sanitizeUser,
 } from "@utils/auth";
+import { validatePassword } from "@utils/validation";
 import { validateContractorServices } from "@utils/serviceValidation";
 import { generateOTPEmailContent } from "@utils/otp";
 import {
@@ -17,6 +18,14 @@ import {
   verifyOTPAndUpdate,
   getVerificationStatus,
 } from "@utils/userVerification";
+import {
+  createPasswordResetData,
+  clearPasswordResetData,
+  canRequestPasswordReset,
+  getPasswordResetCooldownTime,
+  isPasswordResetExpired,
+  generatePasswordResetEmailContent,
+} from "@utils/passwordReset";
 import { sendEmail } from "@utils/email";
 
 // Export the utility functions with the same name for backward compatibility
@@ -303,5 +312,91 @@ export async function getVerificationState(email: string) {
     email: user.email,
     firstName: user.firstName,
     ...verificationStatus,
+  };
+}
+
+// Forgot password function
+export async function forgotPassword(email: string) {
+  // Find user by email
+  const user = await User.findOne({ email });
+  if (!user) {
+    // Don't reveal if user exists or not for security
+    return {
+      message: "If an account with this email exists, you will receive a password reset link.",
+    };
+  }
+
+  // Check if user's email is verified (requirement)
+  if (!user.userVerification.isVerified) {
+    throw new Error("Please verify your email address first before requesting a password reset.");
+  }
+
+  // Check rate limiting (5 minutes cooldown)
+  const cooldownMinutes = 5;
+  if (!canRequestPasswordReset(user.passwordReset.lastRequestedAt, cooldownMinutes)) {
+    const remainingSeconds = getPasswordResetCooldownTime(
+      user.passwordReset.lastRequestedAt,
+      cooldownMinutes,
+    );
+    throw new Error(
+      `Please wait ${Math.ceil(remainingSeconds / 60)} minutes before requesting another password reset.`,
+    );
+  }
+
+  // Create password reset data
+  const passwordResetData = createPasswordResetData();
+
+  // Update user with password reset data
+  user.passwordReset = passwordResetData;
+  await user.save();
+
+  // Send password reset email
+  try {
+    const resetUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/reset-password?token=${passwordResetData.token}`;
+    await sendEmail(email, "🔒 Password Reset - AAS Platform", "password_reset", {
+      firstName: user.firstName,
+      resetUrl,
+      token: passwordResetData.token,
+    });
+  } catch (emailError) {
+    console.error("Failed to send password reset email:", emailError);
+    throw new Error("Failed to send password reset email. Please try again.");
+  }
+
+  return {
+    message: "Password reset link has been sent to your email.",
+  };
+}
+
+// Reset password function
+export async function resetPassword(token: string, newPassword: string) {
+  // Find user by reset token
+  const user = await User.findOne({
+    "passwordReset.token": token,
+  });
+
+  if (!user) {
+    throw new Error("Invalid or expired password reset token.");
+  }
+
+  // Check if token is expired
+  if (isPasswordResetExpired(user.passwordReset.expiresAt)) {
+    throw new Error("Password reset token has expired. Please request a new one.");
+  }
+
+  // Validate new password
+  const passwordValidation = validatePassword(newPassword);
+  if (!passwordValidation.isValid) {
+    throw new Error(`Invalid password: ${passwordValidation.message}`);
+  }
+
+  // Update password and clear reset data
+  user.passwordHash = hashPassword(newPassword);
+  user.passwordReset = clearPasswordResetData();
+  await user.save();
+
+  return {
+    message: "Password reset successfully! You can now sign in with your new password.",
+    user: cleanUserData(user),
   };
 }
