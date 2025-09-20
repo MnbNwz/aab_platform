@@ -7,7 +7,7 @@ import {
   updateUserController,
   deleteUserController,
   getUserStatsController,
-} from "@controllers/admin/user";
+} from "@controllers/auth";
 
 const router = Router();
 

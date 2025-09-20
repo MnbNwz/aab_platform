@@ -1,8 +1,8 @@
 {
   "info": {
     "name": "AAS Platform API",
-    "description": "Complete API collection for AAS Platform with authentication, user management, services management, and intelligent caching system.\n\n🆕 **Updated Features:**\n• firstName & lastName required for all user registrations\n• User-level approval system (moved from role-specific)\n• Redis caching with memory fallback for production reliability\n• Enhanced customer schema with defaultPropertyType\n• Improved contractor docs structure with proper object format\n• Simplified Services Management for contractor service categories\n\n⚡ **Performance Features:**\n• Authentication middleware caching (50-80% performance boost)\n• Membership plans caching (1-hour TTL)\n• User profile caching with intelligent invalidation\n• Cache fallback system ensures zero downtime\n\n� **Services Management:**\n• Public endpoint for current services list\n• Admin-only service creation with versioning\n• Automatic normalization and deduplication\n\n�📋 **API Highlights:**\n• JWT-based authentication with HttpOnly cookies\n• Comprehensive admin user management with filtering\n• Role-based access control (RBAC)\n• Rate limiting and security headers\n• Complete membership plan management\n• Simplified contractor services management",
-    "version": "2.1.0",
+    "description": "Complete API collection for AAS Platform with authentication, user management, services management, and intelligent caching system.\n\n🆕 **Updated Features (v2.2.0):**\n• Complete OTP verification system (verify, resend, state check)\n• Password reset flow with OTP verification\n• Lead management system for contractors\n• Corrected payment endpoint URLs\n• Enhanced membership checkout with Stripe integration\n• firstName & lastName required for all user registrations\n• User-level approval system (moved from role-specific)\n• Redis caching with memory fallback for production reliability\n\n⚡ **Performance Features:**\n• Authentication middleware caching (50-80% performance boost)\n• Membership plans caching (1-hour TTL)\n• User profile caching with intelligent invalidation\n• Cache fallback system ensures zero downtime\n\n🔐 **Authentication & Security:**\n• Complete OTP verification workflow\n• Password reset with email verification\n• JWT-based authentication with HttpOnly cookies\n• Role-based access control (RBAC)\n• Rate limiting and security headers\n\n💼 **Lead Management:**\n• Contractor lead access system\n• Lead usage tracking and statistics\n• Job request access with credit deduction\n• Filtering by service type, property type, and budget\n\n📋 **API Highlights:**\n• Comprehensive admin user management with filtering\n• Complete membership plan management\n• Advanced payment processing with Stripe\n• Property management with image uploads\n• Job request and bidding system\n• Services management with versioning",
+    "version": "2.2.0",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -190,6 +190,114 @@
           }
         },
         {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"customer1@test.com\",\n  \"otp\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verify-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "verify-otp"]
+            },
+            "description": "Verify OTP sent to user's email during registration or password reset"
+          }
+        },
+        {
+          "name": "Resend OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"customer1@test.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/resend-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "resend-otp"]
+            },
+            "description": "Resend OTP to user's email"
+          }
+        },
+        {
+          "name": "Get Verification State",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verification-state?email=customer1@test.com",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "verification-state"],
+              "query": [
+                {
+                  "key": "email",
+                  "value": "customer1@test.com",
+                  "description": "User email to check verification state"
+                }
+              ]
+            },
+            "description": "Get current verification state for a user email"
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"customer1@test.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/forgot-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "forgot-password"]
+            },
+            "description": "Initiate password reset process by sending OTP to user's email"
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"customer1@test.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"NewPassword@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/reset-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "reset-password"]
+            },
+            "description": "Reset password using OTP verification"
+          }
+        },
+        {
           "name": "Logout",
           "request": {
             "method": "POST",
@@ -257,6 +365,28 @@
               "path": ["api", "membership", "current"]
             },
             "description": "Get current user's active membership"
+          }
+        },
+        {
+          "name": "Create Membership Checkout Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planId\": \"PLAN_ID_HERE\",\n  \"stripePriceId\": \"price_customer_basic_monthly\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/membership/checkout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "membership", "checkout"]
+            },
+            "description": "Create Stripe checkout session for membership purchase"
           }
         },
         {
@@ -714,9 +844,9 @@
               "raw": "{\n  \"paymentId\": \"PAYMENT_ID\",\n  \"financingAmount\": 1500.00,\n  \"termMonths\": 12\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/payment/offmarket/financing",
+              "raw": "{{baseUrl}}/api/payment/offmarket/financing/request",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "offmarket", "financing"]
+              "path": ["api", "payment", "offmarket", "financing", "request"]
             },
             "description": "Request financing for an off-market payment"
           }
@@ -849,9 +979,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/payment/details/{{paymentId}}",
+              "raw": "{{baseUrl}}/api/payment/{{paymentId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "details", "{{paymentId}}"]
+              "path": ["api", "payment", "{{paymentId}}"]
             },
             "description": "Get detailed information about a specific payment"
           }
@@ -862,11 +992,11 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/payment/stats",
+              "raw": "{{baseUrl}}/api/payment/stats/overview",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "stats"]
+              "path": ["api", "payment", "stats", "overview"]
             },
-            "description": "Get payment statistics and analytics"
+            "description": "Get payment statistics and analytics (admin only)"
           }
         },
         {
@@ -1588,6 +1718,108 @@
               "path": ["api", "jobRequest", "JOB_REQUEST_ID_FROM_STEP_2"]
             },
             "description": "Step 5: Verify the complete workflow worked correctly. Check:\n- status: should be 'inprogress'\n- acceptedBid: should contain the bid ID\n- timelineHistory: should have 'accepted' entry with date and user"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lead Management",
+      "item": [
+        {
+          "name": "Get Contractor Leads",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/leads?page=1&limit=10&service=plumbing&propertyType=domestic&minBudget=1000&maxBudget=5000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "leads"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number for pagination"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page"
+                },
+                {
+                  "key": "service",
+                  "value": "plumbing",
+                  "description": "Filter by service type",
+                  "disabled": true
+                },
+                {
+                  "key": "propertyType",
+                  "value": "domestic",
+                  "description": "Filter by property type: domestic, commercial",
+                  "disabled": true
+                },
+                {
+                  "key": "minBudget",
+                  "value": "1000",
+                  "description": "Minimum budget filter",
+                  "disabled": true
+                },
+                {
+                  "key": "maxBudget",
+                  "value": "5000",
+                  "description": "Maximum budget filter",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get available leads for contractors with filtering options (contractor only)"
+          }
+        },
+        {
+          "name": "Get Lead Usage Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/leads/usage",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "leads", "usage"]
+            },
+            "description": "Get contractor's lead usage statistics including credits used, remaining, and monthly limits (contractor only)"
+          }
+        },
+        {
+          "name": "Check Job Access",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/leads/check/{{jobRequestId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "leads", "check", "{{jobRequestId}}"]
+            },
+            "description": "Check if contractor can access a specific job request without deducting credits (contractor only)"
+          }
+        },
+        {
+          "name": "Access Job Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/leads/access/{{jobRequestId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "leads", "access", "{{jobRequestId}}"]
+            },
+            "description": "Access a specific job request and deduct lead credit from contractor's account (contractor only)"
           }
         }
       ]

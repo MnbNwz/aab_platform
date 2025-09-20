@@ -8,7 +8,7 @@ import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 import { connectDB } from "@config/db";
 import apiRoutes from "@routes/index";
-import { appLogger, errorLogger, logErrorWithContext } from "@utils/logger";
+import { appLogger, errorLogger, logErrorWithContext } from "@utils/core";
 
 dotenv.config();
 

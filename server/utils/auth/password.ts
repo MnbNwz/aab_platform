@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
-import { validatePassword as validatePasswordLib } from "@utils/validation";
+import { validatePassword as validatePasswordLib } from "../validation/validation";
 
 /**
  * Hash password using SHA-256

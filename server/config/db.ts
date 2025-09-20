@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { logErrorWithContext } from "@utils/logger";
+import { logErrorWithContext } from "@utils/core";
 
 let dbInstance: typeof mongoose | null = null;
 

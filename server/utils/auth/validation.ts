@@ -2,7 +2,7 @@ import crypto from "crypto";
 import {
   validateEmail as validateEmailLib,
   validatePhone as validatePhoneLib,
-} from "@utils/validation";
+} from "../validation/validation";
 
 /**
  * Validate email format using comprehensive validation
