@@ -1,5 +1,12 @@
 import MyProperties from "./MyProperties";
-import React, { useState, useCallback, useMemo, memo } from "react";
+import React, {
+  useState,
+  useCallback,
+  useMemo,
+  memo,
+  useEffect,
+  useRef,
+} from "react";
 import { useSelector, useDispatch } from "react-redux";
 import {
   Users,
@@ -12,8 +19,12 @@ import {
 import PageHeader from "./ui/PageHeader";
 import { logoutThunk } from "../store/thunks/authThunks";
 import Sidebar from "./dashboard/Sidebar";
-import UserStatsCards from "./dashboard/UserStatsCards";
 import UserManagementTable from "./dashboard/UserManagementTable";
+import CustomerDashboardCards from "./dashboard/CustomerDashboardCards";
+import ContractorDashboardCards from "./dashboard/ContractorDashboardCards";
+import PlatformDashboardCards from "./dashboard/PlatformDashboardCards";
+import { fetchDashboardThunk } from "../store/thunks/dashboardThunks";
+import { useDashboardRefresh } from "../hooks/useDashboardRefresh";
 import { AppDispatch, RootState } from "../store";
 import ProfileModal from "./ProfileModal";
 import ProfileViewModal from "./ProfileViewModal";
@@ -231,7 +242,16 @@ const TabContentWrapper = memo<{
 TabContentWrapper.displayName = "TabContentWrapper";
 
 // Main Dashboard Content Component
-const DashboardContent = memo<TabContentProps>(
+const DashboardContent = memo<
+  TabContentProps & {
+    manualRefresh: () => void;
+    unifiedData: any;
+    unifiedLoading: boolean;
+    customerData: any;
+    contractorData: any;
+    platformData: any;
+  }
+>(
   ({
     user,
     activeTab,
@@ -244,6 +264,12 @@ const DashboardContent = memo<TabContentProps>(
     isMobileOpen,
     onMobileToggle,
     setActiveTab,
+    manualRefresh,
+    unifiedData,
+    unifiedLoading,
+    customerData,
+    contractorData,
+    platformData,
   }) => {
     const isAdmin = user.role === "admin";
 
@@ -262,28 +288,47 @@ const DashboardContent = memo<TabContentProps>(
       };
 
       if (activeTab === "dashboard") {
-        return isAdmin
-          ? {
-              ...baseProps,
-              title: "Admin Dashboard",
-              subtitle: "Overview of the system",
-              children: (
-                <div className="space-y-6 md:space-y-8">
-                  <UserStatsCards onCardClick={() => {}} />
-                  <AdminQuickActions
-                    onNavigateToUsers={handleNavigateToUsers}
-                  />
-                </div>
-              ),
-            }
-          : {
-              ...baseProps,
-              title: `${user.role === "customer" ? "Customer" : "Contractor"} `,
-              subtitle: "Overview of the system",
-              children: (
-                <UserDashboardCards user={user} onProfileClick={onProfile} />
-              ),
-            };
+        if (isAdmin) {
+          return {
+            ...baseProps,
+            title: "Platform Dashboard",
+            subtitle: "Comprehensive platform analytics and insights",
+            children: (
+              <PlatformDashboardCards
+                key="platform-dashboard"
+                data={unifiedData || platformData}
+                loading={unifiedLoading}
+                onRefresh={manualRefresh}
+              />
+            ),
+          };
+        } else if (user.role === "customer") {
+          return {
+            ...baseProps,
+            title: "Customer Dashboard",
+            subtitle: "Your job and payment analytics",
+            children: (
+              <CustomerDashboardCards
+                data={unifiedData || customerData}
+                loading={unifiedLoading}
+                onRefresh={manualRefresh}
+              />
+            ),
+          };
+        } else if (user.role === "contractor") {
+          return {
+            ...baseProps,
+            title: "Contractor Dashboard",
+            subtitle: "Your performance metrics and lead analytics",
+            children: (
+              <ContractorDashboardCards
+                data={unifiedData || contractorData}
+                loading={unifiedLoading}
+                onRefresh={manualRefresh}
+              />
+            ),
+          };
+        }
       }
 
       const tabConfigs = {
@@ -331,6 +376,11 @@ const DashboardContent = memo<TabContentProps>(
       isMobileOpen,
       onMobileToggle,
       handleNavigateToUsers,
+      onProfileFromSettings,
+      onEmailChange,
+      onPasswordChange,
+      onProfileImageUpdate,
+      manualRefresh,
     ]);
 
     // Render tab content or default
@@ -359,8 +409,36 @@ const Dashboard: React.FC = () => {
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileViewOpen, setProfileViewOpen] = useState(false);
   const [profileFromSettings, setProfileFromSettings] = useState(false);
-  // Use Redux user directly - no need for local displayUser state
-  // since auth slice now updates when profile changes
+
+  // Load dashboard data once when user is available and dashboard tab is active
+  const {
+    data: unifiedData,
+    loading: unifiedLoading,
+    customerData,
+    contractorData,
+    platformData,
+  } = useSelector((state: RootState) => state.dashboard);
+
+  // Manual refresh functionality for dashboard
+  const dashboardUserRole = useMemo(
+    () => user?.role as "admin" | "customer" | "contractor",
+    [user?.role]
+  );
+  const { manualRefresh } = useDashboardRefresh(dashboardUserRole);
+
+  // Track if we've already loaded data for this user session
+  const hasLoadedRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    if (user && activeTab === "dashboard" && !hasLoadedRef.current) {
+      // Only call unified API once per component mount to prevent multiple calls
+      hasLoadedRef.current = true;
+
+      if (!unifiedData) {
+        dispatch(fetchDashboardThunk({ showToast: false })); // Silent initial load, no toast
+      }
+    }
+  }, [dispatch, user, activeTab, unifiedData]);
 
   const handleLogout = useCallback(() => {
     dispatch(logoutThunk());
@@ -487,8 +565,8 @@ const Dashboard: React.FC = () => {
     [dispatch, user]
   );
 
-  // Memoized user role
-  const userRole = useMemo(
+  // Memoized user role for sidebar
+  const sidebarUserRole = useMemo(
     () => user?.role as "admin" | "customer" | "contractor",
     [user?.role]
   );
@@ -545,7 +623,7 @@ const Dashboard: React.FC = () => {
         onTabChange={setActiveTab}
         isMobileOpen={isMobileOpen}
         onMobileToggle={handleMobileToggle}
-        userRole={userRole}
+        userRole={sidebarUserRole}
       />
 
       <div className="flex-1 flex flex-col bg-primary-50">
@@ -561,6 +639,12 @@ const Dashboard: React.FC = () => {
           isMobileOpen={isMobileOpen}
           onMobileToggle={handleMobileToggle}
           setActiveTab={setActiveTab}
+          manualRefresh={manualRefresh}
+          unifiedData={unifiedData}
+          unifiedLoading={unifiedLoading}
+          customerData={customerData}
+          contractorData={contractorData}
+          platformData={platformData}
         />
       </div>
 

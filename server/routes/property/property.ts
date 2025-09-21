@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authenticate } from "@middlewares/auth";
 import * as propertyController from "@controllers/property";
-import upload from "@middlewares/multer";
+import { upload } from "@middlewares/storage";
 
 const router = Router();
 

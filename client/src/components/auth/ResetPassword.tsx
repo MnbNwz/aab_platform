@@ -69,7 +69,7 @@ const ResetPassword: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const response = await api.auth.resetPassword(token, data.newPassword);
+      await api.auth.resetPassword(token, data.newPassword);
       setIsSuccess(true);
       showToast.success("Password reset successfully!");
 

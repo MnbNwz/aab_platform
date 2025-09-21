@@ -1,4 +1,4 @@
-import { ContractorServices } from "@models/service";
+import { ContractorServices } from "@models/system";
 
 /**
  * Validates that the provided services exist in the current services table

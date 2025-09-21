@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticate } from "@middlewares/auth";
-import { requireAdmin, requireAdminOrSelf } from "@middlewares/admin";
+import { requireAdmin, requireAdminOrSelf } from "@middlewares/authorization";
 import {
   getUsersController,
   getUserController,

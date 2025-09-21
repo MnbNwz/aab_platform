@@ -12,6 +12,7 @@ import jobRequestsReducer from "./slices/jobRequestsSlice";
 import jobReducer from "./slices/jobSlice";
 import propertyReducer from "./slices/propertySlice";
 import adminProfileReducer from "./slices/adminProfileSlice";
+import dashboardReducer from "./slices/dashboardSlice";
 
 export const store = configureStore({
   reducer: {
@@ -27,6 +28,7 @@ export const store = configureStore({
     job: jobReducer,
     property: propertyReducer,
     adminProfile: adminProfileReducer,
+    dashboard: dashboardReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

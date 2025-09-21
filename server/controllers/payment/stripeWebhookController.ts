@@ -1,10 +1,10 @@
 import "dotenv/config";
 import { Request, Response } from "express";
 import Stripe from "stripe";
-import { UserMembership } from "@models/userMembership";
+import { UserMembership } from "@models/user";
 import { Payment } from "@models/payment";
 import { User } from "@models/user";
-import { MembershipPlan } from "@models/membershipPlan";
+import { MembershipPlan } from "@models/membership";
 import { getPlanById } from "@services/membership/membership";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {

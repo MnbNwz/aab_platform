@@ -1,4 +1,4 @@
-import { JobRequest } from "@models/jobRequest";
+import { JobRequest } from "@models/job";
 import { Property } from "@models/property";
 import { User } from "@models/user";
 import { logErrorWithContext } from "@utils/core";

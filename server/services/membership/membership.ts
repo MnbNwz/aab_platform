@@ -1,6 +1,6 @@
-import { MembershipPlan, IMembershipPlan } from "@models/membershipPlan";
-import { UserMembership, IUserMembership } from "@models/userMembership";
-import mongoose from "mongoose";
+import { MembershipPlan, IMembershipPlan } from "@models/membership";
+import { UserMembership, IUserMembership } from "@models/user";
+import { Types } from "@models/types";
 
 // Securely get a plan by ID, with validation
 export async function getPlanById(planId: string) {
@@ -37,13 +37,47 @@ export async function getPlansByUserTypeAndBilling(
   }).sort({ tier: 1 });
 }
 
-// Get user's current active membership
+// Get user's current active membership (optimized with aggregation)
 export async function getCurrentMembership(userId: string): Promise<IUserMembership | null> {
-  return await UserMembership.findOne({
-    userId: new mongoose.Types.ObjectId(userId),
-    status: "active",
-    endDate: { $gt: new Date() },
-  }).populate("planId");
+  const pipeline = [
+    {
+      $match: {
+        userId: new Types.ObjectId(userId),
+        status: "active",
+        endDate: { $gt: new Date() },
+      },
+    },
+    {
+      $lookup: {
+        from: "membershipplans",
+        localField: "planId",
+        foreignField: "_id",
+        as: "planId",
+        pipeline: [
+          {
+            $project: {
+              name: 1,
+              tier: 1,
+              price: 1,
+              features: 1,
+              stripePriceIdMonthly: 1,
+              stripePriceIdYearly: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $addFields: {
+        planId: { $arrayElemAt: ["$planId", 0] },
+      },
+    },
+    { $sort: { createdAt: -1 } },
+    { $limit: 1 },
+  ];
+
+  const [result] = await UserMembership.aggregate(pipeline as any);
+  return result || null;
 }
 
 // Determine billing period from Stripe Price ID by looking up in database

@@ -2,6 +2,7 @@ import { Response } from "express";
 import { AuthenticatedRequest } from "@middlewares/types";
 import * as paymentService from "@services/payment/payment";
 import * as offMarketPaymentService from "@services/payment/offMarket";
+import { CONTROLLER_ERROR_MESSAGES, HTTP_STATUS } from "../constants";
 
 // MEMBERSHIP PAYMENTS
 export const createMembershipCheckout = async (req: AuthenticatedRequest, res: Response) => {
@@ -10,7 +11,9 @@ export const createMembershipCheckout = async (req: AuthenticatedRequest, res: R
     const userId = req.user?._id;
 
     if (!userId) {
-      return res.status(401).json({ success: false, message: "User not authenticated" });
+      return res
+        .status(HTTP_STATUS.UNAUTHORIZED)
+        .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
     }
 
     if (!planId || !billingPeriod) {
@@ -84,7 +87,9 @@ export const cancelMembership = async (req: AuthenticatedRequest, res: Response)
     const userId = req.user?._id;
 
     if (!userId) {
-      return res.status(401).json({ success: false, message: "User not authenticated" });
+      return res
+        .status(HTTP_STATUS.UNAUTHORIZED)
+        .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
     }
 
     const result = await paymentService.cancelMembership(userId, cancellationReason);
@@ -109,7 +114,9 @@ export const createJobPayment = async (req: AuthenticatedRequest, res: Response)
     const customerId = req.user?._id;
 
     if (!customerId) {
-      return res.status(401).json({ success: false, message: "User not authenticated" });
+      return res
+        .status(HTTP_STATUS.UNAUTHORIZED)
+        .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
     }
 
     if (!jobRequestId || !contractorId || !bidId || !totalAmount) {
@@ -146,7 +153,9 @@ export const processJobDeposit = async (req: AuthenticatedRequest, res: Response
     const customerId = req.user?._id;
 
     if (!customerId) {
-      return res.status(401).json({ success: false, message: "User not authenticated" });
+      return res
+        .status(HTTP_STATUS.UNAUTHORIZED)
+        .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
     }
 
     if (!jobPaymentId) {
@@ -181,7 +190,9 @@ export const processJobPreStart = async (req: AuthenticatedRequest, res: Respons
     const customerId = req.user?._id;
 
     if (!customerId) {
-      return res.status(401).json({ success: false, message: "User not authenticated" });
+      return res
+        .status(HTTP_STATUS.UNAUTHORIZED)
+        .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
     }
 
     if (!jobPaymentId) {
@@ -216,7 +227,9 @@ export const processJobCompletion = async (req: AuthenticatedRequest, res: Respo
     const customerId = req.user?._id;
 
     if (!customerId) {
-      return res.status(401).json({ success: false, message: "User not authenticated" });
+      return res
+        .status(HTTP_STATUS.UNAUTHORIZED)
+        .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
     }
 
     if (!jobPaymentId) {
@@ -283,7 +296,9 @@ export const createOffMarketPayment = async (req: AuthenticatedRequest, res: Res
     const contractorId = req.user?._id;
 
     if (!contractorId) {
-      return res.status(401).json({ success: false, message: "User not authenticated" });
+      return res
+        .status(HTTP_STATUS.UNAUTHORIZED)
+        .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
     }
 
     if (!listingId || !listingPrice) {
@@ -439,7 +454,9 @@ export const setupContractorConnect = async (req: AuthenticatedRequest, res: Res
     const contractorId = req.user?._id;
 
     if (!contractorId) {
-      return res.status(401).json({ success: false, message: "User not authenticated" });
+      return res
+        .status(HTTP_STATUS.UNAUTHORIZED)
+        .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
     }
 
     const result = await paymentService.setupContractorConnectAccount(contractorId);
@@ -465,7 +482,9 @@ export const getContractorDashboard = async (req: AuthenticatedRequest, res: Res
     const contractorId = req.user?._id;
 
     if (!contractorId) {
-      return res.status(401).json({ success: false, message: "User not authenticated" });
+      return res
+        .status(HTTP_STATUS.UNAUTHORIZED)
+        .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
     }
 
     const result = await paymentService.getContractorDashboardLink(contractorId);
@@ -488,7 +507,9 @@ export const getConnectStatus = async (req: AuthenticatedRequest, res: Response)
     const contractorId = req.user?._id;
 
     if (!contractorId) {
-      return res.status(401).json({ success: false, message: "User not authenticated" });
+      return res
+        .status(HTTP_STATUS.UNAUTHORIZED)
+        .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
     }
 
     const result = await paymentService.getConnectAccountStatus(contractorId);
@@ -514,7 +535,9 @@ export const getPaymentHistory = async (req: AuthenticatedRequest, res: Response
     const limit = parseInt(req.query.limit as string) || 10;
 
     if (!userId) {
-      return res.status(401).json({ success: false, message: "User not authenticated" });
+      return res
+        .status(HTTP_STATUS.UNAUTHORIZED)
+        .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
     }
 
     const result = await paymentService.getPaymentHistory(userId, page, limit);
@@ -563,7 +586,9 @@ export const getPaymentStats = async (req: AuthenticatedRequest, res: Response) 
     const userId = req.user?._id;
 
     if (!userId) {
-      return res.status(401).json({ success: false, message: "User not authenticated" });
+      return res
+        .status(HTTP_STATUS.UNAUTHORIZED)
+        .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
     }
 
     const stats = await paymentService.getPaymentStatistics(userId);

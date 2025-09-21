@@ -1,6 +1,5 @@
 import React, { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import MembershipPlans from "./MembershipPlans";
 import {
   fetchCurrentMembership,
   fetchMembershipPlans,
@@ -24,12 +23,9 @@ const MembershipGate: React.FC<{ children: React.ReactNode }> = ({
   const isAdminProfileLoaded = useSelector(
     (state: RootState) => state.adminProfile.isLoaded
   );
-  const {
-    current: membership,
-    plans,
-    loading,
-    error,
-  } = useSelector((state: RootState) => state.membership);
+  const { loading, error } = useSelector(
+    (state: RootState) => state.membership
+  );
 
   useEffect(() => {
     if (!user || !user.role) {

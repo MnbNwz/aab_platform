@@ -1,6 +1,6 @@
 import express from "express";
 import { authenticate } from "@middlewares/auth";
-import { requireRole } from "@middlewares/rbac";
+import { requireRole } from "@middlewares/authorization";
 import {
   getAllPlansController,
   getPlansByUserTypeController,

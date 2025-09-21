@@ -1,13 +1,16 @@
 import { Response } from "express";
 import { AuthenticatedRequest } from "@middlewares/types";
 import * as leadAccessService from "@services/job/leads";
+import { CONTROLLER_ERROR_MESSAGES, HTTP_STATUS } from "../constants";
 
 // Get contractor's lead usage and available job requests
 export const getContractorLeads = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const contractorId = req.user?._id;
     if (!contractorId) {
-      return res.status(401).json({ success: false, message: "Authentication required" });
+      return res
+        .status(HTTP_STATUS.UNAUTHORIZED)
+        .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
     }
 
     const { page = 1, limit = 10, service, propertyType, minEstimate, maxEstimate } = req.query;
@@ -40,8 +43,10 @@ export const getContractorLeads = async (req: AuthenticatedRequest, res: Respons
       },
     });
   } catch (error) {
-    console.error("Error getting contractor leads:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
+    console.error(CONTROLLER_ERROR_MESSAGES.LEAD_FETCH_ERROR, error);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.INTERNAL_SERVER_ERROR });
   }
 };
 
@@ -52,7 +57,9 @@ export const accessJobRequest = async (req: AuthenticatedRequest, res: Response)
     const { jobRequestId } = req.params;
 
     if (!contractorId) {
-      return res.status(401).json({ success: false, message: "Authentication required" });
+      return res
+        .status(HTTP_STATUS.UNAUTHORIZED)
+        .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
     }
 
     const result = await leadAccessService.accessJobRequest(contractorId, jobRequestId);
@@ -70,8 +77,10 @@ export const accessJobRequest = async (req: AuthenticatedRequest, res: Response)
       data: result.jobRequest,
     });
   } catch (error) {
-    console.error("Error accessing job request:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
+    console.error(CONTROLLER_ERROR_MESSAGES.LEAD_ACCESS_ERROR, error);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.INTERNAL_SERVER_ERROR });
   }
 };
 
@@ -80,7 +89,9 @@ export const getLeadUsage = async (req: AuthenticatedRequest, res: Response) => 
   try {
     const contractorId = req.user?._id;
     if (!contractorId) {
-      return res.status(401).json({ success: false, message: "Authentication required" });
+      return res
+        .status(HTTP_STATUS.UNAUTHORIZED)
+        .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
     }
 
     const leadUsage = await leadAccessService.getLeadUsage(contractorId);
@@ -90,8 +101,10 @@ export const getLeadUsage = async (req: AuthenticatedRequest, res: Response) => 
       data: leadUsage,
     });
   } catch (error) {
-    console.error("Error getting lead usage:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
+    console.error(CONTROLLER_ERROR_MESSAGES.LEAD_USAGE_ERROR, error);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.INTERNAL_SERVER_ERROR });
   }
 };
 
@@ -102,7 +115,9 @@ export const checkJobAccess = async (req: AuthenticatedRequest, res: Response) =
     const { jobRequestId } = req.params;
 
     if (!contractorId) {
-      return res.status(401).json({ success: false, message: "Authentication required" });
+      return res
+        .status(HTTP_STATUS.UNAUTHORIZED)
+        .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
     }
 
     const result = await leadAccessService.canAccessJobRequest(contractorId, jobRequestId);
@@ -112,7 +127,9 @@ export const checkJobAccess = async (req: AuthenticatedRequest, res: Response) =
       data: result,
     });
   } catch (error) {
-    console.error("Error checking job access:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
+    console.error(CONTROLLER_ERROR_MESSAGES.LEAD_CHECK_ERROR, error);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.INTERNAL_SERVER_ERROR });
   }
 };

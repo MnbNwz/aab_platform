@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import mongoose from "mongoose";
-import { MembershipPlan } from "@models/membershipPlan";
+import { MembershipPlan } from "@models/membership";
 import { connectDB } from "@config/db";
 
 // Annual discount rate

@@ -7,10 +7,10 @@ import { Router } from "express";
 
 const router = Router();
 
-// Mount job routes
-router.use("/", jobRequestRouter);
-router.use("/", leadRouter);
-router.use("/", bidRouter);
-router.use("/", contractorRouter);
+// Mount job routes with specific paths
+router.use("/requests", jobRequestRouter);
+router.use("/leads", leadRouter);
+router.use("/bids", bidRouter);
+router.use("/contractor", contractorRouter);
 
 export default router;

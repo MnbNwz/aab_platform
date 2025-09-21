@@ -14,7 +14,6 @@ import {
   setUserUpdating,
   updateUserInList,
   setUpdateError,
-  removeUserFromList,
 } from "../slices/userManagementSlice";
 
 // Fetch user statistics

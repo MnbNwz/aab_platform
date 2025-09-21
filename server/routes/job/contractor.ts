@@ -1,6 +1,7 @@
 import express from "express";
 import * as bidController from "@controllers/job";
-import { authenticate, requireContractor } from "@middlewares/auth";
+import { authenticate } from "@middlewares/auth";
+import { requireContractor } from "@middlewares/authorization";
 
 const router = express.Router();
 

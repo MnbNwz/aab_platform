@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticate } from "@middlewares/auth";
-import { requireContractor } from "@middlewares/rbac";
+import { requireContractor } from "@middlewares/authorization";
 import {
   getContractorLeads,
   accessJobRequest,

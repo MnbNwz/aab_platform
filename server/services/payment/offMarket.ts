@@ -1,8 +1,8 @@
-import { OffMarketPayment } from "@models/offMarketPayment";
+import { OffMarketPayment } from "@models/payment";
 import { User } from "@models/user";
 import { getOrCreateCustomer, createJobPaymentIntent } from "./stripe";
 import { roundToCents } from "@utils/financial";
-import mongoose from "mongoose";
+import { Types } from "@models/types";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -229,7 +229,7 @@ export async function processOffMarketRefund(
   }
 }
 
-// Get off-market payment history
+// Get off-market payment history (optimized with aggregation)
 export async function getOffMarketPaymentHistory(
   contractorId: string,
   page: number = 1,
@@ -238,12 +238,68 @@ export async function getOffMarketPaymentHistory(
   try {
     const skip = (page - 1) * limit;
 
-    const payments = await OffMarketPayment.find({ contractorId })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+    // Optimized aggregation with enriched data
+    const pipeline = [
+      { $match: { contractorId: new Types.ObjectId(contractorId) } },
 
-    const total = await OffMarketPayment.countDocuments({ contractorId });
+      // Add contractor details
+      {
+        $lookup: {
+          from: "users",
+          localField: "contractorId",
+          foreignField: "_id",
+          as: "contractor",
+          pipeline: [
+            {
+              $project: {
+                firstName: 1,
+                lastName: 1,
+                email: 1,
+                "contractor.company": 1,
+              },
+            },
+          ],
+        },
+      },
+
+      // Add payment statistics
+      {
+        $addFields: {
+          contractor: { $arrayElemAt: ["$contractor", 0] },
+          totalAmount: { $add: ["$listingPrice", "$depositAmount"] },
+          isFinanced: { $ne: ["$financing", null] },
+          financingStatus: "$financing.underwritingStatus",
+        },
+      },
+
+      // Sort by creation date
+      { $sort: { createdAt: -1 } },
+
+      // Facet for pagination and count
+      {
+        $facet: {
+          payments: [{ $skip: skip }, { $limit: limit }],
+          total: [{ $count: "count" }],
+          statistics: [
+            {
+              $group: {
+                _id: null,
+                totalListings: { $sum: 1 },
+                totalValue: { $sum: "$listingPrice" },
+                totalDeposits: { $sum: "$depositAmount" },
+                avgListingPrice: { $avg: "$listingPrice" },
+                financedListings: { $sum: { $cond: ["$isFinanced", 1, 0] } },
+              },
+            },
+          ],
+        },
+      },
+    ];
+
+    const [result] = await OffMarketPayment.aggregate(pipeline as any);
+    const payments = result.payments;
+    const total = result.total[0]?.count || 0;
+    const statistics = result.statistics[0] || {};
 
     return {
       payments,
@@ -253,6 +309,7 @@ export async function getOffMarketPaymentHistory(
         total,
         pages: Math.ceil(total / limit),
       },
+      statistics, // Additional insights for contractors
     };
   } catch (error) {
     console.error("Error getting off-market payment history:", error);
@@ -313,7 +370,7 @@ export async function updateFinancingStatus(
 export async function getFinancingStatistics(contractorId: string) {
   try {
     const stats = await OffMarketPayment.aggregate([
-      { $match: { contractorId: new mongoose.Types.ObjectId(contractorId) } },
+      { $match: { contractorId: new Types.ObjectId(contractorId) } },
       {
         $group: {
           _id: null,

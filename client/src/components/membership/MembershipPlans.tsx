@@ -27,7 +27,7 @@ type Membership = {
   planId?: string;
 };
 
-const MembershipPlans: React.FC<Props> = ({ plans, onSelect }) => {
+const MembershipPlans: React.FC<Props> = ({ plans }) => {
   const user = useSelector((state: RootState) => state.auth.user);
   const currentMembership = useSelector(
     (state: RootState) => state.membership.current

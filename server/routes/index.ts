@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { autoRefreshToken } from "@middlewares/autoRefresh";
+import { autoRefreshToken } from "@middlewares/auth";
 
 const router = Router();
 
@@ -10,6 +10,7 @@ import membershipRoutes from "./membership";
 import jobRoutes from "./job";
 import propertyRoutes from "./property";
 import paymentRoutes from "./payment";
+import dashboardRoutes from "./dashboard";
 import { authenticate } from "@middlewares/auth";
 
 // Apply auto-refresh middleware globally to all routes
@@ -23,12 +24,10 @@ router.use(authenticate);
 router.use("/user", authRoutes); // user routes are in auth folder
 router.use("/admin", adminRoutes);
 router.use("/membership", membershipRoutes);
-router.use("/jobRequest", jobRoutes); // jobRequest routes are in job folder
+router.use("/job", jobRoutes); // All job-related routes under /job
 router.use("/property", propertyRoutes);
-router.use("/bid", jobRoutes); // bid routes are in job folder
-router.use("/contractor", jobRoutes); // contractor routes are in job folder
 router.use("/payment", paymentRoutes);
-router.use("/leads", jobRoutes); // lead routes are in job folder
+router.use("/dashboard", dashboardRoutes); // Dashboard and analytics
 
 // Example route
 router.get("/", (req: Request, res: Response) => {

@@ -7,7 +7,6 @@ import type { RootState, AppDispatch } from "../../store";
 import { getMyPropertiesThunk } from "../../store/thunks/propertyThunks";
 import { setPropertyInactiveThunk } from "../../store/thunks/propertyThunks";
 import { searchPropertiesApi } from "../../services/propertyService";
-import { canEditProperty, hasActiveJobs } from "../../utils";
 
 interface Property {
   _id: string;
@@ -72,7 +71,7 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
   const [searchResults, setSearchResults] = useState<Property[] | null>(null);
 
   useEffect(() => {
-    !(properties.length > 0) && dispatch(getMyPropertiesThunk());
+    dispatch(getMyPropertiesThunk());
   }, [dispatch]);
 
   const [searchLoading, setSearchLoading] = useState(false);

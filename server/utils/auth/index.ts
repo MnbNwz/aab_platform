@@ -4,3 +4,4 @@ export * from "./validation";
 export * from "./otp";
 export * from "./userVerification";
 export * from "./passwordReset";
+export * from "./types";

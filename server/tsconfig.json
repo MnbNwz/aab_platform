@@ -23,7 +23,6 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": false,
     "resolveJsonModule": true,
-    "typeRoots": ["../shared/types"],
     "baseUrl": "./",
     "paths": {
       "@/*": ["./*"],
@@ -33,10 +32,7 @@
       "@middlewares/*": ["middlewares/*"],
       "@routes/*": ["routes/*"],
       "@services/*": ["services/*"],
-      "@utils/*": ["utils/*"],
-      "@types/*": ["schemas/*"],
-      "@schemas/*": ["schemas/*"],
-      "@shared/*": ["../shared/*"]
+      "@utils/*": ["utils/*"]
     }
   },
   "include": ["./**/*.ts", "./**/*.tsx"],

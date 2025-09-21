@@ -1,5 +1,5 @@
 import { Property, IProperty } from "@models/property";
-import { Types } from "mongoose";
+import { Types } from "@models/types";
 import S3Upload from "@utils/storage";
 import { PropertyInput } from "../types/property";
 
@@ -82,11 +82,54 @@ export const getUserProperties = async (
   // Handle specific title filter (for backward compatibility)
   if (filters.title) query.title = { $regex: filters.title, $options: "i" };
 
-  const properties = await Property.find(query)
-    .skip((+page - 1) * +limit)
-    .limit(+limit)
-    .sort({ createdAt: -1 });
-  const total = await Property.countDocuments(query);
+  // Optimized aggregation for properties with job statistics
+  const pipeline = [
+    { $match: query },
+
+    // Add job statistics for each property
+    {
+      $lookup: {
+        from: "jobrequests",
+        localField: "_id",
+        foreignField: "property",
+        as: "jobStats",
+        pipeline: [
+          {
+            $group: {
+              _id: null,
+              totalJobs: { $sum: 1 },
+              openJobs: { $sum: { $cond: [{ $eq: ["$status", "open"] }, 1, 0] } },
+              completedJobs: { $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] } },
+              totalValue: { $sum: "$estimate" },
+            },
+          },
+        ],
+      },
+    },
+
+    // Transform job stats
+    {
+      $addFields: {
+        jobStats: { $arrayElemAt: ["$jobStats", 0] },
+      },
+    },
+
+    // Sort
+    { $sort: { createdAt: -1 } },
+
+    // Facet for pagination and count
+    {
+      $facet: {
+        properties: [{ $skip: (+page - 1) * +limit }, { $limit: +limit }],
+        total: [{ $count: "count" }],
+      },
+    },
+  ];
+
+  const [result] = await Property.aggregate(pipeline as any);
+  const properties = result.properties;
+  const total = result.total[0]?.count || 0;
+
   return { properties, total };
 };
 

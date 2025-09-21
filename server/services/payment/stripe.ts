@@ -1,10 +1,10 @@
 import "dotenv/config";
 import Stripe from "stripe";
-import mongoose from "mongoose";
+import { SERVICE_ERROR_MESSAGES, SERVICE_CONSTANTS } from "../constants";
 import { User } from "@models/user";
-import { UserMembership } from "@models/userMembership";
-import { JobPayment } from "@models/jobPayment";
-import { OffMarketPayment } from "@models/offMarketPayment";
+import { UserMembership } from "@models/user";
+import { JobPayment } from "@models/payment";
+import { OffMarketPayment } from "@models/payment";
 import { getCurrentMembership } from "@services/membership/membership";
 import {
   calculateDepositAmount,
@@ -46,7 +46,7 @@ export async function getOrCreateCustomer(userId: string, email: string): Promis
 
     return customer.id;
   } catch (error) {
-    console.error("Error creating/retrieving Stripe customer:", error);
+    console.error(SERVICE_ERROR_MESSAGES.STRIPE_CUSTOMER_ERROR, error);
     throw error;
   }
 }
@@ -61,7 +61,7 @@ export async function createJobPaymentIntent(
   try {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amount,
-      currency: "usd",
+      currency: SERVICE_CONSTANTS.CURRENCY,
       customer: customerId,
       metadata: {
         jobRequestId,
@@ -74,7 +74,7 @@ export async function createJobPaymentIntent(
 
     return paymentIntent;
   } catch (error) {
-    console.error("Error creating payment intent:", error);
+    console.error(SERVICE_ERROR_MESSAGES.PAYMENT_INTENT_ERROR, error);
     throw error;
   }
 }
@@ -91,7 +91,9 @@ export async function createJobPayment(
     // Get customer's membership to determine platform fee
     const membership = await getCurrentMembership(customerId);
     const platformFeePercentage =
-      (membership?.planId as any)?.tier === "premium" ? 0 : PLATFORM_FEE_PERCENTAGE;
+      (membership?.planId as any)?.tier === SERVICE_CONSTANTS.PREMIUM_TIER
+        ? 0
+        : PLATFORM_FEE_PERCENTAGE;
 
     // Calculate payment amounts using safe financial calculations
     const depositAmount = calculateDepositAmount(totalAmount); // 15% deposit
@@ -110,13 +112,13 @@ export async function createJobPayment(
       completionAmount,
       platformFeeAmount,
       platformFeePercentage,
-      jobStatus: "pending",
+      jobStatus: SERVICE_CONSTANTS.DEFAULT_PAYMENT_STATUS,
     });
 
     await jobPayment.save();
     return jobPayment;
   } catch (error) {
-    console.error("Error creating job payment:", error);
+    console.error(SERVICE_ERROR_MESSAGES.JOB_PAYMENT_ERROR, error);
     throw error;
   }
 }
@@ -129,7 +131,7 @@ export async function processJobDeposit(
   try {
     const jobPayment = await JobPayment.findById(jobPaymentId);
     if (!jobPayment) {
-      throw new Error("Job payment not found");
+      throw new Error(SERVICE_ERROR_MESSAGES.JOB_PAYMENT_NOT_FOUND);
     }
 
     const stripeCustomerId = await getOrCreateCustomer(customerId, "");
@@ -137,17 +139,17 @@ export async function processJobDeposit(
       stripeCustomerId,
       jobPayment.depositAmount,
       jobPayment.jobRequestId.toString(),
-      "deposit",
+      SERVICE_CONSTANTS.DEPOSIT_TYPE,
     );
 
     // Update job payment with payment intent ID
     jobPayment.depositPaymentIntentId = paymentIntent.id;
-    jobPayment.depositStatus = "pending";
+    jobPayment.depositStatus = SERVICE_CONSTANTS.DEFAULT_PAYMENT_STATUS;
     await jobPayment.save();
 
     return { paymentIntent, jobPayment };
   } catch (error) {
-    console.error("Error processing job deposit:", error);
+    console.error(SERVICE_ERROR_MESSAGES.DEPOSIT_PROCESSING_ERROR, error);
     throw error;
   }
 }
@@ -159,8 +161,8 @@ export async function processPreStartPayment(
 ): Promise<{ paymentIntent: Stripe.PaymentIntent; jobPayment: any }> {
   try {
     const jobPayment = await JobPayment.findById(jobPaymentId);
-    if (!jobPayment || jobPayment.depositStatus !== "paid") {
-      throw new Error("Job payment not found or deposit not paid");
+    if (!jobPayment || jobPayment.depositStatus !== SERVICE_CONSTANTS.PAID_STATUS) {
+      throw new Error(SERVICE_ERROR_MESSAGES.DEPOSIT_NOT_PAID);
     }
 
     const stripeCustomerId = await getOrCreateCustomer(customerId, "");
@@ -168,16 +170,16 @@ export async function processPreStartPayment(
       stripeCustomerId,
       jobPayment.preStartAmount,
       jobPayment.jobRequestId.toString(),
-      "prestart",
+      SERVICE_CONSTANTS.PRESTART_TYPE,
     );
 
     jobPayment.preStartPaymentIntentId = paymentIntent.id;
-    jobPayment.preStartStatus = "pending";
+    jobPayment.preStartStatus = SERVICE_CONSTANTS.DEFAULT_PAYMENT_STATUS;
     await jobPayment.save();
 
     return { paymentIntent, jobPayment };
   } catch (error) {
-    console.error("Error processing pre-start payment:", error);
+    console.error(SERVICE_ERROR_MESSAGES.PRESTART_PROCESSING_ERROR, error);
     throw error;
   }
 }
@@ -189,8 +191,8 @@ export async function processCompletionPayment(
 ): Promise<{ paymentIntent: Stripe.PaymentIntent; jobPayment: any }> {
   try {
     const jobPayment = await JobPayment.findById(jobPaymentId);
-    if (!jobPayment || jobPayment.preStartStatus !== "paid") {
-      throw new Error("Job payment not found or pre-start not paid");
+    if (!jobPayment || jobPayment.preStartStatus !== SERVICE_CONSTANTS.PAID_STATUS) {
+      throw new Error(SERVICE_ERROR_MESSAGES.PRESTART_NOT_PAID);
     }
 
     const stripeCustomerId = await getOrCreateCustomer(customerId, "");
@@ -198,16 +200,16 @@ export async function processCompletionPayment(
       stripeCustomerId,
       jobPayment.completionAmount,
       jobPayment.jobRequestId.toString(),
-      "completion",
+      SERVICE_CONSTANTS.COMPLETION_TYPE,
     );
 
     jobPayment.completionPaymentIntentId = paymentIntent.id;
-    jobPayment.completionStatus = "pending";
+    jobPayment.completionStatus = SERVICE_CONSTANTS.DEFAULT_PAYMENT_STATUS;
     await jobPayment.save();
 
     return { paymentIntent, jobPayment };
   } catch (error) {
-    console.error("Error processing completion payment:", error);
+    console.error(SERVICE_ERROR_MESSAGES.COMPLETION_PROCESSING_ERROR, error);
     throw error;
   }
 }
@@ -219,14 +221,14 @@ export async function processContractorPayout(
 ): Promise<{ transfer: Stripe.Transfer; jobPayment: any }> {
   try {
     const jobPayment = await JobPayment.findById(jobPaymentId);
-    if (!jobPayment || jobPayment.completionStatus !== "paid") {
-      throw new Error("Job payment not found or completion not paid");
+    if (!jobPayment || jobPayment.completionStatus !== SERVICE_CONSTANTS.PAID_STATUS) {
+      throw new Error(SERVICE_ERROR_MESSAGES.COMPLETION_NOT_PAID);
     }
 
     // Get contractor's Stripe Connect account
     const contractor = await User.findById(contractorId);
     if (!contractor || !(contractor as any).stripeConnectAccountId) {
-      throw new Error("Contractor not found or no Stripe Connect account");
+      throw new Error(SERVICE_ERROR_MESSAGES.CONTRACTOR_NOT_FOUND);
     }
 
     // Calculate contractor amount (total - platform fee)
@@ -235,7 +237,7 @@ export async function processContractorPayout(
     // Create transfer to contractor
     const transfer = await stripe.transfers.create({
       amount: contractorAmount,
-      currency: "usd",
+      currency: SERVICE_CONSTANTS.CURRENCY,
       destination: (contractor as any).stripeConnectAccountId,
       metadata: {
         jobPaymentId: jobPaymentId,
@@ -245,12 +247,12 @@ export async function processContractorPayout(
 
     // Update job payment with transfer details
     jobPayment.contractorPayoutId = transfer.id;
-    jobPayment.jobStatus = "completed";
+    jobPayment.jobStatus = SERVICE_CONSTANTS.COMPLETED_STATUS;
     await jobPayment.save();
 
     return { transfer, jobPayment };
   } catch (error) {
-    console.error("Error processing contractor payout:", error);
+    console.error(SERVICE_ERROR_MESSAGES.PAYOUT_PROCESSING_ERROR, error);
     throw error;
   }
 }
@@ -268,7 +270,7 @@ export async function processRefund(
     const refund = await stripe.refunds.create({
       payment_intent: paymentIntentId,
       amount: amount,
-      reason: "requested_by_customer",
+      reason: SERVICE_CONSTANTS.REQUESTED_BY_CUSTOMER,
       metadata: {
         reason,
         jobPaymentId: jobPaymentId || "",
@@ -317,7 +319,7 @@ export async function processRefund(
 
     return { refund, paymentRecord };
   } catch (error) {
-    console.error("Error processing refund:", error);
+    console.error(SERVICE_ERROR_MESSAGES.REFUND_PROCESSING_ERROR, error);
     throw error;
   }
 }
@@ -337,7 +339,7 @@ export async function createOffMarketPayment(
       contractorId,
       listingPrice,
       depositAmount,
-      status: "pending",
+      status: SERVICE_CONSTANTS.DEFAULT_PAYMENT_STATUS,
     });
 
     await offMarketPayment.save();
@@ -345,11 +347,11 @@ export async function createOffMarketPayment(
     const stripeCustomerId = await getOrCreateCustomer(contractorId, "");
     const paymentIntent = await stripe.paymentIntents.create({
       amount: depositAmount,
-      currency: "usd",
+      currency: SERVICE_CONSTANTS.CURRENCY,
       customer: stripeCustomerId,
       metadata: {
         listingId,
-        paymentType: "off_market_deposit",
+        paymentType: SERVICE_CONSTANTS.OFF_MARKET_DEPOSIT,
       },
       automatic_payment_methods: {
         enabled: true,
@@ -361,7 +363,7 @@ export async function createOffMarketPayment(
 
     return { paymentIntent, offMarketPayment };
   } catch (error) {
-    console.error("Error creating off-market payment:", error);
+    console.error(SERVICE_ERROR_MESSAGES.OFF_MARKET_PAYMENT_ERROR, error);
     throw error;
   }
 }
@@ -373,7 +375,7 @@ export async function setupContractorConnect(
   try {
     // Create Stripe Connect account
     const account = await stripe.accounts.create({
-      type: "express",
+      type: SERVICE_CONSTANTS.EXPRESS_TYPE,
       country: "US",
       email: "", // Will be filled during onboarding
       metadata: {
@@ -386,18 +388,18 @@ export async function setupContractorConnect(
       account: account.id,
       refresh_url: `${process.env.FRONTEND_URL}/contractor/connect/refresh`,
       return_url: `${process.env.FRONTEND_URL}/contractor/connect/success`,
-      type: "account_onboarding",
+      type: SERVICE_CONSTANTS.ACCOUNT_ONBOARDING,
     });
 
     // Save account ID to contractor
     await User.findByIdAndUpdate(contractorId, {
       stripeConnectAccountId: account.id,
-      stripeConnectStatus: "pending",
+      stripeConnectStatus: SERVICE_CONSTANTS.DEFAULT_PAYMENT_STATUS,
     });
 
     return { accountLink, account };
   } catch (error) {
-    console.error("Error setting up contractor connect:", error);
+    console.error(SERVICE_ERROR_MESSAGES.CONTRACTOR_CONNECT_SETUP_ERROR, error);
     throw error;
   }
 }
@@ -407,7 +409,7 @@ export async function getContractorDashboard(contractorId: string): Promise<stri
   try {
     const contractor = await User.findById(contractorId);
     if (!contractor || !(contractor as any).stripeConnectAccountId) {
-      throw new Error("Contractor not found or no Stripe Connect account");
+      throw new Error(SERVICE_ERROR_MESSAGES.CONTRACTOR_NOT_FOUND);
     }
 
     const loginLink = await stripe.accounts.createLoginLink(
@@ -416,7 +418,7 @@ export async function getContractorDashboard(contractorId: string): Promise<stri
 
     return loginLink.url;
   } catch (error) {
-    console.error("Error getting contractor dashboard:", error);
+    console.error(SERVICE_ERROR_MESSAGES.CONTRACTOR_DASHBOARD_ERROR, error);
     throw error;
   }
 }

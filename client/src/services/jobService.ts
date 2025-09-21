@@ -4,7 +4,7 @@ import { api } from "./apiService";
 export const jobApi = {
   // Create Job Request
   createJob: async (jobData: any) => {
-    return api.post("/api/jobRequest", jobData);
+    return api.post("/api/job/requests", jobData);
   },
 
   // Get Job Requests
@@ -14,21 +14,21 @@ export const jobApi = {
       if (value !== undefined && value !== "")
         params.append(key, String(value));
     });
-    return api.get(`/api/jobRequest?${params.toString()}`);
+    return api.get(`/api/job/requests?${params.toString()}`);
   },
 
   // Get Job by ID
   getJobById: async (jobId: string) => {
-    return api.get(`/api/jobRequest/${jobId}`);
+    return api.get(`/api/job/requests/${jobId}`);
   },
 
   // Update Job Request
   updateJob: async (jobId: string, updateData: any) => {
-    return api.put(`/api/jobRequest/${jobId}`, updateData);
+    return api.put(`/api/job/requests/${jobId}`, updateData);
   },
 
   // Cancel Job Request
   cancelJob: async (jobId: string) => {
-    return api.put(`/api/jobRequest/${jobId}/cancel`);
+    return api.put(`/api/job/requests/${jobId}/cancel`);
   },
 };

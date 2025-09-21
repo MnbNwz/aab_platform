@@ -1,22 +1,8 @@
 import React, { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
+import type { RootState } from "../store";
 import PropertyManagementTable from "./dashboard/PropertyManagementTable";
 import PropertyFormModal from "./dashboard/PropertyFormModal";
-
-interface Property {
-  _id: string;
-  title: string;
-  propertyType: string;
-  address: string;
-  location: { type: string; coordinates: [number, number] };
-  dimensions: { length: number; width: number };
-  totalRooms: number;
-  bedrooms: number;
-  bathrooms: number;
-  kitchens: number;
-  description: string;
-  images: string[];
-  isActive: boolean;
-}
 
 interface MyPropertiesProps {
   userRole: string;
@@ -26,12 +12,14 @@ const MyProperties: React.FC<MyPropertiesProps> = ({ userRole }) => {
   if (userRole !== "admin" && userRole !== "customer") return null;
 
   const [propertyModalOpen, setPropertyModalOpen] = useState(false);
-  const [properties, setProperties] = useState<Property[]>([]);
   const [filter, setFilter] = useState<"all" | "active" | "inactive">("all");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 10;
+
+  // Get properties from Redux store instead of local state
+  const { properties } = useSelector((state: RootState) => state.property);
 
   // Reset filters on component unmount
   useEffect(() => {
@@ -52,7 +40,7 @@ const MyProperties: React.FC<MyPropertiesProps> = ({ userRole }) => {
         setSortOrder={setSortOrder}
         search={search}
         setSearch={setSearch}
-        properties={properties}
+        properties={properties as any}
         page={page}
         setPage={setPage}
         pageSize={pageSize}

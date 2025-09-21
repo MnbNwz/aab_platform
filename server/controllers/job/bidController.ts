@@ -1,7 +1,12 @@
 import { Request, Response } from "express";
-import { Bid } from "@models/bid";
-import { JobRequest } from "@models/jobRequest";
-import { authenticate, requireContractor } from "@middlewares/auth";
+import { Bid } from "@models/job";
+import { JobRequest } from "@models/job";
+import {
+  CONTROLLER_ERROR_MESSAGES,
+  HTTP_STATUS,
+  CONTROLLER_CONSTANTS,
+  FIELD_CONSTANTS,
+} from "../constants";
 
 // Create a new bid
 export const createBid = async (req: Request & { user?: any }, res: Response) => {
@@ -10,22 +15,24 @@ export const createBid = async (req: Request & { user?: any }, res: Response) =>
     const contractorId = req.user?._id;
 
     if (!contractorId) {
-      return res.status(401).json({ success: false, message: "Authentication required" });
+      return res
+        .status(HTTP_STATUS.UNAUTHORIZED)
+        .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
     }
 
     // Validate required fields
     if (!jobRequestId || !bidAmount || !message || !timeline) {
       return res.status(400).json({
         success: false,
-        message: "Job request ID, bid amount, message, and timeline are required",
+        message: CONTROLLER_ERROR_MESSAGES.MISSING_REQUIRED_FIELDS,
       });
     }
 
     // Validate bid amount
-    if (typeof bidAmount !== "number" || bidAmount <= 0) {
+    if (typeof bidAmount !== CONTROLLER_CONSTANTS.NUMBER_TYPE || bidAmount <= 0) {
       return res.status(400).json({
         success: false,
-        message: "Bid amount must be a positive number",
+        message: CONTROLLER_ERROR_MESSAGES.BID_AMOUNT_MUST_BE_POSITIVE,
       });
     }
 
@@ -33,20 +40,22 @@ export const createBid = async (req: Request & { user?: any }, res: Response) =>
     if (!timeline.startDate || !timeline.endDate) {
       return res.status(400).json({
         success: false,
-        message: "Start date and end date are required",
+        message: CONTROLLER_ERROR_MESSAGES.START_END_DATE_REQUIRED,
       });
     }
 
     // Check if job request exists and is open
     const jobRequest = await JobRequest.findById(jobRequestId);
     if (!jobRequest) {
-      return res.status(404).json({ success: false, message: "Job request not found" });
+      return res
+        .status(HTTP_STATUS.NOT_FOUND)
+        .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.JOB_REQUEST_NOT_FOUND });
     }
 
-    if (jobRequest.status !== "open") {
+    if (jobRequest.status !== CONTROLLER_CONSTANTS.OPEN_STATUS) {
       return res.status(400).json({
         success: false,
-        message: "Job request is no longer accepting bids",
+        message: CONTROLLER_ERROR_MESSAGES.JOB_NO_LONGER_ACCEPTING_BIDS,
       });
     }
 
@@ -59,7 +68,7 @@ export const createBid = async (req: Request & { user?: any }, res: Response) =>
     if (existingBid) {
       return res.status(400).json({
         success: false,
-        message: "You have already placed a bid on this job",
+        message: CONTROLLER_ERROR_MESSAGES.BID_ALREADY_PLACED,
       });
     }
 
@@ -81,8 +90,10 @@ export const createBid = async (req: Request & { user?: any }, res: Response) =>
 
     res.status(201).json({ success: true, data: bid });
   } catch (error) {
-    console.error("Error creating bid:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
+    console.error(CONTROLLER_ERROR_MESSAGES.BID_CREATION_ERROR, error);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.INTERNAL_SERVER_ERROR });
   }
 };
 
@@ -92,13 +103,18 @@ export const getJobBids = async (req: Request, res: Response) => {
     const { jobRequestId } = req.params;
 
     const bids = await Bid.find({ jobRequest: jobRequestId })
-      .populate("contractor", "name email phone")
+      .populate(
+        "contractor",
+        `${FIELD_CONSTANTS.NAME} ${FIELD_CONSTANTS.EMAIL} ${FIELD_CONSTANTS.PHONE}`,
+      )
       .sort({ createdAt: -1 });
 
     res.json({ success: true, data: bids });
   } catch (error) {
-    console.error("Error fetching bids:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
+    console.error(CONTROLLER_ERROR_MESSAGES.BID_FETCH_ERROR, error);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.INTERNAL_SERVER_ERROR });
   }
 };
 
@@ -109,13 +125,17 @@ export const acceptBid = async (req: Request & { user?: any }, res: Response) =>
     const userId = req.user?._id;
 
     if (!userId) {
-      return res.status(401).json({ success: false, message: "Authentication required" });
+      return res
+        .status(HTTP_STATUS.UNAUTHORIZED)
+        .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
     }
 
     // Find the bid
     const bid = await Bid.findById(bidId).populate("jobRequest");
     if (!bid) {
-      return res.status(404).json({ success: false, message: "Bid not found" });
+      return res
+        .status(HTTP_STATUS.NOT_FOUND)
+        .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.BID_NOT_FOUND });
     }
 
     const jobRequest = bid.jobRequest as any; // Type assertion for populated field
@@ -124,20 +144,20 @@ export const acceptBid = async (req: Request & { user?: any }, res: Response) =>
     if (jobRequest.createdBy.toString() !== userId) {
       return res.status(403).json({
         success: false,
-        message: "Only the job creator can accept bids",
+        message: CONTROLLER_ERROR_MESSAGES.INSUFFICIENT_PERMISSIONS,
       });
     }
 
     // Check if job is still open
-    if (jobRequest.status !== "open") {
+    if (jobRequest.status !== CONTROLLER_CONSTANTS.OPEN_STATUS) {
       return res.status(400).json({
         success: false,
-        message: "Job is no longer accepting bids",
+        message: CONTROLLER_ERROR_MESSAGES.JOB_NO_LONGER_ACCEPTING_BIDS,
       });
     }
 
     // Update bid status to accepted
-    await Bid.findByIdAndUpdate(bidId, { status: "accepted" });
+    await Bid.findByIdAndUpdate(bidId, { status: CONTROLLER_CONSTANTS.ACCEPTED_STATUS });
 
     // Reject all other bids for this job
     await Bid.updateMany(
@@ -145,26 +165,28 @@ export const acceptBid = async (req: Request & { user?: any }, res: Response) =>
         jobRequest: jobRequest._id,
         _id: { $ne: bidId },
       },
-      { status: "rejected" },
+      { status: CONTROLLER_CONSTANTS.REJECTED_STATUS },
     );
 
     // Update job request
     await JobRequest.findByIdAndUpdate(jobRequest._id, {
       acceptedBid: bidId,
-      status: "inprogress",
+      status: CONTROLLER_CONSTANTS.INPROGRESS_STATUS,
       $push: {
         timelineHistory: {
-          status: "accepted",
+          status: CONTROLLER_CONSTANTS.ACCEPTED_STATUS,
           date: new Date(),
           by: userId,
         },
       },
     });
 
-    res.json({ success: true, message: "Bid accepted successfully" });
+    res.json({ success: true, message: CONTROLLER_ERROR_MESSAGES.BID_ACCEPTED_SUCCESS });
   } catch (error) {
-    console.error("Error accepting bid:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
+    console.error(CONTROLLER_ERROR_MESSAGES.BID_ACCEPT_ERROR, error);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.INTERNAL_SERVER_ERROR });
   }
 };
 
@@ -174,16 +196,23 @@ export const getContractorBids = async (req: Request & { user?: any }, res: Resp
     const contractorId = req.user?._id;
 
     if (!contractorId) {
-      return res.status(401).json({ success: false, message: "Authentication required" });
+      return res
+        .status(HTTP_STATUS.UNAUTHORIZED)
+        .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
     }
 
     const bids = await Bid.find({ contractor: contractorId })
-      .populate("jobRequest", "title description status")
+      .populate(
+        "jobRequest",
+        `${FIELD_CONSTANTS.TITLE} ${FIELD_CONSTANTS.DESCRIPTION} ${FIELD_CONSTANTS.STATUS}`,
+      )
       .sort({ createdAt: -1 });
 
     res.json({ success: true, data: bids });
   } catch (error) {
-    console.error("Error fetching contractor bids:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
+    console.error(CONTROLLER_ERROR_MESSAGES.CONTRACTOR_BID_FETCH_ERROR, error);
+    res
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.INTERNAL_SERVER_ERROR });
   }
 };

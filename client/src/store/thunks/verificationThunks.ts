@@ -24,7 +24,7 @@ export const verifyOTPThunk = createAsyncThunk<
   async ({ email, otpCode }, { dispatch, rejectWithValue }) => {
     try {
       dispatch(setVerifying(true));
-      dispatch(setError(null));
+      dispatch(setError(""));
 
       const response = await api.auth.verifyOTP(email, otpCode);
 
@@ -57,7 +57,7 @@ export const resendOTPThunk = createAsyncThunk<
   async ({ email }, { dispatch, rejectWithValue }) => {
     try {
       dispatch(setResending(true));
-      dispatch(setError(null));
+      dispatch(setError(""));
 
       const response = await api.auth.resendOTP(email);
 
@@ -104,7 +104,7 @@ export const getVerificationStateThunk = createAsyncThunk<
           otpCode: null, // Never store otpCode for security
           canResend: response.canResend,
           cooldownSeconds: response.cooldownSeconds,
-          otpExpiresInSeconds: response.otpExpiresInSeconds,
+          otpExpiresInSeconds: 0, // Default value since API doesn't return this
         })
       );
 

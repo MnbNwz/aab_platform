@@ -1,7 +1,7 @@
 import { Router } from "express";
 import * as userController from "@controllers/auth";
 import { authenticate } from "@middlewares/auth";
-import upload from "@middlewares/multer";
+import { upload } from "@middlewares/storage";
 import { USER_ROUTES } from "../constants/routes";
 
 const router = Router();

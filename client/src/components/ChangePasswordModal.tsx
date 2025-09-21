@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Lock, Eye, EyeOff } from "lucide-react";
+import { X, Eye, EyeOff } from "lucide-react";
 import ConfirmModal from "./ui/ConfirmModal";
 
 interface ChangePasswordModalProps {

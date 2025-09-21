@@ -55,16 +55,18 @@ export const fetchJobRequestsThunk = createAsyncThunk(
     try {
       const params = new URLSearchParams();
       Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined && value !== "") params.append(key, String(value));
+        if (value !== undefined && value !== "")
+          params.append(key, String(value));
       });
-  const res = await api.get(`/api/jobRequest?${params.toString()}`);
+      const res = await api.get(`/api/job/requests?${params.toString()}`);
       return res;
     } catch (err) {
-      return rejectWithValue(err instanceof Error ? err.message : "Unknown error");
+      return rejectWithValue(
+        err instanceof Error ? err.message : "Unknown error"
+      );
     }
   }
 );
-
 
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
@@ -82,21 +84,26 @@ const jobRequestsSlice = createSlice({
         state.jobsLoading = true;
         state.jobsError = null;
       })
-      .addCase(fetchJobRequestsThunk.fulfilled, (state, action: PayloadAction<any>) => {
-        state.jobsLoading = false;
-        state.jobs = action.payload.jobs || [];
-        state.pagination = {
-          totalCount: action.payload.total,
-          currentPage: action.payload.page,
-          totalPages: action.payload.pages,
-          limit: state.filters.limit || 10,
-          hasPrevPage: (action.payload.page || 1) > 1,
-          hasNextPage: (action.payload.page || 1) < (action.payload.pages || 1),
-        };
-      })
+      .addCase(
+        fetchJobRequestsThunk.fulfilled,
+        (state, action: PayloadAction<any>) => {
+          state.jobsLoading = false;
+          state.jobs = action.payload.jobs || [];
+          state.pagination = {
+            totalCount: action.payload.total,
+            currentPage: action.payload.page,
+            totalPages: action.payload.pages,
+            limit: state.filters.limit || 10,
+            hasPrevPage: (action.payload.page || 1) > 1,
+            hasNextPage:
+              (action.payload.page || 1) < (action.payload.pages || 1),
+          };
+        }
+      )
       .addCase(fetchJobRequestsThunk.rejected, (state, action) => {
         state.jobsLoading = false;
-        state.jobsError = action.payload as string || 'Failed to fetch job requests';
+        state.jobsError =
+          (action.payload as string) || "Failed to fetch job requests";
       });
   },
 });

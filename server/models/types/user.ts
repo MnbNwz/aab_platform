@@ -1,4 +1,4 @@
-import { Types, Document } from "mongoose";
+import { Types, Document } from "./mongoose";
 
 export type UserRole = "admin" | "customer" | "contractor";
 export type UserStatus = "pending" | "active" | "revoke";

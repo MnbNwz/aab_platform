@@ -1,7 +1,7 @@
 import { Response } from "express";
-import { AuthenticatedRequest } from "@middlewares/types/middleware";
+import { AuthenticatedRequest } from "@middlewares/types";
 import * as propertyService from "@services/property/property";
-import { Types } from "mongoose";
+import { Types } from "@models/types";
 import S3Upload from "@utils/storage";
 
 // Create new property

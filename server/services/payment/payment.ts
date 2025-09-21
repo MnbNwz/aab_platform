@@ -1,8 +1,8 @@
 import { Payment } from "@models/payment";
-import { JobPayment } from "@models/jobPayment";
+import { JobPayment } from "@models/payment";
 import { User } from "@models/user";
-import { UserMembership } from "@models/userMembership";
-import { MembershipPlan } from "@models/membershipPlan";
+import { UserMembership } from "@models/user";
+import { MembershipPlan } from "@models/membership";
 import { sendPaymentReceipt } from "@utils/email";
 import {
   getOrCreateCustomer,
@@ -21,7 +21,7 @@ import {
   calculateCancellationFee,
 } from "@utils/financial";
 import { getMembershipEndDate, getDaysRemaining } from "@utils/core";
-import mongoose from "mongoose";
+import { Types } from "@models/types";
 
 // MEMBERSHIP PAYMENTS
 export const createMembershipCheckout = async (
@@ -367,14 +367,78 @@ export const getConnectAccountStatus = async (contractorId: string) => {
   }
 };
 
-// PAYMENT MANAGEMENT
+// PAYMENT MANAGEMENT (optimized with aggregation)
 export const getPaymentHistory = async (userId: string, page: number = 1, limit: number = 10) => {
   try {
     const skip = (page - 1) * limit;
 
-    const payments = await Payment.find({ userId }).sort({ createdAt: -1 }).skip(skip).limit(limit);
+    // Optimized aggregation with related data
+    const pipeline = [
+      { $match: { userId: new (await import("mongoose")).Types.ObjectId(userId) } },
 
-    const total = await Payment.countDocuments({ userId });
+      // Add membership plan info for context
+      {
+        $lookup: {
+          from: "usermemberships",
+          localField: "userId",
+          foreignField: "userId",
+          as: "membership",
+          pipeline: [
+            { $match: { status: "active" } },
+            { $sort: { createdAt: -1 } },
+            { $limit: 1 },
+            {
+              $lookup: {
+                from: "membershipplans",
+                localField: "planId",
+                foreignField: "_id",
+                as: "plan",
+                pipeline: [{ $project: { name: 1, tier: 1 } }],
+              },
+            },
+            {
+              $addFields: {
+                plan: { $arrayElemAt: ["$plan", 0] },
+              },
+            },
+          ],
+        },
+      },
+
+      // Add job details if it's a job payment
+      {
+        $lookup: {
+          from: "jobrequests",
+          localField: "jobRequestId",
+          foreignField: "_id",
+          as: "jobDetails",
+          pipeline: [{ $project: { title: 1, service: 1, status: 1 } }],
+        },
+      },
+
+      // Transform data
+      {
+        $addFields: {
+          membership: { $arrayElemAt: ["$membership", 0] },
+          jobDetails: { $arrayElemAt: ["$jobDetails", 0] },
+        },
+      },
+
+      // Sort by creation date
+      { $sort: { createdAt: -1 } },
+
+      // Facet for pagination and count
+      {
+        $facet: {
+          payments: [{ $skip: skip }, { $limit: limit }],
+          total: [{ $count: "count" }],
+        },
+      },
+    ];
+
+    const [result] = await Payment.aggregate(pipeline as any);
+    const payments = result.payments;
+    const total = result.total[0]?.count || 0;
 
     return {
       payments,
@@ -408,7 +472,7 @@ export const getPaymentDetails = async (paymentId: string) => {
 export const getPaymentStatistics = async (userId: string) => {
   try {
     const stats = await Payment.aggregate([
-      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
+      { $match: { userId: new Types.ObjectId(userId) } },
       {
         $group: {
           _id: null,

@@ -121,9 +121,8 @@ export const membershipService = {
     billingPeriod: "monthly" | "yearly";
     url: string;
   }) => {
-    let toastId: string | undefined;
     try {
-      toastId = showToast.loading("Redirecting to payment...");
+      showToast.loading("Redirecting to payment...");
       const res = await post<{ url: string }>(
         "/api/membership/checkout",
         payload

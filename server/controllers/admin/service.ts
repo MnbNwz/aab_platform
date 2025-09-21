@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { ContractorServices } from "@models/service";
-import { AuthenticatedRequest } from "@schemas/express";
+import { ContractorServices } from "@models/system";
+import { AuthenticatedRequest } from "@middlewares/types";
 
 // Get current services (public)
 export const getServices = async (req: Request, res: Response) => {

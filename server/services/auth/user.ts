@@ -1,8 +1,8 @@
 import { User } from "@models/user";
-import { FilterQuery, UpdateQuery } from "mongoose";
 import { CreateUserDTO, UpdateUserDTO } from "@models/types/user";
 import { hashPassword } from "@utils/auth/password";
 import S3Upload from "@utils/storage";
+import { FilterQuery } from "mongoose";
 
 export const createUser = async (userData: CreateUserDTO) => {
   return await User.create(userData);

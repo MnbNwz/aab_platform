@@ -12,7 +12,6 @@ export const MapPicker: React.FC<MapPickerProps> = ({
   isOpen,
   onClose,
   onSelectLocation,
-  initialLocation,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);

@@ -21,9 +21,7 @@ const JobManagementTable: React.FC = () => {
     pagination,
     filters,
   } = useSelector((state: RootState) => state.job);
-  const { properties, loading: propertiesLoading } = useSelector(
-    (state: RootState) => state.property
-  );
+  const { properties } = useSelector((state: RootState) => state.property);
   const user = useSelector((state: RootState) => state.auth.user);
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
@@ -39,12 +37,12 @@ const JobManagementTable: React.FC = () => {
     dispatch(getJobsThunk(filters));
   }, [dispatch, filters]);
 
-  // Fetch properties on mount (only once)
+  // Fetch properties on mount
   useEffect(() => {
-    if (user && properties.length === 0 && !propertiesLoading) {
+    if (user) {
       dispatch(getMyPropertiesThunk());
     }
-  }, [user, properties.length, propertiesLoading, dispatch]);
+  }, [user, dispatch]);
 
   // Handle search
   const handleSearch = () => {
@@ -372,7 +370,7 @@ const JobManagementTable: React.FC = () => {
             ) : (
               jobs.map((job: Job) => (
                 <tr key={job._id} className="hover:bg-gray-50">
-                  <td className="px-3 lg:px-3 lg:px-6 py-4 font-semibold text-gray-900 max-w-xs">
+                  <td className="px-3 lg:px-6 py-4 font-semibold text-gray-900 max-w-xs">
                     <span className="block truncate" title={job.title}>
                       {job.title.length > 40
                         ? `${job.title.substring(0, 40)}...`
@@ -383,7 +381,7 @@ const JobManagementTable: React.FC = () => {
                       {job.description?.length > 60 ? "..." : ""}
                     </div>
                   </td>
-                  <td className="px-3 lg:px-3 lg:px-6 py-4 text-gray-700">
+                  <td className="px-3 lg:px-6 py-4 text-gray-700">
                     {job.service}
                   </td>
                   <td className="px-3 lg:px-6 py-4 text-center">

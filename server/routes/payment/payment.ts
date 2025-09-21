@@ -1,11 +1,11 @@
 import express from "express";
 import { authenticate } from "@middlewares/auth";
-import { requireRole } from "@middlewares/rbac";
+import { requireRole } from "@middlewares/authorization";
 import {
   validateMembershipCheckout,
   validateJobPayment,
   validateOffMarketPayment,
-} from "@middlewares/paymentValidation";
+} from "@middlewares/validation";
 import {
   // Membership payments
   createMembershipCheckout,

@@ -50,7 +50,7 @@ export async function cancelMembershipController(req: AuthenticatedRequest, res:
     res.status(500).json({ success: false, message: "Failed to cancel membership" });
   }
 }
-import { UserMembership } from "@models/userMembership";
+import { UserMembership } from "@models/user";
 import { Payment } from "@models/payment";
 
 export async function purchaseMembershipController(req: AuthenticatedRequest, res: Response) {

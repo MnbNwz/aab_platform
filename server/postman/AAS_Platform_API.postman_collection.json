@@ -1045,9 +1045,9 @@
               "raw": "{\n  \"title\": \"Kitchen Renovation\",\n  \"description\": \"Complete kitchen renovation including cabinets, countertops, and appliances\",\n  \"property\": \"PROPERTY_ID\",\n  \"service\": \"solar\",\n  \"estimate\": 15000,\n  \"type\": \"regular\",\n  \"timeline\": 30\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/jobRequest",
+              "raw": "{{baseUrl}}/api/job/requests",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "jobRequest"]
+              "path": ["api", "job", "requests"]
             },
             "description": "Create a new job request for contractors to bid on. Use valid services from /api/services endpoint. Timeline is in days."
           }
@@ -1058,9 +1058,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/jobRequest?page=1&limit=10&status=open&serviceType=general",
+              "raw": "{{baseUrl}}/api/job/requests?page=1&limit=10&status=open&serviceType=general",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "jobRequest"],
+              "path": ["api", "job", "requests"],
               "query": [
                 {
                   "key": "page",
@@ -1093,9 +1093,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/jobRequest/{{jobRequestId}}",
+              "raw": "{{baseUrl}}/api/job/requests/{{jobRequestId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "jobRequest", "{{jobRequestId}}"]
+              "path": ["api", "job", "requests", "{{jobRequestId}}"]
             },
             "description": "Get specific job request details by ID. Returns timelineHistory array for status tracking."
           }
@@ -1106,9 +1106,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/jobRequest/{{jobRequestId}}",
+              "raw": "{{baseUrl}}/api/job/requests/{{jobRequestId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "jobRequest", "{{jobRequestId}}"]
+              "path": ["api", "job", "requests", "{{jobRequestId}}"]
             },
             "description": "Get job request with complete timeline history showing all status changes, dates, and who made the changes. Includes timelineHistory array with status, date, and by fields."
           }
@@ -1128,9 +1128,9 @@
               "raw": "{\n  \"title\": \"Updated Kitchen Renovation\",\n  \"description\": \"Updated description with additional requirements\",\n  \"budget\": 18000,\n  \"preferredEndDate\": \"2024-03-15\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/jobRequest/{{jobRequestId}}",
+              "raw": "{{baseUrl}}/api/job/requests/{{jobRequestId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "jobRequest", "{{jobRequestId}}"]
+              "path": ["api", "job", "requests", "{{jobRequestId}}"]
             },
             "description": "Update an existing job request"
           }
@@ -1150,9 +1150,9 @@
               "raw": "{\n  \"reason\": \"Project cancelled by customer\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/jobRequest/{{jobRequestId}}/cancel",
+              "raw": "{{baseUrl}}/api/job/requests/{{jobRequestId}}/cancel",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "jobRequest", "{{jobRequestId}}", "cancel"]
+              "path": ["api", "job", "requests", "{{jobRequestId}}", "cancel"]
             },
             "description": "Cancel an existing job request"
           }
@@ -1327,7 +1327,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/bid/job/{{jobRequestId}}",
+              "raw": "{{baseUrl}}/api/job/bids/job/{{jobRequestId}}",
               "host": ["{{baseUrl}}"],
               "path": ["api", "bid", "job", "{{jobRequestId}}"]
             },
@@ -1349,7 +1349,7 @@
               "raw": "{\n  \"acceptedAt\": \"2024-01-15T10:00:00Z\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/bid/{{bidId}}/accept",
+              "raw": "{{baseUrl}}/api/job/bids/{{bidId}}/accept",
               "host": ["{{baseUrl}}"],
               "path": ["api", "bid", "{{bidId}}", "accept"]
             },
@@ -1371,7 +1371,7 @@
               "raw": "{\n  \"acceptedAt\": \"2024-01-15T10:00:00Z\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/bid/{{bidId}}/accept",
+              "raw": "{{baseUrl}}/api/job/bids/{{bidId}}/accept",
               "host": ["{{baseUrl}}"],
               "path": ["api", "bid", "{{bidId}}", "accept"]
             },
@@ -1398,7 +1398,7 @@
               "raw": "{\n  \"jobRequestId\": \"JOB_REQUEST_ID\",\n  \"bidAmount\": 12000,\n  \"message\": \"Professional kitchen renovation with high-quality materials\",\n  \"timeline\": {\n    \"startDate\": \"2024-02-01\",\n    \"endDate\": \"2024-03-15\"\n  },\n  \"materials\": [\n    \"High-quality materials\",\n    \"Professional tools\",\n    \"Safety equipment\"\n  ],\n  \"warranty\": \"5 years\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/contractor/bid",
+              "raw": "{{baseUrl}}/api/job/contractor/bid",
               "host": ["{{baseUrl}}"],
               "path": ["api", "contractor", "bid"]
             },
@@ -1411,7 +1411,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/contractor/bids?page=1&limit=10&status=all",
+              "raw": "{{baseUrl}}/api/job/contractor/bids?page=1&limit=10&status=all",
               "host": ["{{baseUrl}}"],
               "path": ["api", "contractor", "bids"],
               "query": [
@@ -1441,7 +1441,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/contractor/bids/job/{{jobRequestId}}",
+              "raw": "{{baseUrl}}/api/job/contractor/bids/job/{{jobRequestId}}",
               "host": ["{{baseUrl}}"],
               "path": ["api", "contractor", "bids", "job", "{{jobRequestId}}"]
             },
@@ -1656,9 +1656,9 @@
               "raw": "{\n  \"title\": \"Complete Workflow Test\",\n  \"description\": \"Testing complete job request and bid workflow\",\n  \"property\": \"PROPERTY_ID_FROM_STEP_1\",\n  \"service\": \"solar\",\n  \"estimate\": 10000,\n  \"type\": \"regular\",\n  \"timeline\": 30\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/jobRequest",
+              "raw": "{{baseUrl}}/api/job/requests",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "jobRequest"]
+              "path": ["api", "job", "requests"]
             },
             "description": "Step 2: Create a job request using the property from step 1. Save the job request ID for next steps."
           }
@@ -1678,7 +1678,7 @@
               "raw": "{\n  \"jobRequestId\": \"JOB_REQUEST_ID_FROM_STEP_2\",\n  \"bidAmount\": 9500,\n  \"message\": \"Professional service with warranty\",\n  \"timeline\": {\n    \"startDate\": \"2024-02-01\",\n    \"endDate\": \"2024-03-02\"\n  },\n  \"materials\": [\"Professional materials\", \"Safety equipment\"],\n  \"warranty\": \"10 years\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/contractor/bid",
+              "raw": "{{baseUrl}}/api/job/contractor/bid",
               "host": ["{{baseUrl}}"],
               "path": ["api", "contractor", "bid"]
             },
@@ -1713,9 +1713,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/jobRequest/JOB_REQUEST_ID_FROM_STEP_2",
+              "raw": "{{baseUrl}}/api/job/requests/JOB_REQUEST_ID_FROM_STEP_2",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "jobRequest", "JOB_REQUEST_ID_FROM_STEP_2"]
+              "path": ["api", "job", "requests", "JOB_REQUEST_ID_FROM_STEP_2"]
             },
             "description": "Step 5: Verify the complete workflow worked correctly. Check:\n- status: should be 'inprogress'\n- acceptedBid: should contain the bid ID\n- timelineHistory: should have 'accepted' entry with date and user"
           }
@@ -1731,9 +1731,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/leads?page=1&limit=10&service=plumbing&propertyType=domestic&minBudget=1000&maxBudget=5000",
+              "raw": "{{baseUrl}}/api/job/leads?page=1&limit=10&service=plumbing&propertyType=domestic&minBudget=1000&maxBudget=5000",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "leads"],
+              "path": ["api", "job", "leads"],
               "query": [
                 {
                   "key": "page",
@@ -1780,9 +1780,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/leads/usage",
+              "raw": "{{baseUrl}}/api/job/leads/usage",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "leads", "usage"]
+              "path": ["api", "job", "leads", "usage"]
             },
             "description": "Get contractor's lead usage statistics including credits used, remaining, and monthly limits (contractor only)"
           }
@@ -1793,9 +1793,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/leads/check/{{jobRequestId}}",
+              "raw": "{{baseUrl}}/api/job/leads/check/{{jobRequestId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "leads", "check", "{{jobRequestId}}"]
+              "path": ["api", "job", "leads", "check", "{{jobRequestId}}"]
             },
             "description": "Check if contractor can access a specific job request without deducting credits (contractor only)"
           }
@@ -1815,11 +1815,60 @@
               "raw": "{}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/leads/access/{{jobRequestId}}",
+              "raw": "{{baseUrl}}/api/job/leads/access/{{jobRequestId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "leads", "access", "{{jobRequestId}}"]
+              "path": ["api", "job", "leads", "access", "{{jobRequestId}}"]
             },
             "description": "Access a specific job request and deduct lead credit from contractor's account (contractor only)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics & Dashboard",
+      "item": [
+        {
+          "name": "Get Dashboard Analytics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "dashboard"]
+            },
+            "description": "Get comprehensive dashboard analytics based on user role. Admin gets platform-wide stats, customers get their job/payment data, contractors get performance metrics."
+          }
+        },
+        {
+          "name": "Get Platform Statistics (Admin Only)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/dashboard/platform",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "dashboard", "platform"]
+            },
+            "description": "Get comprehensive platform health and statistics including platform health score, total metrics, and performance indicators (admin only)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard Analytics",
+      "item": [
+        {
+          "name": "Smart Dashboard (Role-Based)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/platform",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "dashboard", "platform"]
+            },
+            "description": "Single smart dashboard endpoint that returns different analytics based on user role:\n\n🔴 **Admin**: Complete platform analytics, health score, business intelligence\n🟡 **Contractor**: Bidding performance, earnings, win rate, lead usage\n🔵 **Customer**: Personal job statistics, payment history, property analytics\n\nThe response structure changes based on the authenticated user's role, providing tailored dashboard data automatically."
           }
         }
       ]
