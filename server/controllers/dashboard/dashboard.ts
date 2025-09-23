@@ -61,12 +61,12 @@ export const getPlatformDashboardController = async (req: AuthenticatedRequest, 
         };
         break;
 
-      case "customer":
+      case "customer": // customer dashboard
         analytics = await getCustomerAnalytics(userId);
         if (!analytics) {
           return res.status(HTTP_STATUS.NOT_FOUND).json({
             success: false,
-            message: "Customer data not found ",
+            message: "Customer data not found",
           });
         }
         responseData = {
