@@ -53,12 +53,85 @@ const API_CONFIG = {
   timeout: 30000,
 } as const;
 
+// Advanced caching with per-endpoint TTL and invalidation
+type CachedEntry<T> = { expiresAt: number; value: ApiResponse<T> };
+const inFlightRequests = new Map<string, Promise<any>>();
+const getCache = new Map<string, CachedEntry<any>>();
+
+// Per-endpoint cache TTL configuration
+const CACHE_TTL_CONFIG = {
+  // Highly dynamic - short cache
+  "/api/dashboard": 12000, // 12s for dashboard data
+  "/api/admin/users/stats": 15000, // 15s for user stats
+  "/api/admin/users": 10000, // 10s for user lists
+
+  // Semi-static - medium cache
+  "/api/services": 30000, // 30s for services list
+  "/api/auth/profile": 60000, // 1min for user profile
+
+  // Static - longer cache
+  "/api/membership/plans": 300000, // 5min for membership plans
+
+  // Default fallback
+  default: 8000, // 8s default
+} as const;
+
+// Cache invalidation patterns
+const INVALIDATION_PATTERNS = {
+  // When user management actions occur, invalidate related caches
+  userManagement: [
+    "/api/admin/users",
+    "/api/admin/users/stats",
+    "/api/dashboard",
+  ],
+  // When profile updates occur, invalidate profile cache
+  profile: ["/api/auth/profile"],
+  // When services change, invalidate services cache
+  services: ["/api/services"],
+} as const;
+
+// Helper to get cache TTL for an endpoint
+const getCacheTTL = (endpoint: string): number => {
+  for (const [pattern, ttl] of Object.entries(CACHE_TTL_CONFIG)) {
+    if (pattern !== "default" && endpoint.includes(pattern)) {
+      return ttl;
+    }
+  }
+  return CACHE_TTL_CONFIG.default;
+};
+
+// Helper to invalidate caches by pattern
+const invalidateCaches = (
+  pattern: keyof typeof INVALIDATION_PATTERNS
+): void => {
+  const patterns = INVALIDATION_PATTERNS[pattern];
+  for (const [cacheKey] of getCache.entries()) {
+    if (patterns.some((pattern) => cacheKey.includes(pattern))) {
+      getCache.delete(cacheKey);
+    }
+  }
+};
+
 // Core request function with security best practices
 const makeRequest = async <T = any>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> => {
   const url = `${API_CONFIG.baseURL}${endpoint}`;
+  const method = (options.method || "GET").toUpperCase();
+  const cacheKey = `${method}:${endpoint}`;
+
+  // Serve short-cache for GET
+  if (method === "GET") {
+    const cached = getCache.get(cacheKey) as CachedEntry<T> | undefined;
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.value as ApiResponse<T>;
+    }
+    const existing = inFlightRequests.get(cacheKey) as
+      | Promise<ApiResponse<T>>
+      | undefined;
+    if (existing) return existing;
+  }
 
   // Detect FormData for multipart
   let headers: Record<string, string> = {
@@ -94,10 +167,13 @@ const makeRequest = async <T = any>(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.timeout);
 
-    const response = await fetch(url, {
+    const requestPromise = fetch(url, {
       ...config,
       signal: controller.signal,
     });
+    if (method === "GET") inFlightRequests.set(cacheKey, requestPromise);
+
+    const response = await requestPromise;
 
     clearTimeout(timeoutId);
 
@@ -129,11 +205,21 @@ const makeRequest = async <T = any>(
       );
     }
 
-    return {
+    const apiResponse: ApiResponse<T> = {
       success: true,
       data: data?.data || data,
       message: data?.message || "Success",
     };
+
+    // Cache GET responses with per-endpoint TTL
+    if (method === "GET") {
+      const ttl = getCacheTTL(endpoint);
+      getCache.set(cacheKey, {
+        expiresAt: Date.now() + ttl,
+        value: apiResponse,
+      });
+    }
+    return apiResponse;
   } catch (error) {
     if (isApiError(error)) {
       throw error;
@@ -145,6 +231,8 @@ const makeRequest = async <T = any>(
 
     // Network or other errors
     throw createApiError(ERROR_MESSAGES.NETWORK_ERROR, 0);
+  } finally {
+    if (method === "GET") inFlightRequests.delete(cacheKey);
   }
 };
 
@@ -197,6 +285,8 @@ export const authApi = {
     userData: Partial<User>
   ): Promise<User> => {
     const response = await put<User>(`/api/user/${userId}`, userData);
+    // Invalidate profile cache after update
+    invalidateCaches("profile");
     return response.data;
   },
 
@@ -205,6 +295,8 @@ export const authApi = {
     formData: FormData
   ): Promise<User> => {
     const response = await put<User>(`/api/user/${userId}`, formData);
+    // Invalidate profile cache after update
+    invalidateCaches("profile");
     return response.data;
   },
 
@@ -247,26 +339,10 @@ export const authApi = {
     return response.data;
   },
 
-  getVerificationState: async (
-    email: string
-  ): Promise<{
-    email: string;
-    firstName: string;
-    isVerified: boolean;
-    message: string;
-    otpCode: string | null;
-    canResend: boolean;
-    cooldownSeconds: number;
-  }> => {
-    const response = await get<{
-      email: string;
-      firstName: string;
-      isVerified: boolean;
-      message: string;
-      otpCode: string | null;
-      canResend: boolean;
-      cooldownSeconds: number;
-    }>(`/api/auth/verification-state?email=${encodeURIComponent(email)}`);
+  getVerificationState: async (email: string): Promise<UserVerification> => {
+    const response = await get<UserVerification>(
+      `/api/auth/verification-state?email=${encodeURIComponent(email)}`
+    );
     return response.data;
   },
 
@@ -321,6 +397,8 @@ const servicesApi = {
       version: number;
       lastUpdated: string;
     }>("/api/services", { services });
+    // Invalidate services cache after creation
+    invalidateCaches("services");
     return response.data!;
   },
 } as const;
@@ -365,12 +443,16 @@ const userManagementApi = {
       `/api/admin/users/${userId}`,
       updateData
     );
+    // Invalidate related caches after user update
+    invalidateCaches("userManagement");
     return response.data.user;
   },
 
   // Revoke user (soft delete)
   revokeUser: async (userId: string): Promise<void> => {
     await del(`/api/admin/users/${userId}`);
+    // Invalidate related caches after user revocation
+    invalidateCaches("userManagement");
   },
 
   // Quick approval action
@@ -398,6 +480,12 @@ export const api = {
   post,
   put,
   delete: del,
+  // Cache management utilities
+  invalidateCaches,
+  clearAllCaches: () => {
+    getCache.clear();
+    inFlightRequests.clear();
+  },
 } as const;
 
 // Utility functions for error handling

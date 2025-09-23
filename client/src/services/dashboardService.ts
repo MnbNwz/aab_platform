@@ -121,7 +121,23 @@ export interface ContractorDashboardResponse {
 export interface PlatformDashboardResponse {
   success: boolean;
   data: {
+    userRole: string;
+    userId: string;
+    timestamp: string;
     platform: {
+      users: {
+        roles: Array<{
+          role: string;
+          count: number;
+          approved: number;
+          pending: number;
+          rejected: number;
+        }>;
+        totalUsers: number;
+        totalApproved: number;
+        totalPending: number;
+        totalRejected: number;
+      };
       jobs: {
         totalJobs: number;
         openJobs: number;
@@ -130,12 +146,10 @@ export interface PlatformDashboardResponse {
         cancelledJobs: number;
         totalValue: number;
         avgJobValue: number;
-        totalBids: number;
-        avgBidsPerJob: number;
         monthlyJobs: Array<{
           month: number;
           year: number;
-          status: string;
+          status: "open" | "inprogress" | "completed" | "cancelled";
           value: number;
         }>;
         serviceBreakdown: Array<{
@@ -144,99 +158,17 @@ export interface PlatformDashboardResponse {
           status: string;
         }>;
       };
-      users: {
-        totalUsers: number;
-        totalApproved: number;
-        totalPending: number;
-        totalRejected: number;
-        roles: Array<{
-          role: string;
-          count: number;
-          approved: number;
-          pending: number;
-          rejected: number;
-          monthlyRegistrations: Array<{
-            month: number;
-            year: number;
-            approval: string;
-          }>;
-        }>;
-      };
-      payments: {
-        totalPayments: number;
-        totalAmount: number;
-        successfulPayments: number;
-        failedPayments: number;
-        pendingPayments: number;
-        avgPaymentAmount: number;
-        monthlyRevenue: Array<{
-          month: number;
-          year: number;
-          amount: number;
-          status: string;
-        }>;
-        paymentMethods: Array<{
-          method: string;
-          amount: number;
-          status: string;
-        }>;
-      };
       memberships: {
-        totalMemberships: number;
-        totalRevenue: number;
         membershipBreakdown: Array<{
-          planName: string;
-          tier: string;
           status: string;
           count: number;
           totalRevenue: number;
-          avgDuration: number;
-          monthlySubscriptions: Array<{
-            month: number;
-            year: number;
-            price: number;
-            status: string;
-          }>;
         }>;
+        totalMemberships: number;
+        totalRevenue: number;
       };
-      bids: {
-        totalBids: number;
-        acceptedBids: number;
-        pendingBids: number;
-        rejectedBids: number;
-        avgBidAmount: number;
-        totalBidValue: number;
-        serviceBids: Array<{
-          service: string;
-          bidAmount: number;
-          status: string;
-        }>;
-        monthlyBids: Array<{
-          month: number;
-          year: number;
-          amount: number;
-          status: string;
-        }>;
-      };
-      recentActivity: Array<{
-        type:
-          | "user_registration"
-          | "bid_placed"
-          | "payment_processed"
-          | "job_created";
-        createdAt: string;
-        email?: string;
-        role?: string;
-        bidAmount?: number;
-        status?: string;
-        amount?: number;
-      }>;
     };
     summary: {
-      totalJobs: number;
-      totalUsers: number;
-      totalRevenue: number;
-      totalMemberships: number;
       healthScore: number;
     };
     period: {
@@ -246,7 +178,8 @@ export interface PlatformDashboardResponse {
       };
       description: string;
     };
-    timestamp: string;
+    description: string;
+    isAdmin: boolean;
   };
 }
 
@@ -260,23 +193,23 @@ export type UnifiedDashboardResponse =
 export const dashboardApi = {
   // Unified Dashboard (returns role-appropriate data based on authenticated user)
   getDashboard: async (): Promise<any> => {
-    const response = await api.get<any>("/api/dashboard/platform");
+    const response = await api.get<any>("/api/dashboard");
     return response.data;
   },
 
   // Legacy methods for backward compatibility (all point to unified endpoint)
   getCustomerDashboard: async (): Promise<any> => {
-    const response = await api.get<any>("/api/dashboard/platform");
+    const response = await api.get<any>("/api/dashboard");
     return response.data;
   },
 
   getContractorDashboard: async (): Promise<any> => {
-    const response = await api.get<any>("/api/dashboard/platform");
+    const response = await api.get<any>("/api/dashboard");
     return response.data;
   },
 
   getPlatformDashboard: async (): Promise<any> => {
-    const response = await api.get<any>("/api/dashboard/platform");
+    const response = await api.get<any>("/api/dashboard");
     return response.data;
   },
 } as const;

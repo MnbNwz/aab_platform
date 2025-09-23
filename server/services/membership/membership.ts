@@ -52,7 +52,7 @@ export async function getCurrentMembership(userId: string): Promise<IUserMembers
         from: "membershipplans",
         localField: "planId",
         foreignField: "_id",
-        as: "planId",
+        as: "plan",
         pipeline: [
           {
             $project: {
@@ -69,7 +69,12 @@ export async function getCurrentMembership(userId: string): Promise<IUserMembers
     },
     {
       $addFields: {
-        planId: { $arrayElemAt: ["$planId", 0] },
+        planId: { $arrayElemAt: ["$plan", 0] },
+      },
+    },
+    {
+      $project: {
+        plan: 0,
       },
     },
     { $sort: { createdAt: -1 } },

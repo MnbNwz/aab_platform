@@ -35,6 +35,9 @@ const MembershipPlanSchema: Schema<IMembershipPlan> = new Schema({
   isActive: { type: Boolean, default: true },
 });
 
+// Create indexes for better query performance
+MembershipPlanSchema.index({ isActive: 1 }); // For getAllPlans() - most common query
+
 export const MembershipPlan = createModel<IMembershipPlan>({
   schema: MembershipPlanSchema,
   modelName: "MembershipPlan",

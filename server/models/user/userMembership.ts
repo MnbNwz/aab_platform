@@ -49,6 +49,7 @@ const UserMembershipSchema: Schema<IUserMembership> = new Schema(
 // Index to quickly find active memberships
 UserMembershipSchema.index({ userId: 1, status: 1 });
 UserMembershipSchema.index({ endDate: 1, status: 1 });
+UserMembershipSchema.index({ userId: 1, status: 1, endDate: 1 });
 
 export const UserMembership = createModel<IUserMembership>({
   schema: UserMembershipSchema,

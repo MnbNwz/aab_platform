@@ -148,6 +148,8 @@ export function getVerificationStatus(verification: any) {
       otpCode: null,
       canResend: false,
       cooldownSeconds: 0,
+      otpSentAt: null,
+      otpExpiresAt: null,
     };
   }
 
@@ -158,6 +160,8 @@ export function getVerificationStatus(verification: any) {
       otpCode: null,
       canResend: true,
       cooldownSeconds: 0,
+      otpSentAt: null,
+      otpExpiresAt: null,
     };
   }
 
@@ -168,6 +172,8 @@ export function getVerificationStatus(verification: any) {
       otpCode: null,
       canResend: true,
       cooldownSeconds: 0,
+      otpSentAt: verification.lastSentAt,
+      otpExpiresAt: verification.otpExpiresAt,
     };
   }
 
@@ -185,6 +191,8 @@ export function getVerificationStatus(verification: any) {
       canResend: false,
       cooldownSeconds: verification.cooldownSeconds,
       otpExpiresInSeconds: otpExpiresIn,
+      otpSentAt: verification.lastSentAt,
+      otpExpiresAt: verification.otpExpiresAt,
     };
   }
 
@@ -200,5 +208,7 @@ export function getVerificationStatus(verification: any) {
     canResend: true,
     cooldownSeconds: 0,
     otpExpiresInSeconds: otpExpiresIn, // Remaining time in seconds
+    otpSentAt: verification.lastSentAt,
+    otpExpiresAt: verification.otpExpiresAt,
   };
 }

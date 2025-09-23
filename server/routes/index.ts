@@ -12,10 +12,12 @@ import propertyRoutes from "./property";
 import paymentRoutes from "./payment";
 import dashboardRoutes from "./dashboard";
 import { authenticate } from "@middlewares/auth";
+import serviceRoutes from "@routes/admin/service";
 
 // Apply auto-refresh middleware globally to all routes
 // This will automatically refresh expired access tokens using refresh tokens
 router.use("/auth", authRoutes);
+router.use("/services", serviceRoutes);
 
 router.use(autoRefreshToken);
 router.use(authenticate);

@@ -46,10 +46,7 @@ export const verifyOTPThunk = createAsyncThunk<
 
 // Resend OTP
 export const resendOTPThunk = createAsyncThunk<
-  {
-    message: string;
-    userVerification: UserVerification;
-  },
+  UserVerification,
   { email: string },
   { rejectValue: string }
 >(
@@ -61,11 +58,11 @@ export const resendOTPThunk = createAsyncThunk<
 
       const response = await api.auth.resendOTP(email);
 
-      // Update verification state (otpCode is never stored for security)
+      // Update verification state with complete response (otpCode is never stored for security)
       dispatch(setVerificationState(response.userVerification));
 
       showToast.success(response.message);
-      return response;
+      return response.userVerification;
     } catch (error) {
       const errorMessage = handleApiError(error);
       dispatch(setError(errorMessage));
@@ -79,15 +76,7 @@ export const resendOTPThunk = createAsyncThunk<
 
 // Get verification state
 export const getVerificationStateThunk = createAsyncThunk<
-  {
-    email: string;
-    firstName: string;
-    isVerified: boolean;
-    message: string;
-    otpCode: string | null;
-    canResend: boolean;
-    cooldownSeconds: number;
-  },
+  UserVerification,
   { email: string },
   { rejectValue: string }
 >(
@@ -96,17 +85,8 @@ export const getVerificationStateThunk = createAsyncThunk<
     try {
       const response = await api.auth.getVerificationState(email);
 
-      // Update verification state (otpCode is never stored for security)
-      dispatch(
-        setVerificationState({
-          isVerified: response.isVerified,
-          message: response.message,
-          otpCode: null, // Never store otpCode for security
-          canResend: response.canResend,
-          cooldownSeconds: response.cooldownSeconds,
-          otpExpiresInSeconds: 0, // Default value since API doesn't return this
-        })
-      );
+      // Update verification state with complete response (otpCode is never stored for security)
+      dispatch(setVerificationState(response));
 
       return response;
     } catch (error) {

@@ -1,5 +1,17 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+// import {
+//   fetchDashboardThunk,
+//   silentFetchDashboardThunk,
+//   fetchCustomerDashboardThunk,
+//   fetchContractorDashboardThunk,
+//   fetchPlatformDashboardThunk,
+//   silentFetchCustomerDashboardThunk,
+//   silentFetchContractorDashboardThunk,
+//   silentFetchPlatformDashboardThunk,
+// } from "../thunks/dashboardThunks";
+
 import {
+  silentFetchPlatformDashboardThunk,
   fetchDashboardThunk,
   silentFetchDashboardThunk,
   fetchCustomerDashboardThunk,
@@ -7,7 +19,6 @@ import {
   fetchPlatformDashboardThunk,
   silentFetchCustomerDashboardThunk,
   silentFetchContractorDashboardThunk,
-  silentFetchPlatformDashboardThunk,
 } from "../thunks/dashboardThunks";
 import type {
   CustomerDashboardResponse,
@@ -140,7 +151,8 @@ const dashboardSlice = createSlice({
       })
       .addCase(fetchDashboardThunk.fulfilled, (state, action) => {
         state.loading = false;
-        state.data = action.payload;
+        // Extract data from API response structure: { success: true, data: {...} }
+        state.data = action.payload?.data || action.payload;
         state.error = null;
         state.lastFetched = new Date().toISOString();
       })
@@ -153,7 +165,8 @@ const dashboardSlice = createSlice({
         // Silent refresh doesn't show loading state
       })
       .addCase(silentFetchDashboardThunk.fulfilled, (state, action) => {
-        state.data = action.payload;
+        // Extract data from API response structure: { success: true, data: {...} }
+        state.data = action.payload?.data || action.payload;
         state.lastFetched = new Date().toISOString();
       })
       .addCase(silentFetchDashboardThunk.rejected, (_state, _action) => {
@@ -207,11 +220,12 @@ const dashboardSlice = createSlice({
       })
       .addCase(fetchPlatformDashboardThunk.fulfilled, (state, action) => {
         state.platformLoading = false;
-        state.platformData = action.payload;
+        state.platformData =
+          (action.payload as any)?.data || (action.payload as any);
         state.platformError = null;
         state.platformLastFetched = new Date().toISOString();
         // Also update unified data for consistency
-        state.data = action.payload as any;
+        state.data = (action.payload as any)?.data || (action.payload as any);
         state.lastFetched = new Date().toISOString();
       })
       .addCase(fetchPlatformDashboardThunk.rejected, (state, action) => {
@@ -258,7 +272,8 @@ const dashboardSlice = createSlice({
         // Don't set loading state for silent refresh
       })
       .addCase(silentFetchPlatformDashboardThunk.fulfilled, (state, action) => {
-        state.platformData = action.payload;
+        state.platformData =
+          (action.payload as any)?.data || (action.payload as any);
         state.platformError = null;
         state.platformLastFetched = new Date().toISOString();
       })

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import Loader from "./Loader";
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -51,6 +52,9 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
         ref={modalRef}
         className="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 p-6 relative flex flex-col items-center border border-gray-200"
         style={{ boxShadow: "0 6px 32px 0 rgba(0,0,0,0.10)" }}
+        role="dialog"
+        aria-modal="true"
+        aria-busy={loading}
       >
         <h2 className="text-xl font-semibold text-accent-600 mb-3 text-center tracking-tight">
           {title}
@@ -72,12 +76,21 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
           <button
             className={`${
               isDefault ? "w-full" : "flex-1"
-            } py-2 rounded-lg bg-accent-500 hover:bg-accent-600 text-white font-semibold shadow-sm transition-colors`}
+            } py-2 rounded-lg bg-accent-500 hover:bg-accent-600 disabled:bg-accent-400 text-white font-semibold shadow-sm transition-colors flex items-center justify-center`}
             onClick={onConfirm}
             disabled={loading}
             tabIndex={0}
           >
-            {isDefault ? "OK" : confirmText}
+            {loading ? (
+              <>
+                <Loader size="small" color="white" />
+                <span className="ml-2">Processing…</span>
+              </>
+            ) : isDefault ? (
+              "OK"
+            ) : (
+              confirmText
+            )}
           </button>
         </div>
       </div>

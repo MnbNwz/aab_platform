@@ -297,7 +297,6 @@ const DashboardContent = memo<
               <PlatformDashboardCards
                 key="platform-dashboard"
                 data={unifiedData || platformData}
-                loading={unifiedLoading}
                 onRefresh={manualRefresh}
               />
             ),

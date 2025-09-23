@@ -31,7 +31,7 @@ export const getPlatformDashboardController = async (req: AuthenticatedRequest, 
         analytics = await getPlatformAnalytics();
         responseData = {
           ...responseData,
-          platform: analytics,
+          platform: analytics.platform,
           summary: analytics.summary,
           period: {
             current: {

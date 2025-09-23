@@ -12,6 +12,6 @@ router.use(authenticate);
 // Admin: Complete platform analytics
 // Customer: Their personal analytics
 // Contractor: Their performance metrics
-router.get("/platform", getPlatformDashboardController);
+router.get("/", getPlatformDashboardController);
 
 export default router;

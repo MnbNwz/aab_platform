@@ -6,6 +6,10 @@ export interface UserVerification {
   canResend: boolean;
   cooldownSeconds: number;
   otpExpiresInSeconds: number;
+  otpSentAt?: string; // ISO timestamp when OTP was sent
+  otpExpiresAt?: string; // ISO timestamp when OTP expires
+  email?: string; // Email address for verification
+  firstName?: string; // User's first name
 }
 
 export interface User {
