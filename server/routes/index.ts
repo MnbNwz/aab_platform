@@ -22,7 +22,6 @@ router.use("/services", serviceRoutes);
 router.use(autoRefreshToken);
 router.use(authenticate);
 
-// Use organized route modules
 router.use("/user", authRoutes); // user routes are in auth folder
 router.use("/admin", adminRoutes);
 router.use("/membership", membershipRoutes);
