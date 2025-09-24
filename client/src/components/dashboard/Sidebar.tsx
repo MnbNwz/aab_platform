@@ -150,10 +150,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         description: "Overview and statistics",
       },
       {
-        id: "profile",
-        label: "Profile & Portfolio",
-        icon: UserCircle,
-        description: "Manage your profile",
+        id: "jobs",
+        label: "Job Requests",
+        icon: Building,
+        description: "View job requests",
       },
       {
         id: "leads",
@@ -166,12 +166,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         label: "My Bids",
         icon: ClipboardList,
         description: "Manage your bids",
-      },
-      {
-        id: "jobs",
-        label: "Job Requests",
-        icon: Building,
-        description: "View job requests",
       },
       {
         id: "payments",

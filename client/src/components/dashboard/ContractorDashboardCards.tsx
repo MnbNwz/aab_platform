@@ -123,13 +123,19 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
       );
     }
 
-    const analytics = dashboardData?.analytics;
+    // Handle both old structure (analytics) and new structure (contractor)
+    const analytics = dashboardData?.analytics || dashboardData?.contractor;
+
+    // Calculate monthly used leads (handle both array and number formats)
+    const monthlyUsed = Array.isArray(analytics?.leadStats?.monthlyUsed)
+      ? analytics.leadStats.monthlyUsed.length
+      : analytics?.leadStats?.monthlyUsed ?? 0;
 
     const statCards = useMemo(
       () => [
         {
           title: "Total Bids",
-          value: analytics?.biddingStats.totalBids ?? 0,
+          value: analytics?.biddingStats?.totalBids ?? 0,
           icon: Target,
           color: "bg-primary-500",
           textColor: "text-primary-600",
@@ -137,7 +143,7 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
         },
         {
           title: "Won Bids",
-          value: analytics?.biddingStats.acceptedBids ?? 0,
+          value: analytics?.biddingStats?.acceptedBids ?? 0,
           icon: CheckCircle,
           color: "bg-green-500",
           textColor: "text-green-600",
@@ -145,7 +151,7 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
         },
         {
           title: "Win Rate",
-          value: `${(analytics?.biddingStats.winRate ?? 0).toFixed(1)}%`,
+          value: `${(analytics?.biddingStats?.winRate ?? 0).toFixed(1)}%`,
           icon: TrendingUp,
           color: "bg-purple-500",
           textColor: "text-purple-600",
@@ -154,7 +160,7 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
         {
           title: "Total Earnings",
           value: `$${(
-            (analytics?.earningsStats.totalEarnings ?? 0) / 100
+            (analytics?.earningsStats?.totalEarnings ?? 0) / 100
           ).toLocaleString()}`,
           icon: DollarSign,
           color: "bg-emerald-500",
@@ -163,10 +169,10 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
         },
         {
           title: "Leads Used",
-          value: `${analytics?.leadStats.monthlyUsed ?? 0}/${
-            analytics?.leadStats.monthlyLimit === -1
+          value: `${monthlyUsed}/${
+            analytics?.leadStats?.monthlyLimit === -1
               ? "∞"
-              : analytics?.leadStats.monthlyLimit ?? 0
+              : analytics?.leadStats?.monthlyLimit ?? 0
           }`,
           icon: Users,
           color: "bg-cyan-500",
@@ -175,7 +181,7 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
           subtitle: "This month",
         },
       ],
-      [analytics]
+      [analytics, monthlyUsed]
     );
 
     return (
@@ -221,19 +227,22 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">
-                    {bid.job.title}
+                    {bid.job?.title || bid.title || "Unknown Job"}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {bid.job.service} • Estimate: $
-                    {(bid.job.estimate / 100).toLocaleString()}
+                    {bid.job?.service || bid.service || "Unknown Service"} •
+                    Estimate: $
+                    {(
+                      (bid.job?.estimate || bid.estimate || 0) / 100
+                    ).toLocaleString()}
                   </p>
                   <p className="text-xs text-gray-400 truncate mt-1">
-                    {bid.message}
+                    {bid.message || "No message"}
                   </p>
                 </div>
                 <div className="text-right ml-4">
                   <p className="text-sm font-medium text-green-600">
-                    ${(bid.bidAmount / 100).toLocaleString()}
+                    ${((bid.bidAmount || 0) / 100).toLocaleString()}
                   </p>
                   <span
                     className={`inline-flex px-2 py-1 text-xs rounded-full ${
@@ -244,7 +253,7 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
                         : "bg-red-100 text-red-800"
                     }`}
                   >
-                    {bid.status}
+                    {bid.status || "unknown"}
                   </span>
                 </div>
               </div>
@@ -264,15 +273,15 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">
-                    {job.title}
+                    {job.title || "Unknown Job"}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {job.service} • Estimate: $
-                    {(job.estimate / 100).toLocaleString()}
+                    {job.service || "Unknown Service"} • Estimate: $
+                    {((job.estimate || 0) / 100).toLocaleString()}
                   </p>
                   <p className="text-xs text-gray-400">
                     Won with: $
-                    {(job.acceptedBid.bidAmount / 100).toLocaleString()}
+                    {((job.acceptedBid?.bidAmount || 0) / 100).toLocaleString()}
                   </p>
                 </div>
                 <div className="text-right">
@@ -285,7 +294,7 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
                         : "bg-accent-100 text-accent-800"
                     }`}
                   >
-                    {job.status}
+                    {job.status || "unknown"}
                   </span>
                 </div>
               </div>

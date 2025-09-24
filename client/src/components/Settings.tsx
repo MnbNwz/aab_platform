@@ -271,58 +271,6 @@ const Settings: React.FC<SettingsProps> = ({
       });
     }
 
-    // Add role-specific sections
-    if (user.role === "contractor") {
-      baseSections.splice(2, 0, {
-        id: "business",
-        title: "Business Operations",
-        icon: Building,
-        description: "Configure your business settings and preferences",
-        items: [
-          {
-            id: "service-radius",
-            label: "Service Radius",
-            description: "Maximum distance for lead notifications (km)",
-            type: "input",
-            value: settings.serviceRadius,
-            onChange: (value) =>
-              handleDirectChange("serviceRadius", parseInt(value)),
-          },
-          {
-            id: "auto-respond",
-            label: "Auto-Respond to Leads",
-            description: "Automatically send initial responses to new leads",
-            type: "toggle",
-            value: settings.autoRespond,
-            onChange: (value) => handleDirectChange("autoRespond", value),
-          },
-          {
-            id: "quote-timeframe",
-            label: "Quote Response Time",
-            description: "Default time to respond to quote requests",
-            type: "select",
-            value: settings.quoteTimeframe,
-            options: [
-              { value: "2h", label: "2 Hours" },
-              { value: "24h", label: "24 Hours" },
-              { value: "48h", label: "48 Hours" },
-              { value: "72h", label: "72 Hours" },
-            ],
-            onChange: (value) => handleDirectChange("quoteTimeframe", value),
-          },
-          {
-            id: "min-job-value",
-            label: "Minimum Job Value",
-            description: "Only show leads above this value ($)",
-            type: "input",
-            value: settings.minJobValue,
-            onChange: (value) =>
-              handleDirectChange("minJobValue", parseInt(value)),
-          },
-        ],
-      });
-    }
-
     if (user.role === "customer") {
       baseSections.splice(2, 0, {
         id: "preferences",

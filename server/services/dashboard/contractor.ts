@@ -247,10 +247,18 @@ export const getContractorAnalytics = async (contractorId: string) => {
     const limits = MEMBERSHIP_LIMITS[membershipTier as keyof typeof MEMBERSHIP_LIMITS];
 
     // Update lead stats with calculated limits
-    if (result.leadStats) {
+    if (result.leadStats && limits) {
       result.leadStats.monthlyLimit = limits.leads;
       result.leadStats.monthlyRemaining =
         limits.leads === -1 ? -1 : Math.max(0, limits.leads - (result.leadStats.monthlyUsed || 0));
+    } else if (result.leadStats) {
+      // Fallback to basic limits if membership tier is invalid
+      const basicLimits = MEMBERSHIP_LIMITS.basic;
+      result.leadStats.monthlyLimit = basicLimits.leads;
+      result.leadStats.monthlyRemaining = Math.max(
+        0,
+        basicLimits.leads - (result.leadStats.monthlyUsed || 0),
+      );
     }
 
     return result;

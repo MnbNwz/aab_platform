@@ -151,8 +151,17 @@ const dashboardSlice = createSlice({
       })
       .addCase(fetchDashboardThunk.fulfilled, (state, action) => {
         state.loading = false;
-        // Extract data from API response structure: { success: true, data: {...} }
-        state.data = action.payload?.data || action.payload;
+        // Handle new API response structure for contractor
+        const payload = action.payload;
+
+        // For contractor role, extract the contractor data directly
+        if (payload?.userRole === "contractor" && payload?.contractor) {
+          state.data = payload.contractor;
+        } else {
+          // For other roles or legacy format, use existing logic
+          state.data = payload?.data || payload;
+        }
+
         state.error = null;
         state.lastFetched = new Date().toISOString();
       })
@@ -165,8 +174,17 @@ const dashboardSlice = createSlice({
         // Silent refresh doesn't show loading state
       })
       .addCase(silentFetchDashboardThunk.fulfilled, (state, action) => {
-        // Extract data from API response structure: { success: true, data: {...} }
-        state.data = action.payload?.data || action.payload;
+        // Handle new API response structure for contractor
+        const payload = action.payload;
+
+        // For contractor role, extract the contractor data directly
+        if (payload?.userRole === "contractor" && payload?.contractor) {
+          state.data = payload.contractor;
+        } else {
+          // For other roles or legacy format, use existing logic
+          state.data = payload?.data || payload;
+        }
+
         state.lastFetched = new Date().toISOString();
       })
       .addCase(silentFetchDashboardThunk.rejected, (_state, _action) => {
