@@ -68,60 +68,77 @@ const membershipPlans = [
   },
   {
     name: "Basic Contractor Plan",
-    description: "Essential tools for independent contractors",
+    description: "Perfect for new contractors starting their journey",
     userType: "contractor",
     tier: "basic",
     features: [
-      "Job management",
-      "Basic analytics",
-      "Customer communication tools",
-      "Payment processing",
+      "25 leads per month",
+      "24-hour access delay",
+      "15km radius coverage",
+      "Basic job notifications",
+      "Standard support",
     ],
-    monthlyPrice: 100, // $1.00
-    yearlyPrice: 1200, // $12.00 (before discount)
+    monthlyPrice: 2999, // $29.99
+    yearlyPrice: 29999, // $299.99 (save ~17%)
     annualDiscountRate: ANNUAL_DISCOUNT_RATE,
     duration: 30,
+    leadsPerMonth: 25,
+    accessDelayHours: 24,
+    radiusKm: 15,
+    featuredListing: false,
+    offMarketAccess: false,
     stripePriceIdMonthly: "price_contractor_basic_monthly",
     stripePriceIdYearly: "price_contractor_basic_yearly",
   },
   {
     name: "Standard Contractor Plan",
-    description: "Advanced tools for growing businesses",
+    description: "Ideal for growing contractors with more demand",
     userType: "contractor",
     tier: "standard",
     features: [
-      "Advanced job management",
-      "Detailed analytics",
-      "Enhanced customer tools",
-      "Payment processing",
-      "Lead generation",
-      "Scheduling tools",
+      "40 leads per month",
+      "12-hour access delay",
+      "30km radius coverage",
+      "Priority job notifications",
+      "Priority support",
+      "Enhanced profile visibility",
     ],
-    monthlyPrice: 200, // $2.00
-    yearlyPrice: 2400, // $24.00 (before discount)
+    monthlyPrice: 4999, // $49.99
+    yearlyPrice: 49999, // $499.99 (save ~17%)
     annualDiscountRate: ANNUAL_DISCOUNT_RATE,
     duration: 30,
+    leadsPerMonth: 40,
+    accessDelayHours: 12,
+    radiusKm: 30,
+    featuredListing: false,
+    offMarketAccess: false,
     stripePriceIdMonthly: "price_contractor_standard_monthly",
     stripePriceIdYearly: "price_contractor_standard_yearly",
   },
   {
     name: "Premium Contractor Plan",
-    description: "Complete business solution for contractors",
+    description: "For established contractors who want maximum opportunities",
     userType: "contractor",
     tier: "premium",
     features: [
-      "Complete business management",
-      "Advanced analytics & reporting",
-      "Full customer relationship tools",
-      "Priority payment processing",
-      "Premium lead generation",
-      "Advanced scheduling & routing",
-      "24/7 business support",
+      "Unlimited leads",
+      "Instant access to new jobs",
+      "Unlimited radius coverage",
+      "Featured listing priority",
+      "Exclusive off-market opportunities",
+      "Premium support",
+      "Advanced analytics",
+      "Custom branding",
     ],
-    monthlyPrice: 300, // $3.00
-    yearlyPrice: 3600, // $36.00 (before discount)
+    monthlyPrice: 9999, // $99.99
+    yearlyPrice: 99999, // $999.99 (save ~17%)
     annualDiscountRate: ANNUAL_DISCOUNT_RATE,
     duration: 30,
+    leadsPerMonth: null, // unlimited
+    accessDelayHours: 0, // instant access
+    radiusKm: null, // unlimited
+    featuredListing: true,
+    offMarketAccess: true,
     stripePriceIdMonthly: "price_contractor_premium_monthly",
     stripePriceIdYearly: "price_contractor_premium_yearly",
   },

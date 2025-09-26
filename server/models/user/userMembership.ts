@@ -42,6 +42,10 @@ const UserMembershipSchema: Schema<IUserMembership> = new Schema(
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
     isAutoRenew: { type: Boolean, default: false },
+
+    // Lead tracking for contractors
+    leadsUsedThisMonth: { type: Number, default: 0 }, // number of leads accessed this month
+    lastLeadResetDate: { type: Date, default: Date.now }, // when leads were last reset
   },
   { timestamps: true },
 );

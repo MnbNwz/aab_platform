@@ -146,3 +146,76 @@ export interface UserUpdateData {
   status?: UserStatus;
   approval?: UserApproval;
 }
+
+// Contractor Job Request types
+export interface ContractorJob {
+  _id: string;
+  title: string;
+  description: string;
+  service: string;
+  estimate: number;
+  type: "regular" | "off_market";
+  status: "open" | "in_progress" | "completed" | "cancelled";
+  timeline: number;
+  createdAt: string;
+  accessTime: string;
+  canAccessNow: boolean;
+  distance: number;
+  bidCount: number;
+  createdBy: {
+    _id: string;
+    email: string;
+    phone: string;
+  };
+  property: {
+    _id: string;
+    title: string;
+    location: {
+      type: "Point";
+      coordinates: [number, number];
+    };
+  };
+}
+
+export interface MembershipInfo {
+  tier: "basic" | "standard" | "premium";
+  leadsPerMonth: number;
+  accessDelayHours: number;
+  radiusKm: number;
+  featuredListing: boolean;
+  offMarketAccess: boolean;
+}
+
+export interface LeadInfo {
+  canAccess: boolean;
+  leadsUsed: number;
+  leadsLimit: number;
+}
+
+export interface ContractorJobAccessCheck {
+  canAccess: boolean;
+  accessTime?: string;
+  leadsUsed?: number;
+  leadsLimit?: number;
+}
+
+export interface ContractorJobsResponse {
+  jobs: ContractorJob[];
+  total: number;
+  pagination: {
+    page: number;
+    limit: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+  membershipInfo: MembershipInfo;
+  leadInfo: LeadInfo;
+}
+
+export interface ContractorJobFilters {
+  page?: number;
+  limit?: number;
+  service?: string;
+  search?: string;
+}

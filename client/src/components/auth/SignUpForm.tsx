@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
-import { MapPin } from "lucide-react";
+import { MapPin, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { registerThunk } from "../../store/thunks/authThunks";
 import { getServicesThunk } from "../../store/thunks/servicesThunks";
 import { clearError } from "../../store/slices/authSlice";
@@ -17,7 +17,8 @@ import {
   type CustomerRegistrationData,
   type ContractorRegistrationData,
 } from "../../schemas/authSchemas";
-import { useGeocoding } from "../../hooks/useGeocoding";
+import { useGeocoding, useCurrentLocation } from "../../hooks/useGeocoding";
+import FilePreview from "../ui/FilePreview";
 
 type FormData = CustomerRegistrationData | ContractorRegistrationData;
 
@@ -47,6 +48,13 @@ const SignUpForm: React.FC = () => {
     address: "New York, NY",
   });
 
+  // Get current location automatically
+  const {
+    location: currentLocation,
+    loading: currentLocationLoading,
+    error: currentLocationError,
+  } = useCurrentLocation();
+
   // Get readable address from coordinates
   const { address: locationAddress, loading: addressLoading } = useGeocoding(
     selectedLocation.lat !== 0 && selectedLocation.lng !== 0
@@ -57,6 +65,8 @@ const SignUpForm: React.FC = () => {
   // For contractor docs
   const [contractorDocs, setContractorDocs] = useState<File[]>([]);
   const [docsError, setDocsError] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState(0);
+  const itemsPerPage = 3;
 
   // Fetch services when switching to contractor role
   // Track if services fetch failed
@@ -81,10 +91,13 @@ const SignUpForm: React.FC = () => {
   ]);
 
   // Set up form with conditional schema based on role
-  const schema =
-    selectedRole === "contractor"
-      ? contractorRegistrationSchema
-      : customerRegistrationSchema;
+  const schema = useMemo(
+    () =>
+      selectedRole === "contractor"
+        ? contractorRegistrationSchema
+        : customerRegistrationSchema,
+    [selectedRole]
+  );
 
   const {
     register,
@@ -113,6 +126,15 @@ const SignUpForm: React.FC = () => {
       }),
     },
   });
+
+  // Update selected location when current location is available
+  useEffect(() => {
+    if (currentLocation && !currentLocationError) {
+      setSelectedLocation(currentLocation);
+      setValue("latitude", currentLocation.lat);
+      setValue("longitude", currentLocation.lng);
+    }
+  }, [currentLocation, currentLocationError, setValue]);
 
   const watchedServices = watch("services");
 
@@ -148,84 +170,119 @@ const SignUpForm: React.FC = () => {
     }
   }, [isAuthenticated, user, navigate]);
 
-  const onSubmit = async (data: any) => {
-    try {
-      if (selectedRole === "contractor") {
-        // Validate docs
-        if (!contractorDocs.length) {
-          setDocsError("Please upload at least one document.");
-          return;
-        }
-        for (const file of contractorDocs) {
-          if (file.size > 10 * 1024 * 1024) {
-            // 10 MB
-            setDocsError(`File ${file.name} exceeds 10 MB limit.`);
+  const onSubmit = useCallback(
+    async (data: any) => {
+      try {
+        if (selectedRole === "contractor") {
+          // Validate docs
+          if (!contractorDocs.length) {
+            setDocsError("Please upload at least one document.");
             return;
           }
+          for (const file of contractorDocs) {
+            if (file.size > 10 * 1024 * 1024) {
+              // 10 MB
+              setDocsError(`File ${file.name} exceeds 10 MB limit.`);
+              return;
+            }
+          }
+          setDocsError("");
+          // Build FormData
+          const formData = new FormData();
+          formData.append("firstName", data.firstName);
+          formData.append("lastName", data.lastName);
+          formData.append("email", data.email);
+          formData.append("password", data.password);
+          formData.append("phone", data.phone);
+          formData.append("role", selectedRole);
+          formData.append("geoHome[type]", "Point");
+          formData.append(
+            "geoHome[coordinates][0]",
+            String(selectedLocation.lng)
+          );
+          formData.append(
+            "geoHome[coordinates][1]",
+            String(selectedLocation.lat)
+          );
+          formData.append("contractor[companyName]", data.companyName);
+          formData.append("contractor[license]", data.license);
+          formData.append("contractor[taxId]", data.taxId);
+          (data.services || []).forEach((service: string, idx: number) => {
+            formData.append(`contractor[services][${idx}]`, service);
+          });
+          contractorDocs.forEach((file) => {
+            formData.append("docs", file);
+          });
+          await dispatch(registerThunk(formData)).unwrap();
+        } else {
+          // Customer: normal JSON
+          const submitData = {
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: data.email,
+            password: data.password,
+            phone: data.phone,
+            role: selectedRole,
+            geoHome: {
+              type: "Point",
+              coordinates: [selectedLocation.lng, selectedLocation.lat] as [
+                number,
+                number
+              ],
+            },
+            customer: {
+              defaultPropertyType: "domestic",
+            },
+          };
+          await dispatch(registerThunk(submitData)).unwrap();
         }
-        setDocsError("");
-        // Build FormData
-        const formData = new FormData();
-        formData.append("firstName", data.firstName);
-        formData.append("lastName", data.lastName);
-        formData.append("email", data.email);
-        formData.append("password", data.password);
-        formData.append("phone", data.phone);
-        formData.append("role", selectedRole);
-        formData.append("geoHome[type]", "Point");
-        formData.append(
-          "geoHome[coordinates][0]",
-          String(selectedLocation.lng)
-        );
-        formData.append(
-          "geoHome[coordinates][1]",
-          String(selectedLocation.lat)
-        );
-        formData.append("contractor[companyName]", data.companyName);
-        formData.append("contractor[license]", data.license);
-        formData.append("contractor[taxId]", data.taxId);
-        (data.services || []).forEach((service: string, idx: number) => {
-          formData.append(`contractor[services][${idx}]`, service);
-        });
-        contractorDocs.forEach((file) => {
-          formData.append("docs", file);
-        });
-        await dispatch(registerThunk(formData)).unwrap();
-      } else {
-        // Customer: normal JSON
-        const submitData = {
-          firstName: data.firstName,
-          lastName: data.lastName,
-          email: data.email,
-          password: data.password,
-          phone: data.phone,
-          role: selectedRole,
-          geoHome: {
-            type: "Point",
-            coordinates: [selectedLocation.lng, selectedLocation.lat] as [
-              number,
-              number
-            ],
-          },
-          customer: {
-            defaultPropertyType: "domestic",
-          },
-        };
-        await dispatch(registerThunk(submitData)).unwrap();
+      } catch (err) {
+        console.error("Registration failed:", err);
       }
-    } catch (err) {
-      console.error("Registration failed:", err);
-    }
-  };
+    },
+    [selectedRole, contractorDocs, selectedLocation, dispatch]
+  );
 
-  const handleServiceChange = (service: string, checked: boolean) => {
-    const currentServices = watchedServices || [];
-    const newServices = checked
-      ? [...currentServices, service]
-      : currentServices.filter((s: string) => s !== service);
+  const handleServiceChange = useCallback(
+    (service: string, checked: boolean) => {
+      const currentServices = watchedServices || [];
+      const newServices = checked
+        ? [...currentServices, service]
+        : currentServices.filter((s: string) => s !== service);
 
-    setValue("services", newServices);
-  };
+      setValue("services", newServices);
+    },
+    [watchedServices, setValue]
+  );
+
+  // Document carousel functions
+  const removeDocument = useCallback(
+    (index: number) => {
+      const newDocs = contractorDocs.filter((_, i) => i !== index);
+      setContractorDocs(newDocs);
+      setDocsError("");
+      // Reset to first page if current page becomes empty
+      const totalPages = Math.ceil(newDocs.length / itemsPerPage);
+      if (currentPage >= totalPages && totalPages > 0) {
+        setCurrentPage(totalPages - 1);
+      } else if (totalPages === 0) {
+        setCurrentPage(0);
+      }
+    },
+    [contractorDocs, currentPage, itemsPerPage]
+  );
+
+  const totalPages = Math.ceil(contractorDocs.length / itemsPerPage);
+  const startIndex = currentPage * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentDocs = contractorDocs.slice(startIndex, endIndex);
+
+  // Service validation - only check if services are available from backend
+  const servicesError =
+    selectedRole === "contractor" &&
+    !servicesLoading &&
+    services.length === 0 &&
+    !servicesFetchFailed;
 
   const roleConfigs: Record<
     "customer" | "contractor",
@@ -404,7 +461,12 @@ const SignUpForm: React.FC = () => {
                   className="w-full flex items-center justify-between rounded-lg px-4 py-3 border border-white/20 bg-white/10 text-white hover:bg-white/20 transition-colors"
                 >
                   <span className="text-left">
-                    {addressLoading ? (
+                    {currentLocationLoading ? (
+                      <span className="flex items-center space-x-2">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Getting your location...</span>
+                      </span>
+                    ) : addressLoading ? (
                       <span className="flex items-center space-x-2">
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                         <span>Loading address...</span>
@@ -521,21 +583,93 @@ const SignUpForm: React.FC = () => {
                       const files = Array.from(e.target.files || []);
                       setContractorDocs(files);
                       setDocsError("");
+                      setCurrentPage(0);
                     }}
-                    className="w-full px-4 py-2 rounded-lg border border-white/20 bg-white/10 text-white file:bg-accent-500 file:text-white file:rounded file:px-3 file:py-1"
+                    className="w-full px-4 py-2 rounded-lg border border-white/20 bg-white/10 text-white file:bg-accent-500 file:text-white file:rounded file:px-3 file:py-1 [&::-webkit-input-placeholder]:opacity-0 [&::placeholder]:opacity-0 [color-scheme:dark]"
+                    style={{ color: "transparent" }}
                   />
                   {docsError && (
                     <p className="mt-1 text-red-300 text-xs">{docsError}</p>
                   )}
+
+                  {/* Document Carousel */}
                   {contractorDocs.length > 0 && (
-                    <ul className="mt-2 text-xs text-white/80">
-                      {contractorDocs.map((file, idx) => (
-                        <li key={idx}>
-                          {file.name} ({(file.size / 1024 / 1024).toFixed(2)}{" "}
-                          MB)
-                        </li>
-                      ))}
-                    </ul>
+                    <div className="mt-4">
+                      <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                        <div className="mb-3">
+                          <h4 className="text-white text-sm font-medium">
+                            Uploaded Documents ({contractorDocs.length})
+                          </h4>
+                        </div>
+
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setCurrentPage(Math.max(0, currentPage - 1))
+                            }
+                            disabled={currentPage === 0}
+                            className="flex-shrink-0 p-1.5 sm:p-2 bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 disabled:cursor-not-allowed rounded-lg transition-colors"
+                          >
+                            <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </button>
+                          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3">
+                            {currentDocs.map((file, idx) => {
+                              const globalIndex = startIndex + idx;
+                              return (
+                                <div
+                                  key={globalIndex}
+                                  className="relative bg-white/10 rounded-lg p-3 border border-white/20"
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() => removeDocument(globalIndex)}
+                                    className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 transition-colors"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+
+                                  <div className="space-y-2">
+                                    <FilePreview
+                                      file={file}
+                                      height="h-20"
+                                      showFileName={false}
+                                      showFileSize={false}
+                                      showFileType={false}
+                                    />
+
+                                    <div className="text-center">
+                                      <p
+                                        className="text-white text-xs font-medium truncate"
+                                        title={file.name}
+                                      >
+                                        {file.name}
+                                      </p>
+                                      <p className="text-white/60 text-xs">
+                                        {(file.size / 1024 / 1024).toFixed(2)}{" "}
+                                        MB
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setCurrentPage(
+                                Math.min(totalPages - 1, currentPage + 1)
+                              )
+                            }
+                            disabled={currentPage === totalPages - 1}
+                            className="flex-shrink-0 p-1.5 sm:p-2 bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 disabled:cursor-not-allowed rounded-lg transition-colors"
+                          >
+                            <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
 
@@ -572,9 +706,11 @@ const SignUpForm: React.FC = () => {
                       ))}
                     </div>
                   )}
-                  {errors.services && (
+                  {(errors.services || servicesError) && (
                     <p className="mt-1 text-red-300 text-xs">
-                      {String(errors.services.message)}
+                      {errors.services
+                        ? String(errors.services.message)
+                        : "No services available. Please try again later."}
                     </p>
                   )}
                 </div>
@@ -649,12 +785,13 @@ const SignUpForm: React.FC = () => {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isLoading || !isValid}
-              className={`w-full py-3 px-4 rounded-lg font-semibold text-white transition-all duration-200 ${
-                selectedRole === "customer"
-                  ? "bg-accent-500 hover:bg-accent-600"
-                  : "bg-primary-700 hover:bg-primary-800"
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
+              disabled={
+                isLoading ||
+                !isValid ||
+                servicesError ||
+                (selectedRole === "contractor" && contractorDocs.length === 0)
+              }
+              className="w-full py-3 px-4 rounded-lg font-semibold text-white transition-all duration-200 bg-accent-500 hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <span className="flex items-center justify-center">

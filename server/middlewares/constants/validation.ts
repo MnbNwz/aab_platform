@@ -4,6 +4,8 @@
 export const FILE_UPLOAD_LIMITS = {
   MAX_FILE_SIZE: 5 * 1024 * 1024, // 5MB max
   ALLOWED_IMAGE_TYPES: ["image/jpeg", "image/jpg", "image/png", "image/webp"],
+  ALLOWED_DOCUMENT_TYPES: ["application/pdf"],
+  ALLOWED_FILE_TYPES: ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"],
 } as const;
 
 // Payment validation constants

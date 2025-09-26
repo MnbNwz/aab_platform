@@ -33,6 +33,13 @@ const MembershipPlanSchema: Schema<IMembershipPlan> = new Schema({
   stripePriceIdMonthly: { type: String },
   stripePriceIdYearly: { type: String },
   isActive: { type: Boolean, default: true },
+
+  // Contractor-specific features
+  leadsPerMonth: { type: Number, default: null }, // null for unlimited
+  accessDelayHours: { type: Number, default: 24 }, // hours to wait before accessing new jobs
+  radiusKm: { type: Number, default: null }, // null for unlimited
+  featuredListing: { type: Boolean, default: false }, // top priority in listings
+  offMarketAccess: { type: Boolean, default: false }, // access to off-market opportunities
 });
 
 // Create indexes for better query performance

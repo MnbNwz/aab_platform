@@ -41,6 +41,7 @@ const PropertySchema = new Schema<IProperty>({
 });
 
 PropertySchema.index({ userId: 1 });
+PropertySchema.index({ location: "2dsphere" });
 
 export const Property = createModel<IProperty>({
   schema: PropertySchema,

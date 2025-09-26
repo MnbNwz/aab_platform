@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   getAddressFromCoordinates,
   getDetailedAddressFromCoordinates,
   getShortAddressFromCoordinates,
   searchLocations,
   getLocationFromClick,
+  getCurrentLocation,
   GeocodeResult,
 } from "../utils/geocoding";
 
@@ -391,5 +392,55 @@ export function useMapClickGeocoding() {
     loading,
     error,
     handleMapClick,
+  };
+}
+
+/**
+ * Hook for getting current user location using IP geolocation
+ * Automatically fetches location on mount and provides manual refresh
+ */
+export function useCurrentLocation() {
+  const [location, setLocation] = useState<{
+    lat: number;
+    lng: number;
+    address?: string;
+  } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchCurrentLocation = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const currentLocation = await getCurrentLocation();
+      setLocation(currentLocation);
+      setError(null);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to get current location";
+      setError(errorMessage);
+      console.error("Current location error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Auto-fetch on mount
+  useEffect(() => {
+    fetchCurrentLocation();
+  }, [fetchCurrentLocation]);
+
+  const refresh = useCallback(
+    () => fetchCurrentLocation(),
+    [fetchCurrentLocation]
+  );
+
+  return {
+    location,
+    loading,
+    error,
+    fetchCurrentLocation,
+    refresh,
   };
 }

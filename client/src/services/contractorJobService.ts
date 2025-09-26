@@ -1,0 +1,31 @@
+import { api } from "./apiService";
+import type {
+  ContractorJobFilters,
+  ContractorJobsResponse,
+  ContractorJob,
+  ContractorJobAccessCheck,
+} from "../types";
+
+// Contractor Job API functions
+export const contractorJobApi = {
+  // Get Jobs for Contractor
+  fetchContractorJobs: async (filters: ContractorJobFilters = {}) => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== "") {
+        params.append(key, String(value));
+      }
+    });
+    return api.get(`/api/job/contractor/jobs?${params.toString()}`);
+  },
+
+  // Get Specific Job Details (consumes a lead)
+  getContractorJobById: async (jobId: string) => {
+    return api.get(`/api/job/contractor/jobs/${jobId}`);
+  },
+
+  // Check Job Access (without consuming lead)
+  checkJobAccess: async (jobId: string) => {
+    return api.get(`/api/job/contractor/jobs/${jobId}/access`);
+  },
+};

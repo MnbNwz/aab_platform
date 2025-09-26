@@ -1,5 +1,5 @@
-import { createSlice } from '@reduxjs/toolkit';
-import { getServicesThunk } from '../thunks/servicesThunks';
+import { createSlice } from "@reduxjs/toolkit";
+import { getServicesThunk } from "../thunks/servicesThunks";
 
 interface ServicesState {
   services: string[];
@@ -20,7 +20,7 @@ const initialState: ServicesState = {
 };
 
 const servicesSlice = createSlice({
-  name: 'services',
+  name: "services",
   initialState,
   reducers: {
     clearError: (state) => {
@@ -36,15 +36,15 @@ const servicesSlice = createSlice({
       })
       .addCase(getServicesThunk.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.services = action.payload.services;
-        state.version = action.payload.version;
-        state.lastUpdated = action.payload.lastUpdated;
+        state.services = action.payload?.services;
+        state.version = action.payload?.version;
+        state.lastUpdated = action.payload?.lastUpdated;
         state.isInitialized = true;
         state.error = null;
       })
       .addCase(getServicesThunk.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload || 'Failed to fetch services';
+        state.error = action.payload || "Failed to fetch services";
         // Don't set isInitialized to true on error - will allow retry
       });
   },

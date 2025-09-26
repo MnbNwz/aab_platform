@@ -1,17 +1,25 @@
-import express from "express";
-import * as bidController from "@controllers/job";
+import { Router } from "express";
 import { authenticate } from "@middlewares/auth";
-import { requireContractor } from "@middlewares/authorization";
+import { requireContractor } from "@middlewares/authorization/rbac";
+import {
+  getContractorJobs,
+  getContractorJobById,
+  checkContractorJobAccess,
+} from "@controllers/job/contractorJobController";
 
-const router = express.Router();
+const router = Router();
 
-// All contractor routes require authentication and contractor role
+// All routes require authentication and contractor authorization
 router.use(authenticate);
 router.use(requireContractor);
 
-// Contractor-specific bidding routes
-router.post("/bid", bidController.createBid);
-router.get("/bids", bidController.getContractorBids);
-router.get("/bids/job/:jobRequestId", bidController.getJobBids);
+// Get jobs for contractor with membership-based filtering
+router.get("/jobs", getContractorJobs);
+
+// Check if contractor can access a specific job (without consuming lead)
+router.get("/jobs/:id/access", checkContractorJobAccess);
+
+// Get a specific job for contractor (consumes lead if accessible)
+router.get("/jobs/:id", getContractorJobById);
 
 export default router;

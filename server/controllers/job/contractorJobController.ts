@@ -1,0 +1,177 @@
+import { Request, Response } from "express";
+import { AuthenticatedRequest } from "@middlewares/types";
+import {
+  getJobsForContractor,
+  canAccessJob,
+  checkLeadLimit,
+  incrementLeadUsage,
+  getContractorMembership,
+} from "@services/job/contractorJobService";
+import { getJobRequestById } from "@services/job/job";
+import { CONTROLLER_ERROR_MESSAGES, HTTP_STATUS } from "@controllers/constants/validation";
+
+// Get jobs for contractor with membership-based filtering
+export const getContractorJobs = async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user?._id;
+
+    if (!userId) {
+      return res.status(HTTP_STATUS.UNAUTHORIZED).json({
+        success: false,
+        message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED,
+      });
+    }
+
+    // Check if user is contractor
+    if (authReq.user.role !== "contractor") {
+      return res.status(HTTP_STATUS.FORBIDDEN).json({
+        success: false,
+        message: "This endpoint is only available for contractors",
+      });
+    }
+
+    const filters = req.query;
+    const result = await getJobsForContractor(userId, filters);
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error("Error getting contractor jobs:", error);
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: "Failed to fetch contractor jobs",
+    });
+  }
+};
+
+// Get a specific job for contractor (with access validation)
+export const getContractorJobById = async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user?._id;
+    const jobId = req.params.id;
+
+    if (!userId) {
+      return res.status(HTTP_STATUS.UNAUTHORIZED).json({
+        success: false,
+        message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED,
+      });
+    }
+
+    // Check if user is contractor
+    if (authReq.user.role !== "contractor") {
+      return res.status(HTTP_STATUS.FORBIDDEN).json({
+        success: false,
+        message: "This endpoint is only available for contractors",
+      });
+    }
+
+    // Get the job
+    const job = await getJobRequestById(jobId);
+    if (!job) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json({
+        success: false,
+        message: "Job not found",
+      });
+    }
+
+    // Check if contractor can access this job
+    const accessCheck = await canAccessJob(userId, jobId, job.createdAt);
+    if (!accessCheck.canAccess) {
+      return res.status(HTTP_STATUS.FORBIDDEN).json({
+        success: false,
+        message: accessCheck.reason,
+        accessTime: accessCheck.accessTime,
+      });
+    }
+
+    // Check lead limit
+    const leadCheck = await checkLeadLimit(userId);
+    if (!leadCheck.canAccess) {
+      return res.status(HTTP_STATUS.FORBIDDEN).json({
+        success: false,
+        message: leadCheck.reason,
+        leadInfo: leadCheck,
+      });
+    }
+
+    // Increment lead usage
+    await incrementLeadUsage(userId);
+
+    // Get updated lead info
+    const updatedLeadCheck = await checkLeadLimit(userId);
+
+    res.json({
+      success: true,
+      job,
+      leadInfo: updatedLeadCheck,
+    });
+  } catch (error) {
+    console.error("Error getting contractor job by ID:", error);
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: "Failed to fetch job details",
+    });
+  }
+};
+
+// Check if contractor can access a specific job (without consuming lead)
+export const checkContractorJobAccess = async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user?._id;
+    const jobId = req.params.id;
+
+    if (!userId) {
+      return res.status(HTTP_STATUS.UNAUTHORIZED).json({
+        success: false,
+        message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED,
+      });
+    }
+
+    // Check if user is contractor
+    if (authReq.user.role !== "contractor") {
+      return res.status(HTTP_STATUS.FORBIDDEN).json({
+        success: false,
+        message: "This endpoint is only available for contractors",
+      });
+    }
+
+    // Get the job
+    const job = await getJobRequestById(jobId);
+    if (!job) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json({
+        success: false,
+        message: "Job not found",
+      });
+    }
+
+    // Check if contractor can access this job
+    const accessCheck = await canAccessJob(userId, jobId, job.createdAt);
+    const leadCheck = await checkLeadLimit(userId);
+
+    res.json({
+      success: true,
+      data: {
+        canAccess: accessCheck.canAccess && leadCheck.canAccess,
+        accessCheck,
+        leadCheck,
+        job: {
+          id: job._id,
+          title: job.title,
+          createdAt: job.createdAt,
+          type: job.type,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error checking job access:", error);
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: "Failed to check job access",
+    });
+  }
+};

@@ -16,6 +16,14 @@ export interface IMembershipPlan extends Document {
   stripePriceIdMonthly?: string; // Stripe price ID for monthly
   stripePriceIdYearly?: string; // Stripe price ID for yearly
   isActive: boolean;
+
+  // Contractor-specific features
+  leadsPerMonth?: number; // null for unlimited
+  accessDelayHours?: number; // hours to wait before accessing new jobs
+  radiusKm?: number; // null for unlimited
+  featuredListing?: boolean; // top priority in listings
+  offMarketAccess?: boolean; // access to off-market opportunities
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,6 +41,11 @@ export interface IUserMembership extends Document {
   isAutoRenew: boolean;
   cancelAtPeriodEnd: boolean;
   canceledAt?: Date;
+
+  // Lead tracking for contractors
+  leadsUsedThisMonth?: number; // number of leads accessed this month
+  lastLeadResetDate?: Date; // when leads were last reset
+
   createdAt: Date;
   updatedAt: Date;
 }

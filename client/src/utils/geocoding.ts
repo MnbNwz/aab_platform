@@ -602,3 +602,67 @@ export function getCacheStats(): {
     },
   };
 }
+
+/**
+ * Get current user location using IP-based geolocation
+ * Returns coordinates with fallback to default location
+ */
+export async function getCurrentLocation(): Promise<{
+  lat: number;
+  lng: number;
+  address?: string;
+}> {
+  try {
+    // Use ip-api.com for IP-based geolocation (CORS-friendly)
+    const response = await fetch("http://ip-api.com/json/");
+
+    if (!response.ok) {
+      throw new Error(`IP geolocation failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (data.lat && data.lon) {
+      const lat = Number(data.lat.toFixed(6));
+      const lng = Number(data.lon.toFixed(6));
+
+      // Try to get a readable address
+      try {
+        const addressResult = await reverseGeocode(lat, lng);
+        return {
+          lat,
+          lng,
+          address: addressResult.address,
+        };
+      } catch (error) {
+        // If reverse geocoding fails, use city/region info from IP
+        const city = data.city || "";
+        const region = data.regionName || "";
+        const country = data.country || "";
+
+        const addressParts = [city, region, country].filter(Boolean);
+        const address =
+          addressParts.length > 0
+            ? addressParts.join(", ")
+            : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+
+        return {
+          lat,
+          lng,
+          address,
+        };
+      }
+    } else {
+      throw new Error("Invalid location data from IP service");
+    }
+  } catch (error) {
+    console.warn("IP geolocation failed:", error);
+
+    // Fallback to default location
+    return {
+      lat: 40.73061,
+      lng: -73.935242,
+      address: "New York, NY",
+    };
+  }
+}

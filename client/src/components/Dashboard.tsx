@@ -30,6 +30,7 @@ import ProfileModal from "./ProfileModal";
 import ProfileViewModal from "./ProfileViewModal";
 import Settings from "./Settings";
 import JobManagementTable from "./dashboard/JobManagementTable";
+import ContractorJobRequestsTable from "./dashboard/ContractorJobRequestsTable";
 import type { User } from "../types";
 import { handleApiError } from "../services/apiService";
 import {
@@ -349,6 +350,17 @@ const DashboardContent = memo<
           subtitle: "Manage job requests and assignments",
           children: <JobManagementTable />,
         },
+        // Contractor job requests
+        ...(user.role === "contractor"
+          ? {
+              jobs: {
+                ...baseProps,
+                title: "Job Requests",
+                subtitle: "View and manage available job requests",
+                children: <ContractorJobRequestsTable />,
+              },
+            }
+          : {}),
         settings: {
           ...baseProps,
           title: "Settings",

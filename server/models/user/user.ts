@@ -88,6 +88,10 @@ const UserSchema = new Schema<IUser>({
   },
 });
 
+// Create indexes for better query performance
+UserSchema.index({ email: 1 }); // Already unique, but explicit index
+UserSchema.index({ geoHome: "2dsphere" }); // Geospatial index for contractor location queries
+
 export const User = createModel<IUser>({
   schema: UserSchema,
   modelName: "User",

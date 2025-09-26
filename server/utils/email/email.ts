@@ -1,18 +1,25 @@
-import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
+import nodemailer from "nodemailer";
 import { logErrorWithContext } from "../core/logger";
 import { emailTemplates, type TemplateType } from "./email-templates";
 
-// AWS SES email utility - internal functions only
+// SMTP email utility - internal functions only
 // No routes needed - called by other services internally
 
-// Initialize AWS SES client
-const sesClient = new SESClient({
-  region: process.env.AWS_REGION || "ca-central-1",
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-});
+// Initialize SMTP transporter
+const createTransporter = () => {
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT || "587"),
+    secure: process.env.SMTP_SECURE === "true", // true for 465, false for other ports
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+    tls: {
+      rejectUnauthorized: process.env.SMTP_TLS_REJECT_UNAUTHORIZED !== "false",
+    },
+  });
+};
 
 export const sendEmail = async (
   to: string,
@@ -20,45 +27,44 @@ export const sendEmail = async (
   template: TemplateType,
   data: any,
 ): Promise<{ success: boolean; messageId?: string }> => {
-  // In development mode, override recipient to verified email for testing
+  // In development mode, override recipient to test email for testing
   const actualRecipient =
-    process.env.NODE_ENV === "development"
-      ? process.env.SES_TEST_EMAIL || "aasplatform2@gmail.com"
-      : to;
+    process.env.NODE_ENV === "development" ? process.env.SMTP_TEST_EMAIL || to : to;
 
   try {
+    const transporter = createTransporter();
+
     // Get template or use provided subject
     const emailTemplate = emailTemplates[template];
     const emailContent = emailTemplate
       ? emailTemplate(data)
       : { subject, html: data.emailContent || "" };
 
-    const command = new SendEmailCommand({
-      Source: process.env.AWS_SES_FROM_EMAIL || "aasplatform2@gmail.com",
-      Destination: {
-        ToAddresses: [actualRecipient],
+    const mailOptions = {
+      from: {
+        name: process.env.SMTP_FROM_NAME || "AAS Platform",
+        address: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER,
       },
-      ReplyToAddresses: [process.env.AWS_SES_FROM_EMAIL || "aasplatform2@gmail.com"],
-      Message: {
-        Subject: {
-          Data: emailContent.subject,
-          Charset: "UTF-8",
-        },
-        Body: {
-          Html: {
-            Data: emailContent.html,
-            Charset: "UTF-8",
-          },
-        },
-      },
-    });
+      to: actualRecipient,
+      replyTo: process.env.SMTP_REPLY_TO || process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER,
+      subject: emailContent.subject,
+      html: emailContent.html,
+      // Add DKIM signing if configured
+      dkim: process.env.SMTP_DKIM_PRIVATE_KEY
+        ? {
+            domainName: process.env.SMTP_DKIM_DOMAIN,
+            keySelector: process.env.SMTP_DKIM_KEY_SELECTOR,
+            privateKey: process.env.SMTP_DKIM_PRIVATE_KEY,
+          }
+        : undefined,
+    };
 
-    const result = await sesClient.send(command);
+    const result = await transporter.sendMail(mailOptions);
 
     console.log(
-      `📧 [SES] Email sent successfully to ${actualRecipient} (intended: ${to}), MessageId: ${result.MessageId}`,
+      `📧 [SMTP] Email sent successfully to ${actualRecipient} (intended: ${to}), MessageId: ${result.messageId}`,
     );
-    return { success: true, messageId: result.MessageId };
+    return { success: true, messageId: result.messageId };
   } catch (error) {
     logErrorWithContext(error as Error, {
       operation: "send_email",
@@ -66,7 +72,7 @@ export const sendEmail = async (
       subject,
       template,
     });
-    console.error(`❌ [SES] Failed to send email to ${to}:`, error);
+    console.error(`❌ [SMTP] Failed to send email to ${to}:`, error);
     return { success: false };
   }
 };

@@ -27,14 +27,14 @@ const ServicesManagement: React.FC<ServicesManagementProps> = () => {
   }>({ isOpen: false, serviceToDelete: null });
 
   useEffect(() => {
-    if (!services.length && !isLoading) {
+    if (!services?.length && !isLoading) {
       dispatch(getServicesThunk());
     }
-  }, [dispatch, services.length, isLoading]);
+  }, [dispatch, services?.length, isLoading]);
 
   // Initialize local services when services are loaded
   useEffect(() => {
-    if (services.length > 0 && localServices.length === 0) {
+    if (services?.length > 0 && localServices.length === 0) {
       setLocalServices([...services]);
     }
   }, [services, localServices.length]);

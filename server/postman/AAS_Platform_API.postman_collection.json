@@ -1825,6 +1825,74 @@
       ]
     },
     {
+      "name": "Contractor Job Management",
+      "item": [
+        {
+          "name": "Get Jobs for Contractor",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/job/contractor/jobs?page=1&limit=10&service=plumbing&search=solar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "job", "contractor", "jobs"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number for pagination"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of jobs per page (max 100)"
+                },
+                {
+                  "key": "service",
+                  "value": "plumbing",
+                  "description": "Filter by service type (e.g., plumbing, electrical, solar)",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "solar",
+                  "description": "Search in job title and description",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get jobs available to contractor based on membership plan. Returns jobs with access control, time delays, lead limits, and geospatial filtering applied. Only shows jobs that are currently accessible (canAccessNow: true)."
+          }
+        },
+        {
+          "name": "Get Job Details (Consumes Lead)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/job/contractor/jobs/{{jobId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "job", "contractor", "jobs", "{{jobId}}"]
+            },
+            "description": "Get specific job details and consume a lead if accessible. Returns job information with customer and property details. Will return error if job is not accessible or lead limit is reached."
+          }
+        },
+        {
+          "name": "Check Job Access (No Lead Consumption)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/job/contractor/jobs/{{jobId}}/access",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "job", "contractor", "jobs", "{{jobId}}", "access"]
+            },
+            "description": "Check if contractor can access a specific job without consuming a lead. Returns access status, lead availability, and job preview information."
+          }
+        }
+      ]
+    },
+    {
       "name": "Analytics & Dashboard",
       "item": [
         {
