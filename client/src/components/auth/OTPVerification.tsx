@@ -307,12 +307,21 @@ const OTPVerification: React.FC<OTPVerificationProps> = ({
           )}
 
           {/* Verification Message */}
-          {userVerification?.message && (
-            <div className="mb-6 sm:mb-8 p-4 bg-blue-500/20 border border-blue-500/30 rounded-lg">
-              <p className="text-blue-200 text-sm sm:text-base">
-                {userVerification.message}
+          {otpExpiry !== null && otpExpiry <= 0 ? (
+            <div className="mb-6 sm:mb-8 p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
+              <p className="text-red-200 text-sm sm:text-base text-center">
+                Your 10 minutes has passed. Please click resend button below to
+                get a new code.
               </p>
             </div>
+          ) : (
+            userVerification?.message && (
+              <div className="mb-6 sm:mb-8 p-4 bg-blue-500/20 border border-blue-500/30 rounded-lg">
+                <p className="text-blue-200 text-sm sm:text-base">
+                  Verification code sent to your email. It expires soon.
+                </p>
+              </div>
+            )
           )}
 
           {/* Success Message */}
@@ -432,41 +441,8 @@ const OTPVerification: React.FC<OTPVerificationProps> = ({
             </div>
           )}
 
-          {/* Action Buttons - Verify and Resend at the bottom */}
+          {/* Action Buttons - Resend and Verify at the bottom */}
           <div className="mt-8 sm:mt-10 flex flex-row gap-3 sm:gap-4 justify-center items-center">
-            {/* Verify Button */}
-            <button
-              onClick={handleSubmit}
-              disabled={
-                isVerifying ||
-                verificationStatus === "success" ||
-                !isValidOTP(otp) ||
-                isOTPExpired()
-              }
-              className={`px-4 sm:px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center min-w-[100px] sm:min-w-[120px] text-sm sm:text-base ${
-                isVerifying ||
-                verificationStatus === "success" ||
-                !isValidOTP(otp) ||
-                isOTPExpired()
-                  ? "bg-white/10 text-white/50 cursor-not-allowed border border-white/20"
-                  : "bg-accent-600 hover:bg-accent-700 text-white border border-accent-500 hover:border-accent-400 shadow-lg hover:shadow-xl transform hover:scale-105"
-              }`}
-            >
-              {isVerifying ? (
-                <div className="flex items-center">
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  <span>Verifying...</span>
-                </div>
-              ) : verificationStatus === "success" ? (
-                <div className="flex items-center">
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  <span>Verified!</span>
-                </div>
-              ) : (
-                <span>Verify OTP</span>
-              )}
-            </button>
-
             {/* Resend Button */}
             <button
               onClick={handleResendOTP}
@@ -504,6 +480,39 @@ const OTPVerification: React.FC<OTPVerificationProps> = ({
                 <div className="flex items-center justify-center">
                   <span>Resend Code</span>
                 </div>
+              )}
+            </button>
+
+            {/* Verify Button */}
+            <button
+              onClick={handleSubmit}
+              disabled={
+                isVerifying ||
+                verificationStatus === "success" ||
+                !isValidOTP(otp) ||
+                isOTPExpired()
+              }
+              className={`px-4 sm:px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center min-w-[100px] sm:min-w-[120px] text-sm sm:text-base ${
+                isVerifying ||
+                verificationStatus === "success" ||
+                !isValidOTP(otp) ||
+                isOTPExpired()
+                  ? "bg-white/10 text-white/50 cursor-not-allowed border border-white/20"
+                  : "bg-accent-600 hover:bg-accent-700 text-white border border-accent-500 hover:border-accent-400 shadow-lg hover:shadow-xl transform hover:scale-105"
+              }`}
+            >
+              {isVerifying ? (
+                <div className="flex items-center">
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  <span>Verifying...</span>
+                </div>
+              ) : verificationStatus === "success" ? (
+                <div className="flex items-center">
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  <span>Verified!</span>
+                </div>
+              ) : (
+                <span>Verify OTP</span>
               )}
             </button>
           </div>

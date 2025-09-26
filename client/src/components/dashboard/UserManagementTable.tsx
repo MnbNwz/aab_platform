@@ -568,8 +568,8 @@ const UserManagementTable: React.FC = () => {
             </table>
           </div>
 
-          {/* Tablet Table View - LG to XL */}
-          <div className="hidden lg:block xl:hidden overflow-x-auto">
+          {/* Tablet Table View - MD to XL */}
+          <div className="hidden md:block xl:hidden overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
@@ -644,52 +644,50 @@ const UserManagementTable: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center space-x-1 min-h-[32px]">
-                        {user.approval === "pending" && (
-                          <>
-                            <button
-                              onClick={() => handleApproveUser(user._id)}
-                              disabled={updatingUsers[user._id]}
-                              className="text-green-600 hover:text-green-900 disabled:opacity-50 transition-colors duration-200"
-                              title="Approve user"
-                            >
-                              <UserCheck className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => handleRejectUser(user._id)}
-                              disabled={updatingUsers[user._id]}
-                              className="text-red-600 hover:text-red-900 disabled:opacity-50 transition-colors duration-200"
-                              title="Reject user"
-                            >
-                              <UserX className="h-4 w-4" />
-                            </button>
-                          </>
-                        )}
-                        {user.role !== "admin" && user.status !== "revoke" && (
-                          <button
-                            onClick={() => handleRevokeUser(user._id)}
-                            disabled={updatingUsers[user._id]}
-                            className="text-red-600 hover:text-red-900 disabled:opacity-50 transition-colors duration-200"
-                            title="Delete user"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
-                        {user.role === "admin" && (
-                          <span className="inline-block w-8" />
-                        )}
-                        {updatingUsers[user._id] && (
-                          <Loader size="small" color="primary" />
-                        )}
-                        {updateErrors[user._id] && (
+                      {updateErrors[user._id] ? (
+                        <div className="flex items-center justify-center">
                           <span
                             className="text-red-500 text-xs"
                             title={updateErrors[user._id]}
                           >
                             Error
                           </span>
-                        )}
-                      </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center">
+                          <button
+                            ref={(() => {
+                              if (!dropdownRefs[user._id]) {
+                                dropdownRefs[user._id] =
+                                  React.createRef<HTMLButtonElement>();
+                              }
+                              return dropdownRefs[user._id];
+                            })()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenDropdown(
+                                openDropdown === user._id ? null : user._id
+                              );
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                            title="More actions"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </button>
+
+                          <UserActionsDropdown
+                            user={user}
+                            isOpen={openDropdown === user._id}
+                            onClose={() => setOpenDropdown(null)}
+                            onApprove={() => handleApproveUser(user._id)}
+                            onReject={() => handleRejectUser(user._id)}
+                            onRevoke={() => handleRevokeUser(user._id)}
+                            onUnrevoke={() => handleUnrevokeUser(user._id)}
+                            isUpdating={updatingUsers[user._id]}
+                            triggerRef={dropdownRefs[user._id]}
+                          />
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -698,7 +696,7 @@ const UserManagementTable: React.FC = () => {
           </div>
 
           {/* Mobile Card View */}
-          <div className="lg:hidden">
+          <div className="md:hidden">
             <div className="p-4 space-y-4">
               {users.map((user) => (
                 <div

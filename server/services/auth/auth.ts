@@ -223,9 +223,8 @@ export async function verifyOTPCode(email: string, otpCode: string) {
     throw new Error("Invalid or expired OTP code");
   }
 
-  // Update user verification and status
+  // Update user verification (status remains pending until admin approval)
   user.userVerification = updatedVerification;
-  user.status = "active"; // Activate user after email verification
   await user.save();
 
   // Clear OTP data from memory (additional security)
