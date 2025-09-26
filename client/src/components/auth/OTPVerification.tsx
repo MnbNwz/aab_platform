@@ -454,7 +454,7 @@ const OTPVerification: React.FC<OTPVerificationProps> = ({
                 !email ||
                 !isValidEmail(email)
               }
-              className={`px-4 sm:px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center min-w-[100px] sm:min-w-[120px] text-sm sm:text-base ${
+              className={`px-4 sm:px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center w-[140px] sm:w-[160px] text-sm sm:text-base ${
                 isResending ||
                 (userVerification?.cooldownSeconds &&
                   userVerification.cooldownSeconds > 0) ||
@@ -492,13 +492,13 @@ const OTPVerification: React.FC<OTPVerificationProps> = ({
                 !isValidOTP(otp) ||
                 isOTPExpired()
               }
-              className={`px-4 sm:px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center min-w-[100px] sm:min-w-[120px] text-sm sm:text-base ${
+              className={`px-4 sm:px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center w-[140px] sm:w-[160px] text-sm sm:text-base ${
                 isVerifying ||
                 verificationStatus === "success" ||
                 !isValidOTP(otp) ||
                 isOTPExpired()
                   ? "bg-white/10 text-white/50 cursor-not-allowed border border-white/20"
-                  : "bg-accent-600 hover:bg-accent-700 text-white border border-accent-500 hover:border-accent-400 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  : "bg-orange-600 hover:bg-orange-700 text-white border border-orange-500 hover:border-orange-400 shadow-lg hover:shadow-xl transform hover:scale-105"
               }`}
             >
               {isVerifying ? (
