@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { createPortal } from "react-dom";
 import {
   UserCheck,
   UserX,
@@ -63,20 +62,9 @@ const UserActionsDropdown: React.FC<UserActionsDropdownProps> = ({
   const canRevoke = user.role !== "admin" && user.status !== "revoke";
   const canUnrevoke = user.role !== "admin" && user.status === "revoke";
 
-  // Calculate position relative to trigger button
-  const rect = triggerRef.current.getBoundingClientRect();
-  const dropdownStyle = {
-    position: "fixed" as const,
-    top: rect.bottom + 8,
-    left: rect.left - 150, // Offset to the left to avoid going off screen
-    zIndex: 999999, // Very high z-index
-  };
-
   const dropdown = (
     <div
-      data-dropdown-portal
-      className="w-48 bg-white rounded-lg shadow-2xl border border-gray-200 py-2"
-      style={dropdownStyle}
+      className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-2xl border border-gray-200 py-2 z-50"
       onClick={(e) => e.stopPropagation()}
     >
       {canApprove && (
@@ -139,8 +127,7 @@ const UserActionsDropdown: React.FC<UserActionsDropdownProps> = ({
     </div>
   );
 
-  // Render dropdown as portal to escape any z-index constraints
-  return createPortal(dropdown, document.body);
+  return dropdown;
 };
 
 const UserManagementTable: React.FC = () => {
@@ -518,7 +505,7 @@ const UserManagementTable: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       {updateErrors[user._id] ? (
-                        <div className="flex items-center justify-center">
+                        <div className="flex items-center justify-center relative">
                           <span
                             className="text-red-500 text-xs"
                             title={updateErrors[user._id]}
@@ -527,7 +514,7 @@ const UserManagementTable: React.FC = () => {
                           </span>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-center">
+                        <div className="flex items-center justify-center relative">
                           <button
                             ref={(() => {
                               if (!dropdownRefs[user._id]) {
@@ -645,7 +632,7 @@ const UserManagementTable: React.FC = () => {
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
                       {updateErrors[user._id] ? (
-                        <div className="flex items-center justify-center">
+                        <div className="flex items-center justify-center relative">
                           <span
                             className="text-red-500 text-xs"
                             title={updateErrors[user._id]}
@@ -654,7 +641,7 @@ const UserManagementTable: React.FC = () => {
                           </span>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-center">
+                        <div className="flex items-center justify-center relative">
                           <button
                             ref={(() => {
                               if (!dropdownRefs[user._id]) {
