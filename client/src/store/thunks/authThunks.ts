@@ -1,6 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { api, handleApiError } from "../../services/apiService";
 import { showToast } from "../../utils/toast";
+import { hasAuthCookies } from "../../utils/auth";
 import type {
   LoginCredentials,
   RegisterData,
@@ -104,6 +105,11 @@ export const restoreSessionThunk = createAsyncThunk<
   { rejectValue: string }
 >("auth/restoreSession", async (_, { rejectWithValue }) => {
   try {
+    // Check if we have authentication cookies before making API call
+    if (!hasAuthCookies()) {
+      return rejectWithValue("No authentication cookies found");
+    }
+
     // Try to get user profile from API using stored token
     const response = await api.auth.getProfile();
     return response;

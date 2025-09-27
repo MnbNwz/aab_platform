@@ -270,7 +270,12 @@ export async function reverseGeocode(
 
     // Make API request
     const response = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
+      {
+        headers: {
+          "User-Agent": "AAS-Platform-Client/1.0 (Property Management System)",
+        },
+      }
     );
 
     if (!response.ok) {
@@ -472,7 +477,12 @@ export async function forwardGeocode(
     const response = await fetch(
       `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
         trimmedQuery
-      )}&limit=${limit}&addressdetails=1`
+      )}&limit=${limit}&addressdetails=1`,
+      {
+        headers: {
+          "User-Agent": "AAS-Platform-Client/1.0 (Property Management System)",
+        },
+      }
     );
 
     if (!response.ok) {

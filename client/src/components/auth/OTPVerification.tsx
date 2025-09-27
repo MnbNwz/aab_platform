@@ -310,8 +310,8 @@ const OTPVerification: React.FC<OTPVerificationProps> = ({
           {otpExpiry !== null && otpExpiry <= 0 ? (
             <div className="mb-6 sm:mb-8 p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
               <p className="text-red-200 text-sm sm:text-base text-center">
-                Your 10 minutes has passed. Please click resend button below to
-                get a new code.
+                Your 10 minutes has passed. Please click <b>resend</b> button
+                below to get a new code.
               </p>
             </div>
           ) : (

@@ -2,6 +2,8 @@ import React from "react";
 import { User } from "../types";
 import { MapPin, Phone, Mail, Shield, CheckCircle, X } from "lucide-react";
 import { useGeocoding } from "../hooks/useGeocoding";
+import { useSelector } from "react-redux";
+import { RootState } from "../store";
 
 interface ProfileViewModalProps {
   user: User;
@@ -14,6 +16,9 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
   isOpen,
   onClose,
 }) => {
+  // Get current user to check if they are admin
+  const currentUser = useSelector((state: RootState) => state.auth.user);
+
   // Get readable address from coordinates
   const { address: locationAddress, loading: addressLoading } = useGeocoding(
     user.geoHome?.coordinates && user.geoHome.coordinates.length === 2
@@ -159,7 +164,7 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
                   </div>
                 )}
 
-                {user.geoHome?.coordinates && (
+                {user.geoHome?.coordinates && currentUser?.role !== "admin" && (
                   <div className="flex items-center space-x-2 xs:space-x-3 p-2 xs:p-3 bg-gray-50 rounded-lg sm:col-span-2">
                     <MapPin className="h-4 w-4 xs:h-5 xs:w-5 text-primary-500 flex-shrink-0" />
                     <div className="min-w-0 flex-1">
