@@ -129,16 +129,24 @@ export async function signup(signupData: any) {
   const user = new User(userData);
   await user.save();
 
-  // Send OTP email
-  try {
-    await sendEmail(email, "Verify Your Email - AAS Platform", "otp_verification", {
-      otpCode: userVerification.otpCode,
-      firstName,
+  // Send OTP email (fire and forget - non-blocking)
+  sendEmail(email, "Verify Your Email - AAS Platform", "otp_verification", {
+    otpCode: userVerification.otpCode,
+    firstName,
+  })
+    .then((emailResult) => {
+      if (emailResult.success) {
+        console.log(
+          `📧 [SIGNUP OTP] Verification email sent to ${email}, MessageId: ${emailResult.messageId}`,
+        );
+      } else {
+        console.error(`❌ [SIGNUP OTP] Failed to send email to ${email}:`, emailResult.error);
+      }
+    })
+    .catch((emailError) => {
+      console.error("Failed to send OTP email:", emailError);
+      // Don't fail signup if email fails, just log it
     });
-  } catch (emailError) {
-    console.error("Failed to send OTP email:", emailError);
-    // Don't fail signup if email fails, just log it
-  }
 
   // Generate tokens
   const accessToken = generateAccessToken(user._id.toString(), user.role);
@@ -172,18 +180,31 @@ export async function signin(signinData: any) {
     throw new Error("Invalid email or password");
   }
 
-  if (!user.userVerification.isVerified && isOTPExpired(user.userVerification.otpExpiresAt)) {
-    const updatedVerification = updateVerificationForResend(user.userVerification, 0); // No cooldown for login
-    user.userVerification = updatedVerification;
-    await user.save();
+  if (!user.userVerification.isVerified) {
+    if (
+      user.userVerification.otpCode &&
+      user.userVerification.otpExpiresAt &&
+      isOTPExpired(user.userVerification.otpExpiresAt)
+    ) {
+      const updatedVerification = updateVerificationForResend(user.userVerification, 0); // No cooldown for login
+      user.userVerification = updatedVerification;
+      await user.save();
 
-    try {
-      await sendEmail(email, "New Verification Code - AAS Platform", "otp_verification", {
+      // Send OTP email (fire and forget - non-blocking)
+      sendEmail(email, "New Verification Code - AAS Platform", "otp_verification", {
         otpCode: updatedVerification.otpCode,
         firstName: user.firstName,
-      });
-    } catch (emailError) {
-      console.error("Failed to send OTP email during login:", emailError);
+      })
+        .then((emailResult) => {
+          if (emailResult.success) {
+            console.log(`📧 [LOGIN OTP] New verification code sent to ${email}`);
+          } else {
+            console.error(`❌ [LOGIN OTP] Failed to send email to ${email}:`, emailResult.error);
+          }
+        })
+        .catch((emailError) => {
+          console.error("Failed to send OTP email during login:", emailError);
+        });
     }
   }
 
@@ -282,16 +303,23 @@ export async function resendOTP(email: string) {
   user.userVerification = updatedVerification;
   await user.save();
 
-  // Send new OTP email
-  try {
-    await sendEmail(email, "New Verification Code - AAS Platform", "otp_verification", {
-      otpCode: updatedVerification.otpCode,
-      firstName: user.firstName,
+  // Send new OTP email (fire and forget - non-blocking)
+  sendEmail(email, "New Verification Code - AAS Platform", "otp_verification", {
+    otpCode: updatedVerification.otpCode,
+    firstName: user.firstName,
+  })
+    .then((emailResult) => {
+      if (emailResult.success) {
+        console.log(
+          `📧 [RESEND OTP] Verification email sent to ${email}, MessageId: ${emailResult.messageId}`,
+        );
+      } else {
+        console.error(`❌ [RESEND OTP] Failed to send email to ${email}:`, emailResult.error);
+      }
+    })
+    .catch((emailError) => {
+      console.error("Failed to send OTP email:", emailError);
     });
-  } catch (emailError) {
-    console.error("Failed to send OTP email:", emailError);
-    throw new Error("Failed to send verification email. Please try again.");
-  }
 
   return {
     message: "New verification code sent to your email.",
@@ -353,18 +381,19 @@ export async function forgotPassword(email: string) {
   user.passwordReset = passwordResetData;
   await user.save();
 
-  // Send password reset email
-  try {
-    const resetUrl = generatePasswordResetUrl(passwordResetData.token);
-    await sendEmail(email, "🔒 Password Reset - AAS Platform", "password_reset", {
-      firstName: user.firstName,
-      resetUrl,
-      token: passwordResetData.token,
+  // Send password reset email (fire and forget - non-blocking)
+  const resetUrl = generatePasswordResetUrl(passwordResetData.token);
+  sendEmail(email, "🔒 Password Reset - AAS Platform", "password_reset", {
+    firstName: user.firstName,
+    resetUrl,
+    token: passwordResetData.token,
+  })
+    .then(() => {
+      console.log(`📧 [PASSWORD RESET] Reset email sent to ${email}`);
+    })
+    .catch((emailError) => {
+      console.error("Failed to send password reset email:", emailError);
     });
-  } catch (emailError) {
-    console.error("Failed to send password reset email:", emailError);
-    throw new Error("Failed to send password reset email. Please try again.");
-  }
 
   return {
     message: "Password reset link has been sent to your email.",

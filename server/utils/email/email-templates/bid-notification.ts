@@ -175,7 +175,7 @@ export const bidNotificationTemplate = (data: BidNotificationData) => ({
           <p><strong>💡 Tip:</strong> Check the contractor's profile, reviews, and proposed timeline to make the best choice for your project.</p>
         </div>
         <div class="footer">
-          <p><strong>© 2025 AAS Platform. All rights reserved.</strong></p>
+          <p><strong>© ${new Date().getFullYear()} AAS Platform. All rights reserved.</strong></p>
           <p>This notification was sent for job ID: ${data.jobId}</p>
           <p>Manage your job requests in your AAS Platform dashboard.</p>
         </div>

@@ -102,34 +102,27 @@ export const otpVerificationTemplate = (data: OTPVerificationData) => ({
         }
       </style>
     </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h1>🔐 Email Verification</h1>
-        </div>
-        <div class="content">
-          <h2>Hello ${data.firstName}!</h2>
-          <p>Welcome to AAS Platform! To complete your registration, please verify your email address using the verification code below:</p>
-          
-          <div class="otp-code">${data.otpCode}</div>
-          
-          <div class="warning">
-            <strong>⏰ This code will expire in 10 minutes.</strong>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🔐 Email Verification</h1>
           </div>
-          
-          <div class="security-note">
-            <strong>🛡️ Security Note:</strong> Never share this code with anyone. AAS Platform will never ask for your verification code via phone or email.
+          <div class="content">
+            <h2>Hello ${data.firstName},</h2>
+            <p>Please use the code below to verify your email and complete your registration with <strong>AAS Platform</strong>:</p>
+            <div class="otp-code">${data.otpCode}</div>
+            <div class="security-note">
+              <strong>🛡️ Security Reminder:</strong> Do not share this code with anyone. <strong>AAS Platform</strong> will never ask for it.
+            </div>
+
+            <p>If you didn’t request this, you can safely ignore this email.</p>
           </div>
-          
-          <p>If you didn't create an account with AAS Platform, please ignore this email and no account will be created.</p>
+          <div class="footer">
+            <p><strong>© ${new Date().getFullYear()} AAS Platform. All rights reserved.</strong></p>
+            <p>Need help? Contact <a href="mailto:support@aasplatform.com">support@aasplatform.com</a>.</p>
+          </div>
         </div>
-        <div class="footer">
-          <p><strong>© 2025 AAS Platform. All rights reserved.</strong></p>
-          <p>This email was sent to verify your account registration.</p>
-          <p>If you have questions, contact our support team.</p>
-        </div>
-      </div>
-    </body>
+      </body>
     </html>
   `,
 });

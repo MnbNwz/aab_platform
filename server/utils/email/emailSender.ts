@@ -4,53 +4,33 @@ import { emailTemplates, type TemplateType } from "@utils/email/email-templates"
 import type { EmailResult, SMTPConfig } from "@utils/types/email";
 import { validateEmail } from "@utils/validation/validation";
 import { VALIDATION_CONSTANTS } from "@utils/constants/validation";
+import "dotenv/config";
 
 // Destructure environment variables once for better performance
-const {
-  SMTP_HOST,
-  SMTP_PORT,
-  SMTP_SECURE,
-  SMTP_USER,
-  SMTP_PASS,
-  SMTP_FROM_EMAIL,
-  SMTP_FROM_NAME,
-  SMTP_TLS_REJECT_UNAUTHORIZED,
-  SMTP_CONNECTION_TIMEOUT,
-  SMTP_GREETING_TIMEOUT,
-  SMTP_SOCKET_TIMEOUT,
-  SMTP_POOL,
-  SMTP_MAX_CONNECTIONS,
-  SMTP_MAX_MESSAGES,
-  SMTP_RATE_DELTA,
-  SMTP_RATE_LIMIT,
-  SMTP_MAX_RETRIES,
-  SMTP_RETRY_DELAY,
-  FRONTEND_URL,
-} = process.env;
 
 // Initialize SMTP transporter with enhanced configuration
 const createTransporter = (): nodemailer.Transporter => {
   const smtpConfig: SMTPConfig = {
-    host: SMTP_HOST!,
-    port: parseInt(SMTP_PORT || "465"),
-    secure: SMTP_SECURE === "true", // true for 465, false for other ports
+    host: process.env.SMTP_HOST!,
+    port: parseInt(process.env.SMTP_PORT || "465"),
+    secure: process.env.SMTP_SECURE === "true", // true for 465, false for other ports
     auth: {
-      user: SMTP_USER!,
-      pass: SMTP_PASS!,
+      user: process.env.SMTP_USER!,
+      pass: process.env.SMTP_PASS!,
     },
     tls: {
-      rejectUnauthorized: SMTP_TLS_REJECT_UNAUTHORIZED !== "false",
+      rejectUnauthorized: process.env.SMTP_TLS_REJECT_UNAUTHORIZED !== "false",
     },
     // Enhanced connection settings for better reliability
-    connectionTimeout: parseInt(SMTP_CONNECTION_TIMEOUT || "60000"), // 60 seconds
-    greetingTimeout: parseInt(SMTP_GREETING_TIMEOUT || "30000"), // 30 seconds
-    socketTimeout: parseInt(SMTP_SOCKET_TIMEOUT || "60000"), // 60 seconds
+    connectionTimeout: parseInt(process.env.SMTP_CONNECTION_TIMEOUT || "60000"), // 60 seconds
+    greetingTimeout: parseInt(process.env.SMTP_GREETING_TIMEOUT || "30000"), // 30 seconds
+    socketTimeout: parseInt(process.env.SMTP_SOCKET_TIMEOUT || "60000"), // 60 seconds
     // Retry configuration
-    pool: SMTP_POOL === "true",
-    maxConnections: parseInt(SMTP_MAX_CONNECTIONS || "5"),
-    maxMessages: parseInt(SMTP_MAX_MESSAGES || "100"),
-    rateDelta: parseInt(SMTP_RATE_DELTA || "1000"),
-    rateLimit: parseInt(SMTP_RATE_LIMIT || "5"),
+    pool: process.env.SMTP_POOL === "true",
+    maxConnections: parseInt(process.env.SMTP_MAX_CONNECTIONS || "5"),
+    maxMessages: parseInt(process.env.SMTP_MAX_MESSAGES || "100"),
+    rateDelta: parseInt(process.env.SMTP_RATE_DELTA || "1000"),
+    rateLimit: parseInt(process.env.SMTP_RATE_LIMIT || "5"),
   };
 
   return nodemailer.createTransport(smtpConfig);
@@ -107,8 +87,8 @@ export const sendEmail = async (
   data: Record<string, any>,
   retryCount: number = 0,
 ): Promise<EmailResult> => {
-  const maxRetries = parseInt(SMTP_MAX_RETRIES || "3");
-  const retryDelay = parseInt(SMTP_RETRY_DELAY || "2000");
+  const maxRetries = parseInt(process.env.SMTP_MAX_RETRIES || "3");
+  const retryDelay = parseInt(process.env.SMTP_RETRY_DELAY || "2000");
 
   try {
     // 1. Email validation
@@ -132,8 +112,8 @@ export const sendEmail = async (
     // 5. SMTP connection and sending
     const transporter = createTransporter();
 
-    // Verify SMTP connection before sending
-    await transporter.verify();
+    // Skip SMTP verification for faster response (fire and forget)
+    // await transporter.verify();
 
     // Get template content
     const emailTemplate = emailTemplates[template];
@@ -141,11 +121,11 @@ export const sendEmail = async (
 
     const mailOptions = {
       from: {
-        name: SMTP_FROM_NAME,
-        address: SMTP_FROM_EMAIL || SMTP_USER,
+        name: process.env.SMTP_FROM_NAME,
+        address: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER,
       },
       to: to,
-      replyTo: process.env.SMTP_REPLY_TO || SMTP_FROM_EMAIL || SMTP_USER,
+      replyTo: process.env.SMTP_REPLY_TO || process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER,
       subject: emailContent.subject,
       html: emailContent.html,
       // Add DKIM signing if configured
@@ -158,13 +138,26 @@ export const sendEmail = async (
         : undefined,
     };
 
-    const result = await transporter.sendMail(mailOptions);
+    // Send email without waiting for completion (fire and forget)
+    transporter
+      .sendMail(mailOptions)
+      .then((result) => {
+        console.log(
+          `📧 [SMTP] Email sent successfully to ${to}, MessageId: ${result.messageId}, Template: ${template}`,
+        );
+      })
+      .catch((error) => {
+        console.error(`❌ [SMTP] Failed to send email to ${to}:`, error);
+        logErrorWithContext(error as Error, {
+          operation: "send_email_async",
+          to,
+          subject,
+          template,
+        });
+      });
 
-    console.log(
-      `📧 [SMTP] Email sent successfully to ${to}, MessageId: ${result.messageId}, Template: ${template}`,
-    );
-
-    return { success: true, messageId: result.messageId };
+    // Return immediately without waiting
+    return { success: true, messageId: "pending" };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
 
@@ -254,7 +247,7 @@ export const sendOTPEmail = async (
     const result = await sendEmail(userEmail, "", "otp_verification", {
       otpCode,
       firstName,
-      verificationUrl: `${FRONTEND_URL}/verify-email`,
+      verificationUrl: `${process.env.FRONTEND_URL}/verify-email`,
     });
 
     if (result.success) {
@@ -330,7 +323,7 @@ export const sendBidAcceptedNotification = async (
       jobTitle,
       bidAmount,
       jobId: "job-id-placeholder",
-      viewBidUrl: `${FRONTEND_URL}/contractor/bids`,
+      viewBidUrl: `${process.env.FRONTEND_URL}/contractor/bids`,
     });
 
     if (result.success) {
@@ -352,38 +345,6 @@ export const sendBidAcceptedNotification = async (
   }
 };
 
-export const sendWelcomeEmail = async (
-  userEmail: string,
-  firstName: string,
-  role: "customer" | "contractor",
-): Promise<EmailResult> => {
-  try {
-    const result = await sendEmail(userEmail, "", "welcome", {
-      firstName,
-      role,
-      dashboardUrl: `${FRONTEND_URL}/dashboard`,
-    });
-
-    if (result.success) {
-      console.log(`🎉 [WELCOME] Email sent to ${userEmail} (${role})`);
-    } else {
-      console.error(
-        `❌ [WELCOME] Failed to send to ${userEmail} (${role}), Error: ${result.error}`,
-      );
-    }
-
-    return { success: result.success, error: result.error };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logErrorWithContext(error as Error, {
-      operation: "send_welcome_email",
-      userEmail,
-      role,
-    });
-    return { success: false, error: errorMessage };
-  }
-};
-
 // Password reset email with enhanced security
 export const sendPasswordResetEmail = async (
   userEmail: string,
@@ -393,7 +354,7 @@ export const sendPasswordResetEmail = async (
   try {
     const result = await sendEmail(userEmail, "", "password_reset", {
       firstName,
-      resetUrl: `${FRONTEND_URL}/reset-password?token=${resetToken}`,
+      resetUrl: `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`,
       expiryHours: 1, // Password reset expires in 1 hour
     });
 

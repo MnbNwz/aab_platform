@@ -183,7 +183,7 @@ export const paymentReceiptTemplate = (data: PaymentReceiptData) => ({
           <p>If you have any questions about this payment, please contact our support team with your payment ID.</p>
         </div>
         <div class="footer">
-          <p><strong>© 2025 AAS Platform. All rights reserved.</strong></p>
+          <p><strong>© ${new Date().getFullYear()} AAS Platform. All rights reserved.</strong></p>
           <p>This is an automated receipt for your payment.</p>
           <p>For support, contact us with payment ID: ${data.paymentId}</p>
         </div>

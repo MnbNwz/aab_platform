@@ -46,7 +46,6 @@ export type TemplateType =
   | "otp_verification"
   | "password_reset"
   | "payment_receipt"
-  | "welcome"
   | "bid_notification";
 
 export interface EmailStats {

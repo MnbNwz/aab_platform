@@ -52,7 +52,7 @@ const ForgotPassword: React.FC = () => {
           type: "manual",
           message: "Please wait before requesting another password reset.",
         });
-        showToast.error("Please wait before trying again");
+        showToast.error(error.message);
       } else {
         setError("email", {
           type: "manual",
@@ -86,8 +86,7 @@ const ForgotPassword: React.FC = () => {
             <div className="bg-blue-50/10 border border-blue-200/20 rounded-lg p-4 mb-6">
               <p className="text-sm text-white/70">
                 📧 <strong>Check your email</strong> and click the reset link to
-                create a new password. The link will expire in{" "}
-                <strong>1 hour</strong>.
+                create a new password.
               </p>
             </div>
 
@@ -191,8 +190,7 @@ const ForgotPassword: React.FC = () => {
         <div className="mt-6 p-4 bg-blue-50/10 border border-blue-200/20 rounded-lg">
           <p className="text-xs text-white/60 text-center">
             <strong>Note:</strong> You must have a verified email address to
-            reset your password. If you haven't verified your email yet, please
-            complete email verification first.
+            reset your password.
           </p>
         </div>
       </div>

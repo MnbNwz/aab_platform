@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { useSelector } from "react-redux";
+import { createSelector } from "@reduxjs/toolkit";
 import {
   Users,
   Briefcase,
@@ -70,13 +71,28 @@ interface PlatformDashboardCardsProps {
 }
 
 // Memoized selector to prevent unnecessary re-renders
-const selectDashboardData = (state: RootState) => ({
-  data: state.dashboard.data,
-  platformData: state.dashboard.platformData,
-  platformError: state.dashboard.platformError,
-  platformLastFetched: state.dashboard.platformLastFetched,
-  platformLoading: state.dashboard.platformLoading,
-});
+const selectDashboardData = createSelector(
+  [
+    (state: RootState) => state.dashboard.data,
+    (state: RootState) => state.dashboard.platformData,
+    (state: RootState) => state.dashboard.platformError,
+    (state: RootState) => state.dashboard.platformLastFetched,
+    (state: RootState) => state.dashboard.platformLoading,
+  ],
+  (
+    data,
+    platformData,
+    platformError,
+    platformLastFetched,
+    platformLoading
+  ) => ({
+    data,
+    platformData,
+    platformError,
+    platformLastFetched,
+    platformLoading,
+  })
+);
 
 export const PlatformDashboardCards = React.memo<PlatformDashboardCardsProps>(
   ({ data, onRefresh }) => {
