@@ -2,7 +2,6 @@
 export interface UserVerification {
   isVerified: boolean;
   message: string;
-  otpCode: string | null;
   canResend: boolean;
   cooldownSeconds: number;
   otpExpiresInSeconds: number;

@@ -18,7 +18,14 @@ export const loginThunk = createAsyncThunk<
   try {
     const response = await api.auth.login(credentials);
 
-    showToast.success("Welcome back! Login successful.");
+    // Only show welcome toast if user is already verified
+
+    showToast.success(
+      response.user.userVerification?.isVerified
+        ? "Welcome back! You have successfully signed in."
+        : `Welcome! OTP has been sent to ${response.user.email}. Please type OTP below.`
+    );
+
     return response;
   } catch (error) {
     console.error("❌ Login failed:", error);
@@ -52,7 +59,6 @@ export const registerThunk = createAsyncThunk<
         setVerificationState({
           isVerified: false,
           message: "Please verify your email address",
-          otpCode: null,
           canResend: true,
           cooldownSeconds: 0,
           otpExpiresInSeconds: 0,
@@ -60,7 +66,6 @@ export const registerThunk = createAsyncThunk<
       );
     }
 
-    showToast.success("Account created successfully! Welcome to AAS Platform.");
     return response;
   } catch (error) {
     console.error("❌ Registration failed:", error);

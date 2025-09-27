@@ -85,9 +85,8 @@ export const getVerificationStateThunk = createAsyncThunk<
     try {
       const response = await api.auth.getVerificationState(email);
 
-      // Update verification state with complete response (otpCode is never stored for security)
+      // Update verification state with complete response
       dispatch(setVerificationState(response));
-
       return response;
     } catch (error) {
       const errorMessage = handleApiError(error);

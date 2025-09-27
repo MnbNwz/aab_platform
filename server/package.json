@@ -25,7 +25,6 @@
   "description": "",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.884.0",
-    "@aws-sdk/client-ses": "^3.891.0",
     "@types/jsdom": "^21.1.7",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/nodemailer": "^7.0.1",

@@ -31,12 +31,7 @@ export const verificationSlice = createSlice({
 
     // Set verification state from API response
     setVerificationState: (state, action: PayloadAction<UserVerification>) => {
-      // Never store otpCode from API responses for security
-      const { otpCode, ...verificationData } = action.payload;
-      state.userVerification = {
-        ...verificationData,
-        otpCode: null, // Always null for security
-      };
+      state.userVerification = action.payload;
       state.error = null;
     },
 

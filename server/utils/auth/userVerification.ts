@@ -145,7 +145,6 @@ export function getVerificationStatus(verification: any) {
     return {
       isVerified: true,
       message: "Email verified successfully!",
-      otpCode: null,
       canResend: false,
       cooldownSeconds: 0,
       otpSentAt: null,
@@ -157,7 +156,6 @@ export function getVerificationStatus(verification: any) {
     return {
       isVerified: false,
       message: "No verification code found. Please request a new one.",
-      otpCode: null,
       canResend: true,
       cooldownSeconds: 0,
       otpSentAt: null,
@@ -169,7 +167,6 @@ export function getVerificationStatus(verification: any) {
     return {
       isVerified: false,
       message: "Verification code has expired. Please request a new one.",
-      otpCode: null,
       canResend: true,
       cooldownSeconds: 0,
       otpSentAt: verification.lastSentAt,
@@ -187,7 +184,6 @@ export function getVerificationStatus(verification: any) {
     return {
       isVerified: false,
       message: `Please wait ${verification.cooldownSeconds} seconds before requesting a new code.`,
-      otpCode: null, // NEVER send OTP in response
       canResend: false,
       cooldownSeconds: verification.cooldownSeconds,
       otpExpiresInSeconds: otpExpiresIn,
@@ -204,7 +200,6 @@ export function getVerificationStatus(verification: any) {
   return {
     isVerified: false,
     message: `Verification code sent to your email. It expires in ${Math.ceil(otpExpiresIn / 60)} minutes.`,
-    otpCode: null, // NEVER send OTP in response
     canResend: true,
     cooldownSeconds: 0,
     otpExpiresInSeconds: otpExpiresIn, // Remaining time in seconds

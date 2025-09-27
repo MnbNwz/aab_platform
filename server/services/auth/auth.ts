@@ -8,6 +8,7 @@ import {
   validateEmail,
   validatePhone,
   sanitizeUser,
+  isOTPExpired,
 } from "@utils/auth";
 import { validatePassword } from "@utils/validation";
 import { validateContractorServices } from "@utils/validation";
@@ -169,6 +170,21 @@ export async function signin(signinData: any) {
   const hashedPassword = hashPassword(password);
   if (user.passwordHash !== hashedPassword) {
     throw new Error("Invalid email or password");
+  }
+
+  if (!user.userVerification.isVerified && isOTPExpired(user.userVerification.otpExpiresAt)) {
+    const updatedVerification = updateVerificationForResend(user.userVerification, 0); // No cooldown for login
+    user.userVerification = updatedVerification;
+    await user.save();
+
+    try {
+      await sendEmail(email, "New Verification Code - AAS Platform", "otp_verification", {
+        otpCode: updatedVerification.otpCode,
+        firstName: user.firstName,
+      });
+    } catch (emailError) {
+      console.error("Failed to send OTP email during login:", emailError);
+    }
   }
 
   // Generate tokens

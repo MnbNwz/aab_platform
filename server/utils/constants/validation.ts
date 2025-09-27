@@ -21,6 +21,9 @@ export const VALIDATION_CONSTANTS = {
 
   // Email validation
   EMAIL_MAX_LENGTH: 254,
+  EMAIL_RATE_LIMIT_PER_HOUR: 50,
+  EMAIL_DEBOUNCE_SECONDS: 60,
+  EMAIL_MAX_ATTEMPTS_PER_DAY: 10,
 
   // File upload validation
   MAX_FILE_SIZE: 5 * 1024 * 1024, // 5MB
@@ -47,10 +50,9 @@ export const DATE_CONSTANTS = {
   EMAIL_VERIFICATION_EXPIRY_HOURS: 24,
 } as const;
 
-// AWS constants
+// AWS constants (S3 only - SES removed)
 export const AWS_CONSTANTS = {
   S3_REGION: "ca-central-1",
-  SES_REGION: "ca-central-1",
   MAX_S3_RETRIES: 3,
   S3_TIMEOUT: 30000, // 30 seconds
 } as const;
