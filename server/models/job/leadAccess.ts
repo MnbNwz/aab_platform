@@ -14,9 +14,11 @@ const LeadAccessSchema = new Schema<ILeadAccess>({
   },
 });
 
-// Index for efficient queries
-LeadAccessSchema.index({ contractor: 1 });
-LeadAccessSchema.index({ jobRequest: 1, contractor: 1 });
+// OPTIMIZATION 6: Enhanced indexes for better performance
+LeadAccessSchema.index({ contractor: 1 }); // For user queries
+LeadAccessSchema.index({ jobRequest: 1, contractor: 1 }); // For duplicate access checks
+LeadAccessSchema.index({ contractor: 1, accessedAt: 1 }); // For monthly count queries
+LeadAccessSchema.index({ accessedAt: 1 }); // For time-based queries
 
 const LeadAccess = createModel<ILeadAccess>({
   schema: LeadAccessSchema,

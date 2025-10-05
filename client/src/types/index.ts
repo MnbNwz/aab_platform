@@ -1,19 +1,18 @@
-// User related types
 export interface UserVerification {
   isVerified: boolean;
   message: string;
   canResend: boolean;
   cooldownSeconds: number;
   otpExpiresInSeconds: number;
-  otpSentAt?: string; // ISO timestamp when OTP was sent
-  otpExpiresAt?: string; // ISO timestamp when OTP expires
-  email?: string; // Email address for verification
-  firstName?: string; // User's first name
+  otpSentAt?: string;
+  otpExpiresAt?: string;
+  email?: string;
+  firstName?: string;
 }
 
 export interface User {
   _id: string;
-  id?: string; // For backward compatibility
+  id?: string;
   email: string;
   firstName: string;
   lastName: string;
@@ -22,10 +21,10 @@ export interface User {
   role: UserRole;
   status: UserStatus;
   approval: UserApproval;
-  emailVerified: boolean; // Email verification status
-  userVerification?: UserVerification; // OTP verification state
-  isActive?: boolean; // For backward compatibility
-  isVerified?: boolean; // For backward compatibility
+  emailVerified: boolean;
+  userVerification?: UserVerification;
+  isActive?: boolean;
+  isVerified?: boolean;
   avatar?: string;
   geoHome?: {
     type: string;
@@ -52,7 +51,6 @@ export type UserRole = "admin" | "customer" | "contractor";
 export type UserStatus = "pending" | "active" | "revoke";
 export type UserApproval = "pending" | "approved" | "rejected";
 
-// Authentication types
 export interface LoginCredentials {
   email: string;
   password: string;
@@ -70,7 +68,6 @@ export interface RegisterData {
     type: string;
     coordinates: [number, number];
   };
-  // Role-specific nested data
   customer?: {
     defaultPropertyType: string;
   };
@@ -106,10 +103,12 @@ export interface ApiError {
 export interface PaginationInfo {
   currentPage: number;
   totalPages: number;
-  totalCount: number;
+  totalItems: number;
+  itemsPerPage: number;
   hasNextPage: boolean;
-  hasPrevPage: boolean;
-  limit: number;
+  hasPreviousPage: boolean;
+  nextPage: number | null;
+  previousPage: number | null;
 }
 
 // User management types
@@ -177,7 +176,7 @@ export interface ContractorJob {
 }
 
 export interface MembershipInfo {
-  tier: "basic" | "standard" | "premium";
+  tier: MembershipPlanTier;
   leadsPerMonth: number;
   accessDelayHours: number;
   radiusKm: number;
@@ -217,4 +216,134 @@ export interface ContractorJobFilters {
   limit?: number;
   service?: string;
   search?: string;
+}
+
+// Membership Plan types
+export type MembershipPlanTier = "basic" | "standard" | "premium";
+export type MembershipPlanUserType = "customer" | "contractor";
+
+// Base membership plan interface with common fields
+export interface BaseMembershipPlan {
+  _id: string;
+  name: string;
+  description: string;
+  userType: MembershipPlanUserType;
+  tier: MembershipPlanTier;
+  features: string[];
+  monthlyPrice: number; // Price in cents
+  yearlyPrice: number; // Price in cents
+  annualDiscountRate: number; // Percentage discount for yearly billing
+  duration: number; // Duration in days
+  stripeProductId: string;
+  stripePriceIdMonthly: string;
+  stripePriceIdYearly: string;
+  stripePriceIdOneTimeMonthly: string;
+  stripePriceIdOneTimeYearly: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Customer-specific plan features
+export interface CustomerPlanFeatures {
+  maxProperties: number;
+  propertyType: string;
+  freeCalculators: boolean;
+  unlimitedRequests: boolean;
+  contractorReviewsVisible: boolean;
+  platformFeePercentage: number; // Percentage (e.g., 100 = 100%)
+  priorityContractorAccess: boolean;
+  propertyValuationSupport: boolean;
+  certifiedAASWork: boolean;
+  freeEvaluation: boolean;
+}
+
+// Contractor-specific plan features
+export interface ContractorPlanFeatures {
+  leadsPerMonth: number;
+  accessDelayHours: number;
+  radiusKm: number;
+  featuredListing: boolean;
+  offMarketAccess: boolean;
+  publicityReferences: boolean;
+  verifiedBadge: boolean;
+  financingSupport: boolean;
+  privateNetwork: boolean;
+}
+
+// Complete membership plan interfaces
+export interface CustomerMembershipPlan
+  extends BaseMembershipPlan,
+    CustomerPlanFeatures {
+  userType: "customer";
+}
+
+export interface ContractorMembershipPlan
+  extends BaseMembershipPlan,
+    ContractorPlanFeatures {
+  userType: "contractor";
+}
+
+// Union type for all membership plans
+export type MembershipPlan = CustomerMembershipPlan | ContractorMembershipPlan;
+
+// Membership plan response
+export interface MembershipPlansResponse {
+  success: boolean;
+  data: MembershipPlan[];
+}
+
+// Current membership info
+export interface CurrentMembership {
+  _id: string;
+  userId: string;
+  planId: {
+    _id: string;
+    name: string;
+    tier: MembershipPlanTier;
+    price: number;
+    features: string[];
+    stripePriceIdMonthly: string;
+    stripePriceIdYearly: string;
+    stripePriceIdOneTimeMonthly: string;
+    stripePriceIdOneTimeYearly: string;
+  };
+  paymentId: string;
+  status: "active" | "inactive" | "cancelled" | "expired";
+  billingPeriod: "monthly" | "yearly";
+  billingType: "recurring" | "one_time"; // Updated to match DB enum
+  startDate: string;
+  endDate?: string;
+  isAutoRenew: boolean;
+  stripeSubscriptionId: string | null;
+  cancelAtPeriodEnd: boolean;
+  canceledAt: string | null;
+  leadsUsedThisMonth: number;
+  lastLeadResetDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Membership checkout payload (for recurring subscriptions)
+export interface MembershipCheckoutPayload {
+  planId: string;
+  billingType: "recurring" | "one_time"; // Updated to match DB enum
+  billingPeriod: "monthly" | "yearly";
+  url: string;
+}
+
+// One-time checkout payload (no billingType or url needed)
+export interface OneTimeCheckoutPayload {
+  planId: string;
+  billingPeriod: "monthly" | "yearly";
+}
+
+// Checkout response
+export interface CheckoutResponse {
+  success: boolean;
+  data: {
+    sessionId: string;
+    checkoutUrl: string;
+    paymentId: string;
+  };
 }

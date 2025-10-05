@@ -1,8 +1,8 @@
-// Export all middlewares from organized folders
 export * from "./auth";
 export * from "./authorization";
 export * from "./validation";
 export * from "./storage";
+export * from "./security";
 
 // Export types and constants
 export * from "./types";

@@ -1,7 +1,15 @@
 import { User } from "@models/user";
 import { Types } from "@models/types";
 import { logErrorWithContext } from "@utils/core";
-import { getCurrentPeriod } from "../job/leads";
+
+// Get current period for lead tracking
+function getCurrentPeriod() {
+  const now = new Date();
+  return {
+    month: now.getMonth() + 1, // JavaScript months are 0-based
+    year: now.getFullYear(),
+  };
+}
 
 // Import membership limits from leads service
 const MEMBERSHIP_LIMITS = {

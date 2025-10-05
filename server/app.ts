@@ -6,7 +6,7 @@ import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
-import { connectDB } from "@config/db";
+import { connectDB, disconnectDB } from "@config/db";
 import apiRoutes from "@routes/index";
 import { appLogger, errorLogger, logErrorWithContext } from "@utils/core";
 
@@ -62,6 +62,50 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
   res.status(500).json({ error: "Internal Server Error" });
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   appLogger.info({ port: PORT }, `Server listening on port ${PORT}`);
+});
+
+// Graceful shutdown handling
+const gracefulShutdown = async (signal: string) => {
+  appLogger.info(`Received ${signal}. Starting graceful shutdown...`);
+
+  server.close(async () => {
+    appLogger.info("HTTP server closed.");
+
+    // Close database connection
+    try {
+      await disconnectDB();
+      appLogger.info("Database connection closed.");
+      process.exit(0);
+    } catch (err) {
+      appLogger.error({ error: err }, "Error closing database connection");
+      process.exit(1);
+    }
+  });
+
+  // Force close after 30 seconds
+  setTimeout(() => {
+    appLogger.error("Could not close connections in time, forcefully shutting down");
+    process.exit(1);
+  }, 30000);
+};
+
+// Handle process signals
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+
+// Handle uncaught exceptions
+process.on("uncaughtException", (err) => {
+  logErrorWithContext(err, { operation: "uncaught_exception" });
+  process.exit(1);
+});
+
+// Handle unhandled promise rejections
+process.on("unhandledRejection", (reason, promise) => {
+  logErrorWithContext(new Error(`Unhandled Rejection: ${reason}`), {
+    operation: "unhandled_rejection",
+    promise: promise.toString(),
+  });
+  process.exit(1);
 });

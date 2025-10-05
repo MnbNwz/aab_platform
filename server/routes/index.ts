@@ -14,6 +14,10 @@ import dashboardRoutes from "./dashboard";
 import { authenticate } from "@middlewares/auth";
 import serviceRoutes from "@routes/admin/service";
 
+// Mount webhook routes FIRST (before authentication middleware)
+// Webhooks need to be accessible without authentication
+router.use("/payment", paymentRoutes);
+
 // Apply auto-refresh middleware globally to all routes
 // This will automatically refresh expired access tokens using refresh tokens
 router.use("/auth", authRoutes);
@@ -22,12 +26,11 @@ router.use("/services", serviceRoutes);
 router.use(autoRefreshToken);
 router.use(authenticate);
 
-router.use("/user", authRoutes); // user routes are in auth folder
+router.use("/user", authRoutes);
 router.use("/admin", adminRoutes);
 router.use("/membership", membershipRoutes);
 router.use("/job", jobRoutes); // All job-related routes under /job
 router.use("/property", propertyRoutes);
-router.use("/payment", paymentRoutes);
 router.use("/dashboard", dashboardRoutes); // Dashboard and analytics
 
 // Example route

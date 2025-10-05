@@ -1,4 +1,4 @@
-import type { ApiResponse } from "../types";
+import type { ApiResponse, MembershipPlan, CurrentMembership } from "../types";
 import showToast from "../utils/toast";
 
 const API_CONFIG = {
@@ -107,36 +107,44 @@ const post = <T = any>(endpoint: string, body: any): Promise<ApiResponse<T>> =>
   });
 
 export const membershipService = {
-  getCurrent: async () => {
-    return get("/api/membership/current");
+  getCurrent: async (): Promise<ApiResponse<CurrentMembership>> => {
+    return get<CurrentMembership>("/api/membership/current");
   },
-  getPlans: async (userType: "customer" | "contractor" | "admin") => {
+  getPlans: async (
+    userType: "customer" | "contractor" | "admin"
+  ): Promise<ApiResponse<MembershipPlan[]>> => {
     return userType === "admin"
-      ? get(`/api/membership/plans`)
-      : get(`/api/membership/plans/${userType}`);
+      ? get<MembershipPlan[]>(`/api/membership/plans`)
+      : get<MembershipPlan[]>(`/api/membership/plans/${userType}`);
   },
-  checkout: async (payload: {
-    planId: string;
-    billingType: "recurring" | "one-time";
-    billingPeriod: "monthly" | "yearly";
-    url: string;
-  }) => {
+  getHistory: async (): Promise<ApiResponse<any[]>> => {
+    return get<any[]>("/api/membership/history");
+  },
+  // Toggle auto-renewal for membership
+  toggleAutoRenewal: async (
+    isAutoRenew: boolean
+  ): Promise<ApiResponse<any>> => {
     try {
-      showToast.loading("Redirecting to payment...");
-      const res = await post<{ url: string }>(
-        "/api/membership/checkout",
-        payload
-      );
+      showToast.loading("Updating auto-renewal settings...");
+      const res = await post<any>("/api/membership/toggle-auto-renewal", {
+        isAutoRenew,
+      });
       showToast.dismiss();
-      if (res.success && res.data.url) {
-        showToast.success("Redirecting to secure payment...");
+      if (res.success) {
+        showToast.success(
+          `Auto-renewal ${isAutoRenew ? "enabled" : "disabled"} successfully`
+        );
       } else {
-        showToast.error(res.message || "Failed to start checkout.");
+        showToast.error(
+          res.message || "Failed to update auto-renewal settings."
+        );
       }
       return res;
     } catch (err: any) {
       showToast.dismiss();
-      showToast.error("Error starting checkout. Please try again.");
+      showToast.error(
+        "Error updating auto-renewal settings. Please try again."
+      );
       throw err;
     }
   },

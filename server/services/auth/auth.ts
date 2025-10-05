@@ -27,6 +27,7 @@ import {
   generatePasswordResetUrl,
 } from "@utils/auth";
 import { sendEmail } from "@utils/email";
+import { ALLOWED_USER_UPDATE_FIELDS, AUTH_COOLDOWN_MINUTES } from "@services/constants/validation";
 
 // Export the utility functions with the same name for backward compatibility
 export const verifyToken = utilVerifyToken;
@@ -222,7 +223,6 @@ export async function signin(signinData: any) {
 // Update user profile
 export async function updateProfile(userId: string, updateData: any) {
   // Only allow certain fields to be updated
-  const { ALLOWED_USER_UPDATE_FIELDS } = await import("../constants/validation");
   const allowedUpdates = ALLOWED_USER_UPDATE_FIELDS;
 
   const updates: any = {};
@@ -362,7 +362,6 @@ export async function forgotPassword(email: string) {
   }
 
   // Check rate limiting (5 minutes cooldown)
-  const { AUTH_COOLDOWN_MINUTES } = await import("../constants/validation");
   const cooldownMinutes = AUTH_COOLDOWN_MINUTES;
   if (!canRequestPasswordReset(user.passwordReset.lastRequestedAt, cooldownMinutes)) {
     const remainingSeconds = getPasswordResetCooldownTime(

@@ -197,9 +197,6 @@ export async function updateUser(userId: string, updateData: UserUpdateData) {
     user.approval = updateData.approval;
   }
 
-  // Note: subscriptionId and membershipId are now handled via Payment model
-  // These fields have been removed from user profiles
-
   await user.save();
 
   // Return user without password hash

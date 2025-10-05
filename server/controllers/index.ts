@@ -1,4 +1,3 @@
-// Export all controllers from organized folders
 export * from "./auth";
 export * from "./admin";
 export * from "./job";

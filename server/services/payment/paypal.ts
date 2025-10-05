@@ -1,5 +1,4 @@
 // PayPal Service - Placeholder for future implementation
-// This would integrate with PayPal SDK for payment processing
 import { logErrorWithContext } from "@utils/core";
 
 // Create PayPal payment order
@@ -10,7 +9,6 @@ export const createPaymentOrder = async (
 ) => {
   try {
     // TODO: Implement PayPal payment order creation
-    // This would use PayPal SDK to create payment orders
     console.log(`PayPal payment order created: ${amount} ${currency} - ${description}`);
 
     return {
@@ -33,7 +31,6 @@ export const createPaymentOrder = async (
 export const capturePayment = async (orderId: string) => {
   try {
     // TODO: Implement PayPal payment capture
-    // This would use PayPal SDK to capture authorized payments
     console.log(`PayPal payment captured: ${orderId}`);
 
     return {
@@ -54,7 +51,6 @@ export const capturePayment = async (orderId: string) => {
 export const refundPayment = async (transactionId: string, amount: number, reason: string) => {
   try {
     // TODO: Implement PayPal refund
-    // This would use PayPal SDK to process refunds
     console.log(`PayPal refund processed: ${transactionId} - ${amount} - ${reason}`);
 
     return {
@@ -77,7 +73,6 @@ export const refundPayment = async (transactionId: string, amount: number, reaso
 export const verifyWebhook = async (headers: any, body: any) => {
   try {
     // TODO: Implement PayPal webhook verification
-    // This would verify PayPal webhook signatures
     console.log("PayPal webhook verified");
 
     return {

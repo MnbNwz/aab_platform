@@ -8,6 +8,7 @@ import {
   getContractorMembership,
 } from "@services/job/contractorJobService";
 import { getJobRequestById } from "@services/job/job";
+import { LeadAccess } from "@models/job/leadAccess";
 import { CONTROLLER_ERROR_MESSAGES, HTTP_STATUS } from "@controllers/constants/validation";
 
 // Get jobs for contractor with membership-based filtering
@@ -78,6 +79,31 @@ export const getContractorJobById = async (req: Request, res: Response) => {
       });
     }
 
+    // ENHANCEMENT: Check if job was already accessed
+    const existingAccess = await LeadAccess.findOne({
+      contractor: userId,
+      jobRequest: jobId,
+    });
+
+    if (existingAccess) {
+      // Job already accessed, return without consuming lead
+      const leadCheck = await checkLeadLimit(userId);
+
+      res.json({
+        success: true,
+        data: {
+          job,
+          leadInfo: leadCheck,
+          accessInfo: {
+            alreadyAccessed: true,
+            accessedAt: existingAccess.accessedAt,
+            membershipTier: existingAccess.membershipTier,
+          },
+        },
+      });
+      return;
+    }
+
     // Check if contractor can access this job
     const accessCheck = await canAccessJob(userId, jobId, job.createdAt);
     if (!accessCheck.canAccess) {
@@ -98,16 +124,36 @@ export const getContractorJobById = async (req: Request, res: Response) => {
       });
     }
 
-    // Increment lead usage
-    await incrementLeadUsage(userId);
+    // OPTIMIZATION 5: Record access with parallel operations
+    const { effectivePlan } = await getContractorMembership(userId);
+    const membershipTier = effectivePlan.tier.toLowerCase();
+
+    // Parallel operations for better performance
+    const [leadAccess] = await Promise.all([
+      // Create lead access record
+      new LeadAccess({
+        contractor: userId,
+        jobRequest: jobId,
+        membershipTier,
+      }).save(),
+      // Increment fast counter
+      incrementLeadUsage(userId),
+    ]);
 
     // Get updated lead info
     const updatedLeadCheck = await checkLeadLimit(userId);
 
     res.json({
       success: true,
-      job,
-      leadInfo: updatedLeadCheck,
+      data: {
+        job,
+        leadInfo: updatedLeadCheck,
+        accessInfo: {
+          alreadyAccessed: false,
+          accessedAt: leadAccess.accessedAt,
+          membershipTier: leadAccess.membershipTier,
+        },
+      },
     });
   } catch (error) {
     console.error("Error getting contractor job by ID:", error);
@@ -153,12 +199,28 @@ export const checkContractorJobAccess = async (req: Request, res: Response) => {
     const accessCheck = await canAccessJob(userId, jobId, job.createdAt);
     const leadCheck = await checkLeadLimit(userId);
 
+    // Check if already accessed
+    const existingAccess = await LeadAccess.findOne({
+      contractor: userId,
+      jobRequest: jobId,
+    });
+
+    const canAccess = accessCheck.canAccess && leadCheck.canAccess;
+    const alreadyAccessed = !!existingAccess;
+
     res.json({
       success: true,
       data: {
-        canAccess: accessCheck.canAccess && leadCheck.canAccess,
+        canAccess: canAccess || alreadyAccessed, // Can access if available or already accessed
+        alreadyAccessed,
         accessCheck,
         leadCheck,
+        accessInfo: existingAccess
+          ? {
+              accessedAt: existingAccess.accessedAt,
+              membershipTier: existingAccess.membershipTier,
+            }
+          : null,
         job: {
           id: job._id,
           title: job.title,

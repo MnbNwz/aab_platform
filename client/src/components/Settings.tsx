@@ -1,8 +1,7 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
   User,
   CreditCard,
-  Building,
   Key,
   Heart,
   Settings as SettingsIcon,
@@ -14,7 +13,9 @@ import ChangeEmailModal from "./ChangeEmailModal";
 import ChangePasswordModal from "./ChangePasswordModal";
 import ServicesManagement from "./ServicesManagement";
 import ImagePreviewModal from "./ImagePreviewModal";
-import { useDispatch } from "react-redux";
+import AutoRenewalModal from "./AutoRenewalModal";
+import PaymentHistoryModal from "./PaymentHistoryModal";
+import { useDispatch, useSelector } from "react-redux";
 import { updateProfileWithFormDataThunk } from "../store/thunks/userThunks";
 import { buildProfileImageFormData } from "../utils/profileFormData";
 import { showToast } from "../utils/toast";
@@ -22,7 +23,8 @@ import {
   smartCompress,
   PROFILE_IMAGE_OPTIONS,
 } from "../utils/imageCompression";
-import type { AppDispatch } from "../store";
+import type { AppDispatch, RootState } from "../store";
+import { toggleAutoRenewal } from "../store/slices/membershipSlice";
 
 interface SettingsProps {
   user: UserType;
@@ -67,6 +69,9 @@ const Settings: React.FC<SettingsProps> = ({
   const [changeEmailOpen, setChangeEmailOpen] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [servicesManagementOpen, setServicesManagementOpen] = useState(false);
+  const [autoRenewalModalOpen, setAutoRenewalModalOpen] = useState(false);
+  const [isSavingAutoRenewal, setIsSavingAutoRenewal] = useState(false);
+  const [paymentHistoryModalOpen, setPaymentHistoryModalOpen] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [imagePreviewOpen, setImagePreviewOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<{
@@ -74,22 +79,45 @@ const Settings: React.FC<SettingsProps> = ({
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dispatch = useDispatch<AppDispatch>();
+
+  const { current: currentMembership } = useSelector(
+    (state: RootState) => state.membership
+  );
+
   const [settings, setSettings] = useState({
-    // Business settings (contractor specific)
     serviceRadius: user.role === "contractor" ? 25 : 15,
     autoRespond: user.role === "contractor" ? false : undefined,
     quoteTimeframe: user.role === "contractor" ? "24h" : undefined,
     minJobValue: user.role === "contractor" ? 100 : undefined,
 
-    // Account settings
-    autoRenewal: true,
+    autoRenewal: currentMembership?.isAutoRenew ?? true,
   });
 
-  const handleDirectChange = (key: string, value: any) => {
-    setSettings((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
+  useEffect(() => {
+    if (currentMembership) {
+      setSettings((prev) => ({
+        ...prev,
+        autoRenewal: currentMembership.isAutoRenew,
+      }));
+    }
+  }, [currentMembership]);
+
+  const handleSaveAutoRenewal = async (newValue: boolean) => {
+    if (!currentMembership) return;
+
+    setIsSavingAutoRenewal(true);
+    try {
+      await dispatch(toggleAutoRenewal(newValue)).unwrap();
+      setAutoRenewalModalOpen(false);
+    } catch (error) {
+      console.error("Failed to save auto-renewal setting:", error);
+    } finally {
+      setIsSavingAutoRenewal(false);
+    }
+  };
+
+  const handleOpenAutoRenewalModal = () => {
+    setAutoRenewalModalOpen(true);
   };
 
   const handleEmailChangeLocal = async (oldEmail: string, newEmail: string) => {
@@ -113,26 +141,22 @@ const Settings: React.FC<SettingsProps> = ({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith("image/")) {
       showToast.error("Please select a valid image file");
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       showToast.error("Image size must be less than 5MB");
       return;
     }
 
     try {
-      // Compress the image silently
       const compressionResult = await smartCompress(
         file,
         PROFILE_IMAGE_OPTIONS
       );
 
-      // Set the compressed file directly
       setSelectedImage({
         file: compressionResult.compressedFile,
       });
@@ -150,10 +174,8 @@ const Settings: React.FC<SettingsProps> = ({
     setImagePreviewOpen(false);
 
     try {
-      // Build FormData with the image file and all current user data
       const formData = buildProfileImageFormData(user, selectedImage.file);
 
-      // Update profile with FormData
       const result = await dispatch(
         updateProfileWithFormDataThunk({
           userId: user._id,
@@ -163,15 +185,12 @@ const Settings: React.FC<SettingsProps> = ({
       );
 
       if (updateProfileWithFormDataThunk.fulfilled.match(result)) {
-        // Only update on successful API response
         if (onProfileImageUpdate) {
-          // Use the returned profileImage or fallback to the original
           const newProfileImage =
             result.payload?.profileImage || user.profileImage || "";
           onProfileImageUpdate(newProfileImage);
         }
       } else if (updateProfileWithFormDataThunk.rejected.match(result)) {
-        // Don't update state on error - just show error message
         console.error("Profile image update failed:", result.payload);
         showToast.error("Failed to update profile picture");
       }
@@ -192,7 +211,6 @@ const Settings: React.FC<SettingsProps> = ({
   const handleImagePreviewRetake = () => {
     setSelectedImage(null);
     setImagePreviewOpen(false);
-    // Trigger file input again
     fileInputRef.current?.click();
   };
 
@@ -226,7 +244,6 @@ const Settings: React.FC<SettingsProps> = ({
       },
     ];
 
-    // Add Services Management section for admin users
     if (user.role === "admin") {
       baseSections.push({
         id: "services",
@@ -245,7 +262,6 @@ const Settings: React.FC<SettingsProps> = ({
       });
     }
 
-    // Add Account & Security section for non-admin users
     if (user.role !== "admin") {
       baseSections.push({
         id: "account",
@@ -297,7 +313,6 @@ const Settings: React.FC<SettingsProps> = ({
       });
     }
 
-    // Add membership section (exclude for admin users)
     if (user.role !== "admin") {
       baseSections.push({
         id: "membership",
@@ -310,36 +325,28 @@ const Settings: React.FC<SettingsProps> = ({
             label: "Current Plan",
             description: "Your active membership tier",
             type: "info",
-            value: "Standard", // This would come from user data
+            value: currentMembership?.planId?.name || "No active plan",
           },
           {
-            id: "auto-renewal",
+            id: "change-auto-renewal",
             label: "Auto-Renewal",
-            description: "Automatically renew your membership",
-            type: "toggle",
-            value: settings.autoRenewal,
-            onChange: (value) => handleDirectChange("autoRenewal", value),
+            description: "Manage your membership auto-renewal preference",
+            type: "button",
+            onClick: handleOpenAutoRenewalModal,
           },
           {
             id: "billing-history",
             label: "Billing History",
             description: "View your payment history and receipts",
             type: "button",
-            onClick: () => {},
-          },
-          {
-            id: "payment-methods",
-            label: "Payment Methods",
-            description: "Manage your saved payment methods",
-            type: "button",
-            onClick: () => {},
+            onClick: () => setPaymentHistoryModalOpen(true),
           },
         ],
       });
     }
 
     return baseSections;
-  }, [user, settings, onProfileEdit]);
+  }, [user, settings, onProfileEdit, currentMembership]);
 
   const activeSectionData = settingsSections.find(
     (section) => section.id === activeSection
@@ -348,7 +355,6 @@ const Settings: React.FC<SettingsProps> = ({
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-primary-900">
             Settings
@@ -358,9 +364,46 @@ const Settings: React.FC<SettingsProps> = ({
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Sidebar Navigation */}
-          <div className="lg:col-span-1">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+          <div className="xl:hidden mb-6">
+            <div className="bg-white rounded-lg shadow-sm border border-primary-200 p-4">
+              <h3 className="text-sm font-medium text-primary-900 mb-3">
+                Settings Sections
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {settingsSections.map((section) => {
+                  const IconComponent = section.icon;
+                  const isActive = activeSection === section.id;
+
+                  return (
+                    <button
+                      key={section.id}
+                      onClick={() =>
+                        !section.disabled && setActiveSection(section.id)
+                      }
+                      disabled={section.disabled}
+                      className={`flex items-center space-x-2 p-3 rounded-lg text-left transition-colors duration-200 ${
+                        section.disabled
+                          ? "opacity-50 cursor-not-allowed text-primary-400"
+                          : isActive
+                          ? "bg-primary-100 text-primary-900 border border-primary-200"
+                          : "text-primary-700 hover:bg-primary-50 border border-transparent"
+                      }`}
+                    >
+                      <IconComponent className="h-4 w-4 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium truncate">
+                          {section.title}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="hidden xl:block xl:col-span-1">
             <nav className="space-y-2">
               {settingsSections.map((section) => {
                 const IconComponent = section.icon;
@@ -394,10 +437,8 @@ const Settings: React.FC<SettingsProps> = ({
             </nav>
           </div>
 
-          {/* Main Content */}
-          <div className="lg:col-span-3">
+          <div className="xl:col-span-3">
             <div className="bg-white rounded-lg shadow-sm border border-primary-200">
-              {/* Section Header */}
               <div className="px-4 sm:px-6 py-4 border-b border-primary-200">
                 <div className="flex items-center space-x-3">
                   {activeSectionData && (
@@ -416,7 +457,6 @@ const Settings: React.FC<SettingsProps> = ({
                 </div>
               </div>
 
-              {/* Section Content */}
               <div className="p-4 sm:p-6">
                 <div className="space-y-6">
                   {activeSectionData?.items.map((item) => (
@@ -536,7 +576,6 @@ const Settings: React.FC<SettingsProps> = ({
         </div>
       </div>
 
-      {/* Change Email Modal */}
       <ChangeEmailModal
         isOpen={changeEmailOpen}
         onClose={() => setChangeEmailOpen(false)}
@@ -544,14 +583,12 @@ const Settings: React.FC<SettingsProps> = ({
         onEmailChange={handleEmailChangeLocal}
       />
 
-      {/* Change Password Modal */}
       <ChangePasswordModal
         isOpen={changePasswordOpen}
         onClose={() => setChangePasswordOpen(false)}
         onPasswordChange={handlePasswordChangeLocal}
       />
 
-      {/* Services Management Modal */}
       {servicesManagementOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
@@ -565,7 +602,6 @@ const Settings: React.FC<SettingsProps> = ({
             className="bg-white rounded-lg shadow-2xl w-full max-w-4xl mx-auto relative flex flex-col max-h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header with Close Button */}
             <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 flex-shrink-0">
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-primary-100 rounded-lg">
@@ -589,7 +625,6 @@ const Settings: React.FC<SettingsProps> = ({
               </button>
             </div>
 
-            {/* Modal Content */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6">
               <ServicesManagement />
             </div>
@@ -597,7 +632,6 @@ const Settings: React.FC<SettingsProps> = ({
         </div>
       )}
 
-      {/* Image Preview Modal */}
       {selectedImage && (
         <ImagePreviewModal
           isOpen={imagePreviewOpen}
@@ -609,13 +643,25 @@ const Settings: React.FC<SettingsProps> = ({
         />
       )}
 
-      {/* Hidden file input for profile photo upload */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
         onChange={handleProfilePhotoUpload}
         className="hidden"
+      />
+
+      <AutoRenewalModal
+        isOpen={autoRenewalModalOpen}
+        onClose={() => setAutoRenewalModalOpen(false)}
+        currentAutoRenew={currentMembership?.isAutoRenew ?? true}
+        onSave={handleSaveAutoRenewal}
+        isSaving={isSavingAutoRenewal}
+      />
+
+      <PaymentHistoryModal
+        isOpen={paymentHistoryModalOpen}
+        onClose={() => setPaymentHistoryModalOpen(false)}
       />
     </div>
   );

@@ -106,12 +106,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         description: "Manage your jobs",
       },
       {
-        id: "contractors",
-        label: "Find Contractors",
-        icon: Users,
-        description: "Search for contractors",
-      },
-      {
         id: "favorites",
         label: "Favorite Contractors",
         icon: Heart,
@@ -122,12 +116,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         label: "Calculators",
         icon: Calculator,
         description: "Cost estimation tools",
-      },
-      {
-        id: "payments",
-        label: "Payments",
-        icon: CreditCard,
-        description: "Payment history & subscription",
       },
       {
         id: "reviews",
@@ -166,12 +154,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         label: "My Bids",
         icon: ClipboardList,
         description: "Manage your bids",
-      },
-      {
-        id: "payments",
-        label: "Payments",
-        icon: CreditCard,
-        description: "Payment history & subscription",
       },
       {
         id: "reviews",

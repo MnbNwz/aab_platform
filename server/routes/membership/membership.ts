@@ -5,12 +5,10 @@ import {
   getAllPlansController,
   getPlansByUserTypeController,
   getCurrentMembershipController,
-  purchaseMembershipController,
-  cancelMembershipController,
   getMembershipHistoryController,
   getMembershipStatsController,
 } from "@controllers/membership";
-import { createStripeSession } from "@controllers/payment";
+import { createStripeSession, toggleAutoRenewal } from "@controllers/payment";
 
 const router = express.Router();
 
@@ -22,8 +20,7 @@ router.get("/plans", getAllPlansController);
 router.get("/plans/:userType", getPlansByUserTypeController);
 router.get("/current", getCurrentMembershipController);
 router.post("/checkout", createStripeSession);
-router.post("/purchase", purchaseMembershipController);
-router.post("/cancel", cancelMembershipController);
+router.post("/toggle-auto-renewal", toggleAutoRenewal);
 router.get("/history", getMembershipHistoryController);
 
 // Admin routes

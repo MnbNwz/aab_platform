@@ -62,6 +62,8 @@ export async function getCurrentMembership(userId: string): Promise<IUserMembers
               features: 1,
               stripePriceIdMonthly: 1,
               stripePriceIdYearly: 1,
+              stripePriceIdOneTimeMonthly: 1,
+              stripePriceIdOneTimeYearly: 1,
             },
           },
         ],
@@ -86,21 +88,32 @@ export async function getCurrentMembership(userId: string): Promise<IUserMembers
 }
 
 // Determine billing period from Stripe Price ID by looking up in database
-export async function determineBillingPeriodFromStripePrice(
+export async function determineBillingFromStripePrice(
   stripePriceId: string,
-): Promise<"monthly" | "yearly"> {
+): Promise<{ billingPeriod: "monthly" | "yearly" }> {
   const plan = await MembershipPlan.findOne({
     $or: [{ stripePriceIdMonthly: stripePriceId }, { stripePriceIdYearly: stripePriceId }],
   });
   if (!plan) {
     throw new Error(`No plan found with Stripe Price ID: ${stripePriceId}`);
   }
+
+  // Check recurring prices (simplified - always one-time initially)
   if (plan.stripePriceIdMonthly === stripePriceId) {
-    return "monthly";
+    return { billingPeriod: "monthly" };
   } else if (plan.stripePriceIdYearly === stripePriceId) {
-    return "yearly";
+    return { billingPeriod: "yearly" };
   }
+
   throw new Error(`Cannot determine billing period from Stripe Price ID: ${stripePriceId}`);
+}
+
+// Get the correct Stripe Price ID based on billing period (simplified - always one-time initially)
+export function getStripePriceId(
+  plan: IMembershipPlan,
+  billingPeriod: "monthly" | "yearly",
+): string {
+  return billingPeriod === "monthly" ? plan.stripePriceIdMonthly! : plan.stripePriceIdYearly!;
 }
 
 // Validate billing period against payment amount

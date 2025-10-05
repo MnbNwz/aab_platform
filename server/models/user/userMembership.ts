@@ -1,7 +1,7 @@
 import { Schema } from "@models/types";
 import { createModel } from "@models/utils/modelCreator";
 import { IUserMembership } from "@models/types/membership";
-import { MEMBERSHIP_STATUSES, BILLING_PERIODS, BILLING_TYPES } from "@models/constants";
+import { MEMBERSHIP_STATUSES, BILLING_PERIODS } from "@models/constants";
 
 // Re-export the interface
 export { IUserMembership };
@@ -33,15 +33,10 @@ const UserMembershipSchema: Schema<IUserMembership> = new Schema(
       enum: BILLING_PERIODS,
       required: true,
     },
-    billingType: {
-      type: String,
-      enum: BILLING_TYPES,
-      required: true,
-      default: "recurring",
-    },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
-    isAutoRenew: { type: Boolean, default: false },
+    isAutoRenew: { type: Boolean, default: false }, // Toggled by user in settings
+    stripeSubscriptionId: { type: String }, // For recurring subscriptions
 
     // Lead tracking for contractors
     leadsUsedThisMonth: { type: Number, default: 0 }, // number of leads accessed this month

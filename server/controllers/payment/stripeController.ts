@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { AuthenticatedRequest } from "@middlewares/types";
 import { getPlanById } from "@services/membership/membership";
 import { CONTROLLER_ERROR_MESSAGES, HTTP_STATUS } from "../constants";
+import { ALLOWED_STRIPE_DOMAINS } from "@controllers/constants/validation";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
   apiVersion: "2025-08-27.basil",
@@ -11,7 +12,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
 
 export const createStripeSession = async (req: Request, res: Response) => {
   try {
-    const { planId, billingType, billingPeriod, url } = req.body;
+    const { planId, billingPeriod, url } = req.body;
     const authReq = req as AuthenticatedRequest;
     const userId = authReq.user?._id;
     if (!userId)
@@ -22,12 +23,6 @@ export const createStripeSession = async (req: Request, res: Response) => {
     // Validate required fields
     if (!planId || typeof planId !== "string") {
       return res.status(400).json({ success: false, message: "Missing or invalid planId" });
-    }
-    if (!billingType || (billingType !== "recurring" && billingType !== "one-time")) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid billingType (must be 'recurring' or 'one-time')",
-      });
     }
     if (!billingPeriod || (billingPeriod !== "monthly" && billingPeriod !== "yearly")) {
       return res
@@ -40,7 +35,6 @@ export const createStripeSession = async (req: Request, res: Response) => {
     // Validate url is absolute, starts with http/https, and matches allowed domains
     try {
       const parsedUrl = new URL(url);
-      const { ALLOWED_STRIPE_DOMAINS } = await import("@controllers/constants/validation");
       const allowedDomains = ALLOWED_STRIPE_DOMAINS;
       if (!(parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:")) {
         return res
@@ -71,7 +65,7 @@ export const createStripeSession = async (req: Request, res: Response) => {
     // Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
-      mode: billingType === "recurring" ? "subscription" : "payment",
+      mode: "payment",
       line_items: [{ price: stripePriceId, quantity: 1 }],
       customer_email: authReq.user?.email,
       success_url: url,
@@ -79,7 +73,6 @@ export const createStripeSession = async (req: Request, res: Response) => {
       metadata: {
         userId: userId.toString(),
         planId: planId.toString(),
-        billingType,
         billingPeriod,
       },
     });

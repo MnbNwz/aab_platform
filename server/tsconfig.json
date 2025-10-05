@@ -3,7 +3,6 @@
     "target": "ES2022",
     "module": "CommonJS",
     "moduleResolution": "node",
-    // "ignoreDeprecations": "6.0", // Removed invalid value
     "lib": ["ES2022"],
 
     "rootDir": "./",

@@ -4,109 +4,6 @@ import * as paymentService from "@services/payment/payment";
 import * as offMarketPaymentService from "@services/payment/offMarket";
 import { CONTROLLER_ERROR_MESSAGES, HTTP_STATUS } from "../constants";
 
-// MEMBERSHIP PAYMENTS
-export const createMembershipCheckout = async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { planId, billingPeriod, isPrepaid, paymentMethod } = req.body;
-    const userId = req.user?._id;
-
-    if (!userId) {
-      return res
-        .status(HTTP_STATUS.UNAUTHORIZED)
-        .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
-    }
-
-    if (!planId || !billingPeriod) {
-      return res.status(400).json({
-        success: false,
-        message: "Plan ID and billing period are required",
-      });
-    }
-
-    // Validate payment method
-    if (paymentMethod && !["stripe", "paypal"].includes(paymentMethod)) {
-      return res.status(400).json({
-        success: false,
-        message: "Payment method must be 'stripe' or 'paypal'",
-      });
-    }
-
-    const result = await paymentService.createMembershipCheckout(
-      userId,
-      planId,
-      billingPeriod,
-      isPrepaid || false,
-    );
-
-    res.status(200).json({
-      success: true,
-      data: {
-        clientSecret: result.paymentIntent.client_secret,
-        paymentIntentId: result.paymentIntent.id,
-        paymentId: result.payment._id,
-      },
-    });
-  } catch (error) {
-    console.error("Error creating membership checkout:", error);
-    res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : "Internal server error",
-    });
-  }
-};
-
-export const confirmMembershipPayment = async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { paymentIntentId } = req.body;
-
-    if (!paymentIntentId) {
-      return res.status(400).json({
-        success: false,
-        message: "Payment intent ID is required",
-      });
-    }
-
-    const payment = await paymentService.confirmMembershipPayment(paymentIntentId);
-
-    res.status(200).json({
-      success: true,
-      data: payment,
-    });
-  } catch (error) {
-    console.error("Error confirming membership payment:", error);
-    res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : "Internal server error",
-    });
-  }
-};
-
-export const cancelMembership = async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { cancellationReason } = req.body;
-    const userId = req.user?._id;
-
-    if (!userId) {
-      return res
-        .status(HTTP_STATUS.UNAUTHORIZED)
-        .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
-    }
-
-    const result = await paymentService.cancelMembership(userId, cancellationReason);
-
-    res.status(200).json({
-      success: true,
-      data: result,
-    });
-  } catch (error) {
-    console.error("Error cancelling membership:", error);
-    res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : "Internal server error",
-    });
-  }
-};
-
 // JOB PAYMENTS
 export const createJobPayment = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -544,7 +441,18 @@ export const getPaymentHistory = async (req: AuthenticatedRequest, res: Response
 
     res.status(200).json({
       success: true,
-      data: result,
+      data: result.payments,
+      pagination: {
+        currentPage: result.pagination.page,
+        totalPages: result.pagination.pages,
+        totalItems: result.pagination.total,
+        itemsPerPage: result.pagination.limit,
+        hasNextPage: result.pagination.page < result.pagination.pages,
+        hasPreviousPage: result.pagination.page > 1,
+        nextPage:
+          result.pagination.page < result.pagination.pages ? result.pagination.page + 1 : null,
+        previousPage: result.pagination.page > 1 ? result.pagination.page - 1 : null,
+      },
     });
   } catch (error) {
     console.error("Error getting payment history:", error);

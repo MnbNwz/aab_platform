@@ -65,7 +65,13 @@ const seedAdmin = async () => {
         canResend: false,
         cooldownSeconds: 0,
       },
-      // Initialize Stripe fields
+      // Password reset fields (admin doesn't need these, but schema requires them)
+      passwordReset: {
+        token: null,
+        expiresAt: null,
+        lastRequestedAt: null,
+      },
+      // Stripe fields (admin needs Stripe integration for job payments, refunds, and contractor management)
       stripeCustomerId: null,
       stripeConnectAccountId: null,
       stripeConnectStatus: "pending",

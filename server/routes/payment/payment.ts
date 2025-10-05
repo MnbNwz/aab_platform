@@ -1,17 +1,19 @@
 import express from "express";
 import { authenticate } from "@middlewares/auth";
 import { requireRole } from "@middlewares/authorization";
+import { validateJobPayment, validateOffMarketPayment } from "@middlewares/validation";
 import {
-  validateMembershipCheckout,
-  validateJobPayment,
-  validateOffMarketPayment,
-} from "@middlewares/validation";
+  paymentRateLimit,
+  checkoutRateLimit,
+  paymentSecurityHeaders,
+  validateNoActiveMembership,
+  validatePlanExists,
+  validateUserRoleForPlan,
+  validatePaymentAmount,
+  validateUserAccountStatus,
+  logPaymentAttempt,
+} from "@middlewares/security";
 import {
-  // Membership payments
-  createMembershipCheckout,
-  confirmMembershipPayment,
-  cancelMembership,
-
   // Job payments
   createJobPayment,
   processJobDeposit,
@@ -43,20 +45,9 @@ import {
 const router = express.Router();
 
 // ==================== MEMBERSHIP PAYMENTS ====================
-
-// Create membership checkout session
-router.post(
-  "/membership/checkout",
-  authenticate,
-  validateMembershipCheckout,
-  createMembershipCheckout,
-);
-
-// Confirm membership payment (webhook handled)
-router.post("/membership/confirm", authenticate, confirmMembershipPayment);
-
-// Cancel membership
-router.post("/membership/cancel", authenticate, cancelMembership);
+// All membership payments use /api/membership/checkout (in membership routes)
+// Webhook handles confirmation automatically
+// Auto-renewal toggle available via /api/membership/toggle-auto-renewal
 
 // ==================== JOB PAYMENTS ====================
 

@@ -11,12 +11,12 @@ export interface IPayment extends Document {
 
   // Stripe essentials
   stripeCustomerId: string;
-  stripePaymentIntentId: string;
+  stripePaymentIntentId?: string; // Recurring
+  stripeSessionId?: string; // One-time (Stripe Checkout)
   stripeSubscriptionId?: string; // Only for recurring
 
   // Billing details
   billingPeriod: "monthly" | "yearly";
-  billingType: "recurring" | "one_time";
   failureReason?: string;
 
   // Metadata

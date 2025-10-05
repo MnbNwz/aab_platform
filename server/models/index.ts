@@ -1,4 +1,3 @@
-// Export all models from organized folders
 export * from "./user";
 export * from "./membership";
 export * from "./payment";

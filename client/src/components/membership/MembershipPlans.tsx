@@ -4,36 +4,20 @@ import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../../store";
 import { logoutThunk } from "../../store/thunks/authThunks";
 import ProfileModal from "../ProfileModal";
-import type { User } from "../../types";
-
-interface Plan {
-  _id: string;
-  name: string;
-  description: string;
-  features: string[];
-  monthlyPrice: number;
-  yearlyPrice: number;
-  annualDiscountRate: number;
-  tier: string;
-}
+import type { User, MembershipPlan, CurrentMembership } from "../../types";
 
 interface Props {
-  plans: Plan[];
-  onSelect: (plan: Plan) => void;
+  plans: MembershipPlan[];
+  onSelect: (plan: MembershipPlan) => void;
 }
-
-type Membership = {
-  _id?: string;
-  planId?: string;
-};
 
 const MembershipPlans: React.FC<Props> = ({ plans }) => {
   const user = useSelector((state: RootState) => state.auth.user);
   const currentMembership = useSelector(
     (state: RootState) => state.membership.current
-  ) as Membership | null;
+  ) as CurrentMembership | null;
   const dispatch = useDispatch<AppDispatch>();
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [hoveredId] = useState<string | null>(null);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   // Animation: fade/scale in
@@ -60,138 +44,182 @@ const MembershipPlans: React.FC<Props> = ({ plans }) => {
         />
       </div>
       <h2 className="text-xl xs:text-2xl sm:text-3xl font-extrabold text-accent-500 mb-1 xs:mb-2 text-center px-2 xs:px-4">
-        Choose Your Membership Plan
+        Choose Your{" "}
+        {user?.role === "customer"
+          ? "Customer"
+          : user?.role === "contractor"
+          ? "Contractor"
+          : ""}{" "}
+        Membership Plan
       </h2>
       <p className="text-primary-700 mb-4 xs:mb-6 sm:mb-8 text-center max-w-2xl text-xs xs:text-sm sm:text-base px-2 xs:px-4">
-        Unlock premium features and get the most out of your experience. Select
-        a plan below to continue.
+        {user?.role === "customer"
+          ? "Find the perfect contractors for your projects and access premium tools to make your home improvement journey smooth and successful."
+          : user?.role === "contractor"
+          ? "Get more leads, grow your business, and access premium tools to take your contracting services to the next level."
+          : "Unlock premium features and get the most out of your experience. Select a plan below to continue."}
       </p>
-      <div className="grid gap-3 xs:gap-4 sm:gap-6 lg:gap-8 w-full max-w-6xl grid-cols-1 md:grid-cols-2 lg:grid-cols-3 px-2 xs:px-4">
+      <div
+        className={`grid gap-3 xs:gap-4 sm:gap-6 lg:gap-8 w-full max-w-7xl px-2 xs:px-4 sm:px-6 lg:px-8 ${
+          plans.length === 3
+            ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 sm:justify-items-center lg:justify-items-stretch"
+            : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+        }`}
+      >
         {plans.map((plan, idx) => {
           const isPremium = plan.tier === "premium";
+
+          // Only show selection for actual current membership, not default hover
           const isSelected =
-            currentMembership &&
-            (currentMembership._id === plan._id ||
-              currentMembership.planId === plan._id);
+            currentMembership && currentMembership.planId._id === plan._id;
+
           return (
             <div
               key={plan._id}
-              className={`relative rounded-lg xs:rounded-xl shadow-lg flex flex-col border-2 overflow-hidden w-full
+              className={`relative rounded-xl shadow-lg flex flex-col border-2 overflow-hidden w-full max-w-sm mx-auto transition-all duration-300 ${
+                plans.length === 3 && idx === 2
+                  ? "sm:col-start-1 sm:col-span-2 lg:col-start-auto lg:col-span-auto"
+                  : ""
+              }
                 ${
-                  isSelected || hoveredId === plan._id
-                    ? "border-accent-600 bg-white z-20 outline-none ring-2 ring-accent-400 ring-offset-0"
-                    : isPremium
-                    ? "border-accent-500 bg-gradient-to-br from-accent-50 to-primary-100 scale-105 z-10"
-                    : "border-primary-200 bg-white"
+                  isSelected
+                    ? "border-orange-400 bg-gradient-to-br from-orange-50 to-orange-100 ring-2 ring-orange-300 ring-opacity-50 shadow-xl"
+                    : "border-orange-200 bg-white shadow-md"
                 }
-                hover:shadow-xl hover:border-accent-500 animate-fadein hover:scale-105 transition-all duration-200 ${getCardClass(
-                  idx
-                )}`}
+                animate-fadein ${getCardClass(idx)}`}
               style={{
                 animationDelay: `${idx * 120}ms`,
                 animationFillMode: "forwards",
                 transition: "border-color 0.2s, box-shadow 0.2s",
                 borderRadius: 12, // match rounded-xl
               }}
-              onMouseEnter={() => setHoveredId(plan._id)}
-              onMouseLeave={() => setHoveredId(null)}
             >
               {/* Tier badge */}
               <span
-                className={`absolute top-2 right-2 xs:top-4 xs:right-4 px-1.5 xs:px-2 sm:px-3 py-0.5 xs:py-1 rounded-full text-xs font-bold tracking-wide
+                className={`absolute top-3 right-3 xs:top-4 xs:right-4 px-2 xs:px-3 py-1 xs:py-1.5 rounded-full text-xs font-bold tracking-wide z-10
                 ${
                   isPremium
-                    ? "bg-accent-500 text-white shadow"
+                    ? "bg-accent-500 text-white shadow-lg"
                     : "bg-primary-200 text-primary-700"
                 }`}
-                style={{ zIndex: 2 }}
               >
                 {plan.tier.charAt(0).toUpperCase() + plan.tier.slice(1)}
               </span>
-              <div className="p-3 xs:p-4 sm:p-6 lg:p-8 flex-1 flex flex-col">
-                <div className="mb-1 xs:mb-2 sm:mb-4"></div>{" "}
+              <div className="p-4 xs:p-5 sm:p-6 lg:p-8 flex-1 flex flex-col">
+                <div className="mb-2 xs:mb-3 sm:mb-4"></div>{" "}
                 {/* Add margin between badge and title */}
                 <div className="relative">
-                  <h3 className="text-lg xs:text-xl sm:text-2xl font-extrabold text-primary-900 mb-1 xs:mb-2 flex items-center gap-1 xs:gap-2 pr-16 xs:pr-20">
+                  <h3 className="text-lg xs:text-xl sm:text-2xl font-extrabold text-primary-900 mb-2 xs:mb-3 flex items-center gap-2 pr-20 xs:pr-24">
                     {isPremium && (
-                      <span className="inline-block text-accent-400 animate-bounce text-sm xs:text-base">
+                      <span className="inline-block text-accent-400 animate-bounce text-base xs:text-lg">
                         ★
                       </span>
                     )}
-                    <span className="truncate">{plan.name}</span>
+                    <span className="truncate leading-tight">{plan.name}</span>
                   </h3>
                 </div>
-                <p className="text-primary-700 mb-3 xs:mb-4 sm:mb-5 text-xs xs:text-sm sm:text-base min-h-[32px] xs:min-h-[40px] sm:min-h-[48px]">
+                <p className="text-primary-700 mb-4 xs:mb-5 sm:mb-6 text-sm xs:text-base leading-relaxed line-clamp-2">
                   {plan.description}
                 </p>
-                <ul className="mb-4 xs:mb-6 flex-1 space-y-1 xs:space-y-2">
+                <ul className="mb-4 xs:mb-6 flex-1 space-y-2 xs:space-y-3">
                   {plan.features.map((f, i) => (
                     <li
                       key={i}
-                      className="text-primary-700 text-xs xs:text-sm flex items-center gap-1 xs:gap-2"
+                      className="text-primary-700 text-sm xs:text-base flex items-start gap-2 xs:gap-3"
                     >
-                      <span className="inline-block w-1.5 h-1.5 xs:w-2 xs:h-2 rounded-full bg-accent-500 animate-pulse flex-shrink-0"></span>{" "}
-                      <span className="truncate">{f}</span>
+                      <span className="inline-block w-2 h-2 xs:w-2.5 xs:h-2.5 rounded-full bg-accent-500 flex-shrink-0 mt-1.5 xs:mt-2"></span>
+                      <span className="leading-relaxed">{f}</span>
                     </li>
                   ))}
                 </ul>
-                <div className="mt-auto space-y-1 xs:space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-primary-900 text-xs xs:text-sm">
-                      Monthly
-                    </span>
-                    <span className="text-accent-500 font-bold text-base xs:text-lg">
-                      ${plan.monthlyPrice}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-primary-900 text-xs xs:text-sm">
-                      Yearly
-                    </span>
-                    <span className="text-accent-500 font-bold text-base xs:text-lg">
-                      ${plan.yearlyPrice}{" "}
-                      <span className="text-xs text-primary-500">
-                        ({plan.annualDiscountRate}% off)
-                      </span>
-                    </span>
+                <div
+                  className={`mt-auto space-y-3 xs:space-y-4 rounded-lg p-3 xs:p-4 transition-all duration-200 ${
+                    hoveredId === plan._id
+                      ? "bg-primary-100 border border-primary-300 shadow-md"
+                      : "bg-primary-50 border border-transparent"
+                  }`}
+                >
+                  <div className="space-y-4">
+                    {/* Monthly Pricing */}
+                    <div className="text-center">
+                      <div className="text-sm font-medium text-primary-600 mb-1">
+                        Monthly
+                      </div>
+                      <div className="text-2xl font-bold text-primary-900">
+                        ${(plan.monthlyPrice / 100).toFixed(2)}
+                      </div>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="flex items-center">
+                      <div className="flex-1 border-t border-primary-200"></div>
+                      <div className="px-3 text-xs font-medium text-primary-500 bg-white">
+                        OR
+                      </div>
+                      <div className="flex-1 border-t border-primary-200"></div>
+                    </div>
+
+                    {/* Yearly Pricing */}
+                    <div className="text-center relative">
+                      <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
+                        <span className="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                          Save {plan.annualDiscountRate}%
+                        </span>
+                      </div>
+                      <div className="text-sm font-medium text-primary-600 mb-1">
+                        Yearly
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-2xl font-bold text-accent-500">
+                          $
+                          {(
+                            (plan.yearlyPrice *
+                              (1 - plan.annualDiscountRate / 100)) /
+                            100
+                          ).toFixed(2)}
+                        </div>
+                        <div className="text-lg font-medium text-primary-400 line-through">
+                          ${(plan.yearlyPrice / 100).toFixed(2)}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-              <button
-                className={`w-full py-2 xs:py-2.5 sm:py-3 text-xs xs:text-sm sm:text-base font-bold rounded-b-lg xs:rounded-b-xl transition-colors
-                  ${
-                    isPremium
-                      ? "bg-accent-600 hover:bg-accent-700"
-                      : "bg-accent-500 hover:bg-accent-600"
-                  }
-                  text-white shadow-md animate-fadein`}
-                onClick={async () => {
-                  try {
-                    const billingType = "recurring"; // or "one-time" if you want to support both
-                    const billingPeriod = "monthly"; // or "yearly"; you can let user choose
-                    const url = window.location.origin + "/payment-result";
-                    const res = await import(
-                      "../../services/membershipService"
-                    ).then((m) =>
-                      m.membershipService.checkout({
-                        planId: plan._id,
-                        billingType,
-                        billingPeriod,
-                        url,
-                      })
-                    );
-                    if (res.success && res.data.url) {
-                      setTimeout(() => {
-                        window.location.href = res.data.url;
-                      }, 800);
+              <div className="flex gap-1 xs:gap-2 p-2 xs:p-3 sm:p-4 lg:p-5">
+                <button
+                  className={`flex-1 py-2 xs:py-2.5 sm:py-3 px-1 xs:px-2 sm:px-4 text-xs xs:text-xs sm:text-sm font-semibold rounded-lg transition-all duration-200
+                    ${
+                      isSelected
+                        ? "bg-accent-600 text-white cursor-default"
+                        : "bg-accent-500 text-white shadow-md"
                     }
-                  } catch (err) {
-                    // error toast handled in API
-                  }
-                }}
-              >
-                Select Plan
-              </button>
+                    animate-fadein`}
+                  onClick={() => {
+                    alert(
+                      "Payment functionality is temporarily unavailable. Please contact support."
+                    );
+                  }}
+                >
+                  Monthly
+                </button>
+                <button
+                  className={`flex-1 py-2 xs:py-2.5 sm:py-3 px-1 xs:px-2 sm:px-4 text-xs xs:text-xs sm:text-sm font-semibold rounded-lg transition-all duration-200
+                    ${
+                      isSelected
+                        ? "bg-accent-600 text-white cursor-default"
+                        : "bg-accent-500 text-white shadow-md"
+                    }
+                    animate-fadein`}
+                  onClick={() => {
+                    alert(
+                      "Payment functionality is temporarily unavailable. Please contact support."
+                    );
+                  }}
+                >
+                  Yearly
+                </button>
+              </div>
             </div>
           );
         })}

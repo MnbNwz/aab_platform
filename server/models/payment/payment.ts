@@ -1,12 +1,7 @@
 import { Schema } from "@models/types";
 import { createModel } from "@models/utils/modelCreator";
 import { IPayment } from "@models/types/payment";
-import {
-  PAYMENT_STATUSES,
-  BILLING_PERIODS,
-  BILLING_TYPES,
-  DEFAULT_CURRENCY,
-} from "@models/constants";
+import { PAYMENT_STATUSES, BILLING_PERIODS, DEFAULT_CURRENCY } from "@models/constants";
 
 const PaymentSchema: Schema<IPayment> = new Schema({
   userId: {
@@ -23,18 +18,14 @@ const PaymentSchema: Schema<IPayment> = new Schema({
     default: "pending",
   },
   stripeCustomerId: { type: String, required: true },
-  stripePaymentIntentId: { type: String, required: true },
+  // For recurring flows we use PaymentIntents; for one-time Stripe Checkout we store the Session ID
+  stripePaymentIntentId: { type: String, required: false },
+  stripeSessionId: { type: String },
   stripeSubscriptionId: { type: String },
   billingPeriod: {
     type: String,
     enum: BILLING_PERIODS,
     required: true,
-  },
-  billingType: {
-    type: String,
-    enum: BILLING_TYPES,
-    required: true,
-    default: "recurring",
   },
   failureReason: { type: String },
 });

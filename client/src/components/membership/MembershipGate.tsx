@@ -23,9 +23,12 @@ const MembershipGate: React.FC<{ children: React.ReactNode }> = ({
   const isAdminProfileLoaded = useSelector(
     (state: RootState) => state.adminProfile.isLoaded
   );
-  const { loading, error } = useSelector(
-    (state: RootState) => state.membership
-  );
+  const {
+    loading,
+    error,
+    current: currentMembership,
+    plans,
+  } = useSelector((state: RootState) => state.membership);
 
   useEffect(() => {
     if (!user || !user.role) {
@@ -34,7 +37,6 @@ const MembershipGate: React.FC<{ children: React.ReactNode }> = ({
     dispatch(fetchMembershipPlans(user.role));
     dispatch(fetchCurrentMembership());
 
-    // Fetch admin profile if not loaded yet
     if (!isAdminProfileLoaded) {
       dispatch(fetchAdminProfileThunk());
     }
@@ -51,7 +53,7 @@ const MembershipGate: React.FC<{ children: React.ReactNode }> = ({
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-primary-50 p-4">
-        <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8 max-w-md w-full text-center border border-accent-200">
+        <div className="bg-primary-50 rounded-xl shadow-lg p-6 sm:p-8 max-w-md w-full text-center border border-accent-200">
           <div className="text-4xl sm:text-5xl mb-4 text-accent-500">⚠️</div>
           <h2 className="text-xl sm:text-2xl font-bold text-accent-600 mb-3">
             Error Loading Plans
@@ -64,11 +66,10 @@ const MembershipGate: React.FC<{ children: React.ReactNode }> = ({
     );
   }
 
-  // Handle rejected users
   if (user && user.approval === "rejected") {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-primary-50 relative p-4">
-        <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8 max-w-md w-full text-center border border-accent-200">
+        <div className="bg-primary-50 rounded-xl shadow-lg p-6 sm:p-8 max-w-md w-full text-center border border-accent-200">
           <div className="text-4xl sm:text-5xl mb-4 text-accent-500">❌</div>
           <h2 className="text-xl sm:text-2xl font-bold text-accent-600 mb-3">
             Account Rejected
@@ -90,13 +91,7 @@ const MembershipGate: React.FC<{ children: React.ReactNode }> = ({
     );
   }
 
-  // if (
-  //   !membership &&
-  //   membership === null &&
-  //   plans.length > 0 &&
-  //   user &&
-  //   user.role !== "admin"
-  // ) {
+  // if (!currentMembership && user?.role !== "admin") {
   //   return (
   //     <MembershipPlans
   //       plans={plans}
@@ -108,7 +103,6 @@ const MembershipGate: React.FC<{ children: React.ReactNode }> = ({
   //   );
   // }
 
-  // If membership exists, render the normal app/dashboard
   return <>{children}</>;
 };
 

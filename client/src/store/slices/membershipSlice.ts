@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { membershipService } from "../../services/membershipService";
+import type { MembershipPlan, CurrentMembership } from "../../types";
 
 export const fetchCurrentMembership = createAsyncThunk(
   "membership/fetchCurrentMembership",
@@ -28,14 +29,34 @@ export const fetchMembershipPlans = createAsyncThunk(
   }
 );
 
+export const toggleAutoRenewal = createAsyncThunk(
+  "membership/toggleAutoRenewal",
+  async (isAutoRenew: boolean, { rejectWithValue, dispatch }) => {
+    try {
+      const res = await membershipService.toggleAutoRenewal(isAutoRenew);
+      dispatch(fetchCurrentMembership());
+      return res.data;
+    } catch (err: any) {
+      return rejectWithValue(err.message || "Failed to toggle auto-renewal");
+    }
+  }
+);
+
+interface MembershipState {
+  current: CurrentMembership | null;
+  plans: MembershipPlan[];
+  loading: boolean;
+  error: string | null;
+}
+
 const membershipSlice = createSlice({
   name: "membership",
   initialState: {
     current: null,
     plans: [],
     loading: false,
-    error: null as string | null,
-  },
+    error: null,
+  } as MembershipState,
   reducers: {
     clearMembershipError(state) {
       state.error = null;
@@ -54,7 +75,7 @@ const membershipSlice = createSlice({
         state.error = null;
       })
       .addCase(fetchCurrentMembership.fulfilled, (state, action) => {
-        state.current = action.payload.data || null;
+        state.current = action.payload || null;
         state.loading = false;
       })
       .addCase(fetchCurrentMembership.rejected, (state, action) => {
@@ -70,6 +91,17 @@ const membershipSlice = createSlice({
         state.loading = false;
       })
       .addCase(fetchMembershipPlans.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      .addCase(toggleAutoRenewal.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(toggleAutoRenewal.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(toggleAutoRenewal.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       });

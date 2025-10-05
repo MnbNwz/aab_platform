@@ -77,8 +77,6 @@ const validateEmailAddress = (email: string): { isValid: boolean; error?: string
   return { isValid: true };
 };
 
-// Rate limiting and debouncing removed to reduce server burden
-
 // Enhanced email sending with comprehensive validation
 export const sendEmail = async (
   to: string,
@@ -96,8 +94,6 @@ export const sendEmail = async (
     if (!emailValidation.isValid) {
       return { success: false, error: `Invalid email address: ${emailValidation.error}` };
     }
-
-    // 2. Rate limiting and debouncing removed to reduce server burden
 
     // 3. Template validation
     if (!emailTemplates[template]) {
@@ -375,5 +371,42 @@ export const sendPasswordResetEmail = async (
   }
 };
 
-// Email statistics and admin functions removed to reduce server burden
-// Use database or Redis for production statistics if needed
+// Payment failure notification
+export const sendPaymentFailedNotification = async (
+  userEmail: string,
+  amount: number,
+  failureReason: string,
+  planName?: string,
+  retryUrl?: string,
+): Promise<EmailResult> => {
+  try {
+    const result = await sendEmail(userEmail, "", "payment_failed", {
+      firstName: "Customer", // Will be replaced with actual user data when called
+      amount,
+      failureReason,
+      planName,
+      retryUrl: retryUrl || `${process.env.FRONTEND_URL}/update-payment`,
+    });
+
+    if (result.success) {
+      console.log(
+        `💳 [PAYMENT FAILED] Notification sent to ${userEmail}, Amount: $${amount / 100}`,
+      );
+    } else {
+      console.error(
+        `❌ [PAYMENT FAILED] Failed to send to ${userEmail}, Amount: $${amount / 100}, Error: ${result.error}`,
+      );
+    }
+
+    return { success: result.success, error: result.error };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logErrorWithContext(error as Error, {
+      operation: "send_payment_failed_notification",
+      userEmail,
+      amount,
+      failureReason,
+    });
+    return { success: false, error: errorMessage };
+  }
+};

@@ -10,11 +10,11 @@ export interface IMembershipPlan extends Document {
   features: string[];
   monthlyPrice: number; // in cents
   yearlyPrice: number; // in cents
-  annualDiscountRate: number; // discount percentage for annual billing
+  annualDiscountRate: number; // discount percentage for annual billing 15%
   duration: number; // in days
   stripeProductId?: string; // Stripe product ID
-  stripePriceIdMonthly?: string; // Stripe price ID for monthly
-  stripePriceIdYearly?: string; // Stripe price ID for yearly
+  stripePriceIdMonthly?: string; // Stripe price ID for monthly recurring
+  stripePriceIdYearly?: string; // Stripe price ID for yearly recurring
   isActive: boolean;
 
   // Contractor-specific features
@@ -23,6 +23,22 @@ export interface IMembershipPlan extends Document {
   radiusKm?: number; // null for unlimited
   featuredListing?: boolean; // top priority in listings
   offMarketAccess?: boolean; // access to off-market opportunities
+  publicityReferences?: boolean; // publicity & references shown
+  verifiedBadge?: boolean; // verified badge display
+  financingSupport?: boolean; // financing support access
+  privateNetwork?: boolean; // private network access (notary, lawyer, specialists, discounts)
+
+  // Customer-specific features
+  maxProperties?: number; // null for unlimited
+  propertyType?: "domestic" | "commercial"; // property type access
+  freeCalculators?: boolean; // free calculators access
+  unlimitedRequests?: boolean; // unlimited service requests
+  contractorReviewsVisible?: boolean; // contractor reviews visibility
+  platformFeePercentage?: number; // platform fee percentage (0-100)
+  priorityContractorAccess?: boolean; // priority access to top contractors
+  propertyValuationSupport?: boolean; // property valuation support
+  certifiedAASWork?: boolean; // certified AAS work adds resale value
+  freeEvaluation?: boolean; // free evaluation by top specialists
 
   createdAt: Date;
   updatedAt: Date;
@@ -33,12 +49,12 @@ export interface IUserMembership extends Document {
   userId: Types.ObjectId;
   planId: Types.ObjectId;
   paymentId: Types.ObjectId;
-  status: "active" | "expired" | "canceled";
+  status: "active" | "expired" | "cancelled";
   billingPeriod: "monthly" | "yearly"; // Which billing option user chose
-  billingType: "recurring" | "one_time"; // Add this field to record user's billing type
   startDate: Date;
   endDate: Date;
   isAutoRenew: boolean;
+  stripeSubscriptionId?: string; // For recurring subscriptions
   cancelAtPeriodEnd: boolean;
   canceledAt?: Date;
 

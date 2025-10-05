@@ -355,6 +355,19 @@
           }
         },
         {
+          "name": "Get Plans by User Type (Dynamic)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/membership/plans/{{userType}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "membership", "plans", "{{userType}}"]
+            },
+            "description": "Get membership plans by user type (customer or contractor). Set userType variable to 'customer' or 'contractor'."
+          }
+        },
+        {
           "name": "Get Current Membership",
           "request": {
             "method": "GET",
@@ -632,6 +645,28 @@
           }
         },
         {
+          "name": "Create One-Time Membership Checkout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planId\": \"PLAN_ID_HERE\",\n  \"billingPeriod\": \"monthly\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/membership/checkout/onetime",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "membership", "checkout", "onetime"]
+            },
+            "description": "Create one-time membership checkout session (monthly or yearly)"
+          }
+        },
+        {
           "name": "Confirm Membership Payment",
           "request": {
             "method": "POST",
@@ -651,6 +686,28 @@
               "path": ["api", "payment", "membership", "confirm"]
             },
             "description": "Confirm membership payment after successful Stripe checkout"
+          }
+        },
+        {
+          "name": "Confirm One-Time Membership Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"cs_test_1234567890\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/membership/confirm/onetime",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "membership", "confirm", "onetime"]
+            },
+            "description": "Confirm one-time membership payment after successful Stripe checkout"
           }
         },
         {
@@ -1723,108 +1780,6 @@
       ]
     },
     {
-      "name": "Lead Management",
-      "item": [
-        {
-          "name": "Get Contractor Leads",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/job/leads?page=1&limit=10&service=plumbing&propertyType=domestic&minBudget=1000&maxBudget=5000",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "job", "leads"],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1",
-                  "description": "Page number for pagination"
-                },
-                {
-                  "key": "limit",
-                  "value": "10",
-                  "description": "Items per page"
-                },
-                {
-                  "key": "service",
-                  "value": "plumbing",
-                  "description": "Filter by service type",
-                  "disabled": true
-                },
-                {
-                  "key": "propertyType",
-                  "value": "domestic",
-                  "description": "Filter by property type: domestic, commercial",
-                  "disabled": true
-                },
-                {
-                  "key": "minBudget",
-                  "value": "1000",
-                  "description": "Minimum budget filter",
-                  "disabled": true
-                },
-                {
-                  "key": "maxBudget",
-                  "value": "5000",
-                  "description": "Maximum budget filter",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "Get available leads for contractors with filtering options (contractor only)"
-          }
-        },
-        {
-          "name": "Get Lead Usage Statistics",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/job/leads/usage",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "job", "leads", "usage"]
-            },
-            "description": "Get contractor's lead usage statistics including credits used, remaining, and monthly limits (contractor only)"
-          }
-        },
-        {
-          "name": "Check Job Access",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/job/leads/check/{{jobRequestId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "job", "leads", "check", "{{jobRequestId}}"]
-            },
-            "description": "Check if contractor can access a specific job request without deducting credits (contractor only)"
-          }
-        },
-        {
-          "name": "Access Job Request",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/job/leads/access/{{jobRequestId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "job", "leads", "access", "{{jobRequestId}}"]
-            },
-            "description": "Access a specific job request and deduct lead credit from contractor's account (contractor only)"
-          }
-        }
-      ]
-    },
-    {
       "name": "Contractor Job Management",
       "item": [
         {
@@ -1937,6 +1892,19 @@
               "path": ["api", "dashboard", "platform"]
             },
             "description": "Single smart dashboard endpoint that returns different analytics based on user role:\n\n🔴 **Admin**: Complete platform analytics, health score, business intelligence\n🟡 **Contractor**: Bidding performance, earnings, win rate, lead usage\n🔵 **Customer**: Personal job statistics, payment history, property analytics\n\nThe response structure changes based on the authenticated user's role, providing tailored dashboard data automatically."
+          }
+        },
+        {
+          "name": "Platform Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "dashboard", ""]
+            },
+            "description": "Alternative dashboard endpoint - returns role-based analytics automatically"
           }
         }
       ]

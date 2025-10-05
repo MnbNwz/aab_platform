@@ -1,7 +1,9 @@
+import mongoose from "mongoose";
 import { JobRequest } from "@models/job";
 import { ContractorServices } from "@models/system";
 import { FilterQuery } from "mongoose";
 import { validateJobRequestCreation } from "../property/typeEnforcement";
+import { VALID_SORT_FIELDS, ALLOWED_JOB_UPDATE_FIELDS } from "@services/constants/validation";
 
 // Helper function to get available services from database
 export const getAvailableServices = async (): Promise<string[]> => {
@@ -203,7 +205,6 @@ export const getJobRequests = async (filters: any, user: any) => {
 
   // Sort options - default to newest first
   const sortOptions: any = {};
-  const { VALID_SORT_FIELDS } = await import("../constants/validation");
   const validSortFields = VALID_SORT_FIELDS;
   const sortField = validSortFields.includes(sortBy) ? sortBy : "createdAt";
   const sortDirection = sortOrder === "asc" ? 1 : -1; // Default is desc (-1) for newest first
@@ -323,7 +324,7 @@ export const getJobRequests = async (filters: any, user: any) => {
 // Get job request by ID (optimized with aggregation)
 export const getJobRequestById = async (id: string) => {
   const pipeline = [
-    { $match: { _id: new (await import("mongoose")).Types.ObjectId(id) } },
+    { $match: { _id: new mongoose.Types.ObjectId(id) } },
 
     // Lookup related collections
     {
@@ -433,7 +434,6 @@ export const updateJobRequest = async (id: string, updateData: any, user: any) =
   }
 
   // Only allow certain fields to be updated
-  const { ALLOWED_JOB_UPDATE_FIELDS } = await import("../constants/validation");
   const allowedFields = ALLOWED_JOB_UPDATE_FIELDS;
   const filteredUpdate: any = {};
 

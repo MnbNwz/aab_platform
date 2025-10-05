@@ -1,3 +1,4 @@
+import Stripe from "stripe";
 import { Payment } from "@models/payment";
 import { JobPayment } from "@models/payment";
 import { User } from "@models/user";
@@ -15,6 +16,7 @@ import {
   setupContractorConnect,
   getContractorDashboard,
 } from "./stripe";
+import { getStripePriceId } from "@services/membership/membership";
 import {
   calculateYearlyDiscount,
   calculatePrepaidRebate,
@@ -22,6 +24,12 @@ import {
 } from "@utils/financial";
 import { getMembershipEndDate, getDaysRemaining } from "@utils/core";
 import { Types } from "@models/types";
+import mongoose from "mongoose";
+
+// Initialize Stripe
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2025-08-27.basil",
+});
 
 // MEMBERSHIP PAYMENTS
 export const createMembershipCheckout = async (
@@ -83,7 +91,6 @@ export const createMembershipCheckout = async (
       stripeCustomerId,
       stripePaymentIntentId: paymentIntent.id,
       billingPeriod,
-      billingType: "recurring",
     });
 
     await payment.save();
@@ -95,6 +102,76 @@ export const createMembershipCheckout = async (
     };
   } catch (error) {
     console.error("Error creating membership checkout:", error);
+    throw error;
+  }
+};
+
+// Create one-time membership payment using Stripe Checkout
+export const createOneTimeMembershipCheckout = async (
+  userId: string,
+  planId: string,
+  billingPeriod: "monthly" | "yearly",
+) => {
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Get membership plan details
+    const membershipPlan = await MembershipPlan.findById(planId);
+    if (!membershipPlan) {
+      throw new Error("Membership plan not found");
+    }
+
+    // Get the correct Stripe Price ID (simplified - always one-time initially)
+    const stripePriceId = getStripePriceId(membershipPlan, billingPeriod);
+
+    // Create Stripe customer if not exists
+    const stripeCustomerId = await getOrCreateCustomer(userId, user.email);
+
+    // Create Stripe Checkout Session for one-time payment
+    const session = await stripe.checkout.sessions.create({
+      customer: stripeCustomerId,
+      payment_method_types: ["card"],
+      line_items: [
+        {
+          price: stripePriceId,
+          quantity: 1,
+        },
+      ],
+      mode: "payment", // One-time payment
+      success_url: `${process.env.FRONTEND_URL}/membership/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.FRONTEND_URL}/membership/cancel`,
+      metadata: {
+        userId,
+        planId,
+        billingPeriod,
+      },
+    });
+
+    // Create payment record
+    const payment = new Payment({
+      userId,
+      email: user.email,
+      amount:
+        billingPeriod === "monthly" ? membershipPlan.monthlyPrice : membershipPlan.yearlyPrice,
+      currency: "usd",
+      status: "pending",
+      stripeCustomerId,
+      stripeSessionId: session.id,
+      billingPeriod,
+    });
+
+    await payment.save();
+
+    return {
+      sessionId: session.id,
+      url: session.url,
+      payment,
+    };
+  } catch (error) {
+    console.error("Error creating one-time membership checkout:", error);
     throw error;
   }
 };
@@ -136,12 +213,13 @@ export const confirmMembershipPayment = async (paymentIntentId: string) => {
     );
 
     // Send payment receipt notification
-    await sendPaymentReceipt(
-      payment.userId.toString(),
-      "membership",
-      payment.amount,
-      payment._id.toString(),
-    );
+    const user = await User.findById(payment.userId);
+    if (user) {
+      await sendPaymentReceipt(user.email, "membership", payment.amount, payment._id.toString(), {
+        firstName: user.firstName,
+        planName: membershipPlan.name,
+      });
+    }
 
     return payment;
   } catch (error) {
@@ -150,73 +228,67 @@ export const confirmMembershipPayment = async (paymentIntentId: string) => {
   }
 };
 
-export const cancelMembership = async (userId: string, cancellationReason?: string) => {
+// Confirm one-time membership payment from Stripe Checkout Session
+export const confirmOneTimeMembershipPayment = async (sessionId: string) => {
   try {
-    // Get current membership
-    const membership = await UserMembership.findOne({ userId, status: "active" });
-    if (!membership) {
-      throw new Error("No active membership found");
+    const payment = await Payment.findOne({ stripeSessionId: sessionId });
+    if (!payment) {
+      throw new Error("Payment not found");
     }
 
-    // Calculate cancellation fee based on time remaining using safe date calculations
-    const now = new Date();
-    const daysRemaining = getDaysRemaining(membership.endDate);
+    // Verify the session with Stripe
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
 
-    let cancellationFee = 0;
-    let refundAmount = 0;
+    if (session.payment_status !== "paid") {
+      throw new Error("Payment not completed");
+    }
 
-    if (daysRemaining > 30) {
-      // >30 days: deposit lost (no refund)
-      cancellationFee = 100; // 100% of payment
-      refundAmount = 0;
+    // Update payment status
+    payment.status = "succeeded";
+    payment.stripePaymentIntentId = session.payment_intent as string;
+    await payment.save();
+
+    // Get membership plan details
+    const membershipPlan = await MembershipPlan.findById(payment.planId);
+    if (!membershipPlan) {
+      throw new Error("Membership plan not found");
+    }
+
+    // Calculate membership duration based on billing period
+    const startDate = new Date();
+    const endDate = new Date();
+
+    if (payment.billingPeriod === "monthly") {
+      endDate.setMonth(endDate.getMonth() + 1);
     } else {
-      // ≤30 days: 5% fee
-      const membershipPlan = await MembershipPlan.findById(membership.planId);
-      if (membershipPlan) {
-        const totalPaid =
-          membership.billingPeriod === "monthly"
-            ? membershipPlan.monthlyPrice
-            : membershipPlan.yearlyPrice;
-        cancellationFee = calculateCancellationFee(totalPaid);
-        refundAmount = totalPaid - cancellationFee;
-      }
+      endDate.setFullYear(endDate.getFullYear() + 1);
     }
 
-    // Update membership status
+    // Create or update user membership
     await UserMembership.findOneAndUpdate(
-      { userId },
+      { userId: payment.userId },
       {
-        status: "cancelled",
-        endDate: new Date(),
-        cancellationReason,
-        cancellationFee,
-        refundAmount,
+        planId: membershipPlan._id,
+        paymentId: payment._id,
+        status: "active",
+        startDate,
+        endDate,
       },
+      { upsert: true },
     );
 
-    // Cancel any active subscriptions
-    const payments = await Payment.find({
-      userId,
-      status: "succeeded",
-      billingType: "recurring",
-    });
-
-    for (const payment of payments) {
-      if (payment.stripeSubscriptionId) {
-        // Cancel Stripe subscription
-        // Note: This would require additional Stripe API calls
-      }
+    // Send payment receipt notification
+    const user = await User.findById(payment.userId);
+    if (user) {
+      await sendPaymentReceipt(user.email, "membership", payment.amount, payment._id.toString(), {
+        firstName: user.firstName,
+        planName: membershipPlan.name,
+      });
     }
 
-    return {
-      success: true,
-      message: "Membership cancelled successfully",
-      cancellationFee,
-      refundAmount,
-      daysRemaining,
-    };
+    return payment;
   } catch (error) {
-    console.error("Error cancelling membership:", error);
+    console.error("Error confirming one-time membership payment:", error);
     throw error;
   }
 };
@@ -372,11 +444,11 @@ export const getPaymentHistory = async (userId: string, page: number = 1, limit:
   try {
     const skip = (page - 1) * limit;
 
-    // Optimized aggregation with related data
+    // Optimized aggregation with only required fields for performance and security
     const pipeline = [
-      { $match: { userId: new (await import("mongoose")).Types.ObjectId(userId) } },
+      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
 
-      // Add membership plan info for context
+      // Add membership plan info (only plan details)
       {
         $lookup: {
           from: "usermemberships",
@@ -401,11 +473,13 @@ export const getPaymentHistory = async (userId: string, page: number = 1, limit:
                 plan: { $arrayElemAt: ["$plan", 0] },
               },
             },
+            // Only return plan object
+            { $project: { plan: 1 } },
           ],
         },
       },
 
-      // Add job details if it's a job payment
+      // Add job details if it's a job payment (only essential fields)
       {
         $lookup: {
           from: "jobrequests",
@@ -421,6 +495,39 @@ export const getPaymentHistory = async (userId: string, page: number = 1, limit:
         $addFields: {
           membership: { $arrayElemAt: ["$membership", 0] },
           jobDetails: { $arrayElemAt: ["$jobDetails", 0] },
+        },
+      },
+
+      // Add purpose field to identify payment type
+      {
+        $addFields: {
+          purpose: {
+            $cond: {
+              if: { $ne: ["$membership", null] },
+              then: { $concat: ["Membership: ", "$membership.plan.name"] },
+              else: {
+                $cond: {
+                  if: { $ne: ["$jobDetails", null] },
+                  then: { $concat: ["Job: ", "$jobDetails.title"] },
+                  else: "Payment",
+                },
+              },
+            },
+          },
+        },
+      },
+
+      // Project only required fields for frontend
+      {
+        $project: {
+          _id: 1,
+          amount: 1,
+          currency: 1,
+          status: 1,
+          createdAt: 1,
+          email: 1,
+          failureReason: 1,
+          purpose: 1,
         },
       },
 

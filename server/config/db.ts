@@ -16,3 +16,16 @@ export const connectDB = async () => {
     throw err;
   }
 };
+
+export const disconnectDB = async () => {
+  if (dbInstance) {
+    try {
+      await mongoose.disconnect();
+      dbInstance = null;
+      console.log("MongoDB disconnected successfully");
+    } catch (err) {
+      logErrorWithContext(err as Error, { operation: "mongodb_disconnection" });
+      throw err;
+    }
+  }
+};

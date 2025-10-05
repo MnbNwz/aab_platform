@@ -22,5 +22,4 @@ export interface PaginationOptions {
 export interface UserUpdateData {
   status?: UserStatus;
   approval?: ApprovalStatus;
-  // Note: subscriptionId and membershipId removed - now handled via Payment/Membership models
 }
