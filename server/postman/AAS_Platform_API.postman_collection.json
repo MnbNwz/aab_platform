@@ -1,8 +1,8 @@
 {
   "info": {
     "name": "AAS Platform API",
-    "description": "Complete API collection for AAS Platform with authentication, user management, services management, and intelligent caching system.\n\n🆕 **Updated Features (v2.2.0):**\n• Complete OTP verification system (verify, resend, state check)\n• Password reset flow with OTP verification\n• Lead management system for contractors\n• Corrected payment endpoint URLs\n• Enhanced membership checkout with Stripe integration\n• firstName & lastName required for all user registrations\n• User-level approval system (moved from role-specific)\n• Redis caching with memory fallback for production reliability\n\n⚡ **Performance Features:**\n• Authentication middleware caching (50-80% performance boost)\n• Membership plans caching (1-hour TTL)\n• User profile caching with intelligent invalidation\n• Cache fallback system ensures zero downtime\n\n🔐 **Authentication & Security:**\n• Complete OTP verification workflow\n• Password reset with email verification\n• JWT-based authentication with HttpOnly cookies\n• Role-based access control (RBAC)\n• Rate limiting and security headers\n\n💼 **Lead Management:**\n• Contractor lead access system\n• Lead usage tracking and statistics\n• Job request access with credit deduction\n• Filtering by service type, property type, and budget\n\n📋 **API Highlights:**\n• Comprehensive admin user management with filtering\n• Complete membership plan management\n• Advanced payment processing with Stripe\n• Property management with image uploads\n• Job request and bidding system\n• Services management with versioning",
-    "version": "2.2.0",
+    "description": "Complete API collection for AAS Platform with authentication, user management, services management, and intelligent caching system.\n\n🆕 **Updated Features (v2.3.0):**\n• Simplified membership system - always starts as one-time payment\n• Auto-renewal toggle feature for existing memberships\n• Removed billing type complexity (no more one-time vs recurring distinction)\n• Enhanced webhook handling for membership payments\n• Graceful server shutdown with proper cleanup\n• Fixed EventEmitter memory leaks\n• Complete OTP verification system (verify, resend, state check)\n• Password reset flow with OTP verification\n• Lead management system for contractors\n• firstName & lastName required for all user registrations\n• User-level approval system (moved from role-specific)\n• Redis caching with memory fallback for production reliability\n\n⚡ **Performance Features:**\n• Authentication middleware caching (50-80% performance boost)\n• Membership plans caching (1-hour TTL)\n• User profile caching with intelligent invalidation\n• Cache fallback system ensures zero downtime\n• Optimized webhook processing\n\n🔐 **Authentication & Security:**\n• Complete OTP verification workflow\n• Password reset with email verification\n• JWT-based authentication with HttpOnly cookies\n• Role-based access control (RBAC)\n• Rate limiting and security headers\n• Enhanced payment security middleware\n\n💼 **Lead Management:**\n• Contractor lead access system\n• Lead usage tracking and statistics\n• Job request access with credit deduction\n• Filtering by service type, property type, and budget\n\n📋 **API Highlights:**\n• Comprehensive admin user management with filtering\n• Simplified membership plan management\n• Advanced payment processing with Stripe\n• Property management with image uploads\n• Job request and bidding system\n• Services management with versioning",
+    "version": "2.3.0",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -392,18 +392,18 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"planId\": \"PLAN_ID_HERE\",\n  \"stripePriceId\": \"price_customer_basic_monthly\"\n}"
+              "raw": "{\n  \"planId\": \"PLAN_ID_HERE\",\n  \"billingPeriod\": \"monthly\"\n}\n\n// billingPeriod: \"monthly\" or \"yearly\"\n// All memberships start as one-time payments\n// Auto-renewal can be toggled later via /api/membership/toggle-auto-renewal"
             },
             "url": {
               "raw": "{{baseUrl}}/api/membership/checkout",
               "host": ["{{baseUrl}}"],
               "path": ["api", "membership", "checkout"]
             },
-            "description": "Create Stripe checkout session for membership purchase"
+            "description": "Create Stripe checkout session for membership purchase (simplified - always one-time initially)"
           }
         },
         {
-          "name": "Purchase Membership",
+          "name": "Toggle Auto-Renewal",
           "request": {
             "method": "POST",
             "header": [
@@ -414,27 +414,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"planId\": \"PLAN_ID_HERE\"\n}"
+              "raw": "{\n  \"isAutoRenew\": true\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/membership/purchase",
+              "raw": "{{baseUrl}}/api/membership/toggle-auto-renewal",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "membership", "purchase"]
+              "path": ["api", "membership", "toggle-auto-renewal"]
             },
-            "description": "Purchase a membership plan (replaces any existing active membership)"
-          }
-        },
-        {
-          "name": "Cancel Membership",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/membership/cancel",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "membership", "cancel"]
-            },
-            "description": "Cancel current active membership"
+            "description": "Toggle auto-renewal for current active membership"
           }
         },
         {
@@ -474,50 +461,6 @@
               "path": ["api", "membership", "current"]
             },
             "description": "Get user's current active membership"
-          }
-        },
-        {
-          "name": "Purchase Membership (New)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"planId\": \"PLAN_ID_HERE\",\n  \"paymentId\": \"PAYMENT_ID_HERE\",\n  \"stripePriceId\": \"price_customer_basic_monthly\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/membership/purchase",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "membership", "purchase"]
-            },
-            "description": "Purchase a membership plan with payment ID (secured version)"
-          }
-        },
-        {
-          "name": "Cancel Membership",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"reason\": \"User requested cancellation\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/membership/cancel",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "membership", "cancel"]
-            },
-            "description": "Cancel current active membership"
           }
         },
         {
@@ -634,102 +577,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"planId\": \"PLAN_ID_HERE\",\n  \"stripePriceId\": \"price_customer_basic_monthly\"\n}"
+              "raw": "{\n  \"planId\": \"PLAN_ID_HERE\",\n  \"billingPeriod\": \"monthly\"\n}\n\n// billingPeriod: \"monthly\" or \"yearly\"\n// All memberships start as one-time payments\n// Auto-renewal can be toggled later via /api/membership/toggle-auto-renewal"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/payment/membership/checkout",
+              "raw": "{{baseUrl}}/api/membership/checkout",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "membership", "checkout"]
+              "path": ["api", "membership", "checkout"]
             },
-            "description": "Create Stripe checkout session for membership purchase"
-          }
-        },
-        {
-          "name": "Create One-Time Membership Checkout",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"planId\": \"PLAN_ID_HERE\",\n  \"billingPeriod\": \"monthly\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/payment/membership/checkout/onetime",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "membership", "checkout", "onetime"]
-            },
-            "description": "Create one-time membership checkout session (monthly or yearly)"
-          }
-        },
-        {
-          "name": "Confirm Membership Payment",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"sessionId\": \"cs_test_1234567890\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/payment/membership/confirm",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "membership", "confirm"]
-            },
-            "description": "Confirm membership payment after successful Stripe checkout"
-          }
-        },
-        {
-          "name": "Confirm One-Time Membership Payment",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"sessionId\": \"cs_test_1234567890\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/payment/membership/confirm/onetime",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "membership", "confirm", "onetime"]
-            },
-            "description": "Confirm one-time membership payment after successful Stripe checkout"
-          }
-        },
-        {
-          "name": "Cancel Membership Payment",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"reason\": \"User requested cancellation\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/payment/membership/cancel",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "membership", "cancel"]
-            },
-            "description": "Cancel active membership and process refund"
+            "description": "Create Stripe checkout session for membership purchase (simplified - always one-time initially)"
           }
         },
         {
@@ -1408,7 +1263,7 @@
             "url": {
               "raw": "{{baseUrl}}/api/job/bids/{{bidId}}/accept",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "bid", "{{bidId}}", "accept"]
+              "path": ["api", "job", "bids", "{{bidId}}", "accept"]
             },
             "description": "Accept a bid for a job request. This will:\n1. Mark the selected bid as 'accepted'\n2. Reject all other bids for the same job\n3. Update job status to 'inprogress'\n4. Add entry to timelineHistory array\n5. Set acceptedBid field on job request"
           }
@@ -1430,7 +1285,7 @@
             "url": {
               "raw": "{{baseUrl}}/api/job/bids/{{bidId}}/accept",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "bid", "{{bidId}}", "accept"]
+              "path": ["api", "job", "bids", "{{bidId}}", "accept"]
             },
             "description": "Complete bid acceptance workflow. After accepting:\n- Check job request status (should be 'inprogress')\n- Check acceptedBid field (should contain bid ID)\n- Check timelineHistory (should have new 'accepted' entry)\n- Check other bids status (should be 'rejected')"
           }
@@ -1757,9 +1612,9 @@
               "raw": "{\n  \"acceptedAt\": \"2024-01-15T10:00:00Z\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/bid/BID_ID_FROM_STEP_3/accept",
+              "raw": "{{baseUrl}}/api/job/bids/BID_ID_FROM_STEP_3/accept",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "bid", "BID_ID_FROM_STEP_3", "accept"]
+              "path": ["api", "job", "bids", "BID_ID_FROM_STEP_3", "accept"]
             },
             "description": "Step 4: Accept the bid as customer. This triggers the complete workflow with status updates and timeline history."
           }
@@ -1843,37 +1698,6 @@
               "path": ["api", "job", "contractor", "jobs", "{{jobId}}", "access"]
             },
             "description": "Check if contractor can access a specific job without consuming a lead. Returns access status, lead availability, and job preview information."
-          }
-        }
-      ]
-    },
-    {
-      "name": "Analytics & Dashboard",
-      "item": [
-        {
-          "name": "Get Dashboard Analytics",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/analytics/dashboard",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "analytics", "dashboard"]
-            },
-            "description": "Get comprehensive dashboard analytics based on user role. Admin gets platform-wide stats, customers get their job/payment data, contractors get performance metrics."
-          }
-        },
-        {
-          "name": "Get Platform Statistics (Admin Only)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/analytics/dashboard/platform",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "analytics", "dashboard", "platform"]
-            },
-            "description": "Get comprehensive platform health and statistics including platform health score, total metrics, and performance indicators (admin only)."
           }
         }
       ]
