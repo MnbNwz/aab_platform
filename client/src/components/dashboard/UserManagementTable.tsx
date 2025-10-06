@@ -45,7 +45,7 @@ interface UserActionsDropdownProps {
   onUnrevoke: () => void;
   onEditProfile: () => void;
   isUpdating: boolean;
-  triggerRef: React.RefObject<HTMLButtonElement | null>;
+  triggerElement: HTMLButtonElement | null;
 }
 
 const UserActionsDropdown: React.FC<UserActionsDropdownProps> = ({
@@ -58,9 +58,14 @@ const UserActionsDropdown: React.FC<UserActionsDropdownProps> = ({
   onUnrevoke,
   onEditProfile,
   isUpdating,
-  triggerRef,
+  triggerElement,
 }) => {
-  if (!isOpen || !triggerRef.current) return null;
+  if (!isOpen) return null;
+
+  // If no trigger element yet, don't render (will render on next cycle when ref is set)
+  if (!triggerElement) {
+    return null;
+  }
 
   const canApprove = user.approval === "pending";
   const canReject = user.approval === "pending";
@@ -68,7 +73,8 @@ const UserActionsDropdown: React.FC<UserActionsDropdownProps> = ({
   const canUnrevoke = user.role !== "admin" && user.status === "revoke";
 
   // Get position of trigger button
-  const triggerRect = triggerRef.current.getBoundingClientRect();
+  const triggerRect = triggerElement.getBoundingClientRect();
+
   const dropdownPosition = {
     top: triggerRect.bottom + window.scrollY + 4,
     right: window.innerWidth - triggerRect.right - window.scrollX,
@@ -179,12 +185,26 @@ const UserManagementTable: React.FC = () => {
   }>({ open: false, userId: null, action: null });
 
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const [dropdownRefs] = useState<{
-    [key: string]: React.RefObject<HTMLButtonElement | null>;
+  const dropdownRefs = React.useRef<{
+    [key: string]: HTMLButtonElement | null;
   }>({});
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [selectedUserForProfile, setSelectedUserForProfile] =
     useState<any>(null);
+
+  // Force re-render when dropdown is opened to ensure refs are ready
+  const [dropdownRenderKey, setDropdownRenderKey] = useState(0);
+
+  const handleToggleDropdown = useCallback((userId: string) => {
+    setOpenDropdown((prev) => {
+      const newValue = prev === userId ? null : userId;
+      if (newValue !== null) {
+        // When opening, force a re-render after a tick to ensure refs are set
+        setTimeout(() => setDropdownRenderKey((k) => k + 1), 0);
+      }
+      return newValue;
+    });
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -193,7 +213,7 @@ const UserManagementTable: React.FC = () => {
         const target = event.target as Element;
         // Check if click is outside both the trigger button and the dropdown
         const isTriggerClick =
-          dropdownRefs[openDropdown]?.current?.contains(target);
+          dropdownRefs.current[openDropdown]?.contains(target);
         const isDropdownClick = target.closest("[data-dropdown-content]");
 
         if (!isTriggerClick && !isDropdownClick) {
@@ -583,18 +603,12 @@ const UserManagementTable: React.FC = () => {
                       ) : (
                         <div className="flex items-center justify-center relative">
                           <button
-                            ref={(() => {
-                              if (!dropdownRefs[user._id]) {
-                                dropdownRefs[user._id] =
-                                  React.createRef<HTMLButtonElement>();
-                              }
-                              return dropdownRefs[user._id];
-                            })()}
+                            ref={(el) => {
+                              dropdownRefs.current[user._id] = el;
+                            }}
                             onClick={(e) => {
                               e.stopPropagation();
-                              setOpenDropdown(
-                                openDropdown === user._id ? null : user._id
-                              );
+                              handleToggleDropdown(user._id);
                             }}
                             className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
                             title="More actions"
@@ -603,6 +617,7 @@ const UserManagementTable: React.FC = () => {
                           </button>
 
                           <UserActionsDropdown
+                            key={`${user._id}-${dropdownRenderKey}`}
                             user={user}
                             isOpen={openDropdown === user._id}
                             onClose={() => setOpenDropdown(null)}
@@ -612,7 +627,7 @@ const UserManagementTable: React.FC = () => {
                             onUnrevoke={() => handleUnrevokeUser(user._id)}
                             onEditProfile={() => handleEditProfile(user)}
                             isUpdating={updatingUsers[user._id]}
-                            triggerRef={dropdownRefs[user._id]}
+                            triggerElement={dropdownRefs.current[user._id]}
                           />
                         </div>
                       )}
@@ -711,18 +726,12 @@ const UserManagementTable: React.FC = () => {
                       ) : (
                         <div className="flex items-center justify-center relative">
                           <button
-                            ref={(() => {
-                              if (!dropdownRefs[user._id]) {
-                                dropdownRefs[user._id] =
-                                  React.createRef<HTMLButtonElement>();
-                              }
-                              return dropdownRefs[user._id];
-                            })()}
+                            ref={(el) => {
+                              dropdownRefs.current[user._id] = el;
+                            }}
                             onClick={(e) => {
                               e.stopPropagation();
-                              setOpenDropdown(
-                                openDropdown === user._id ? null : user._id
-                              );
+                              handleToggleDropdown(user._id);
                             }}
                             className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
                             title="More actions"
@@ -731,6 +740,7 @@ const UserManagementTable: React.FC = () => {
                           </button>
 
                           <UserActionsDropdown
+                            key={`${user._id}-${dropdownRenderKey}`}
                             user={user}
                             isOpen={openDropdown === user._id}
                             onClose={() => setOpenDropdown(null)}
@@ -740,7 +750,7 @@ const UserManagementTable: React.FC = () => {
                             onUnrevoke={() => handleUnrevokeUser(user._id)}
                             onEditProfile={() => handleEditProfile(user)}
                             isUpdating={updatingUsers[user._id]}
-                            triggerRef={dropdownRefs[user._id]}
+                            triggerElement={dropdownRefs.current[user._id]}
                           />
                         </div>
                       )}
