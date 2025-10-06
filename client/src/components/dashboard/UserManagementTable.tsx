@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useSelector, useDispatch } from "react-redux";
 import {
@@ -18,6 +18,7 @@ import {
   User,
   MoreVertical,
   RotateCcw,
+  Edit,
 } from "lucide-react";
 import type { RootState, AppDispatch } from "../../store";
 import type { UserFilters } from "../../types";
@@ -31,6 +32,7 @@ import {
 import { setFilters } from "../../store/slices/userManagementSlice";
 import Loader from "../ui/Loader";
 import ConfirmModal from "../ui/ConfirmModal";
+import ProfileModal from "../ProfileModal";
 
 // User Actions Dropdown Modal Component
 interface UserActionsDropdownProps {
@@ -41,6 +43,7 @@ interface UserActionsDropdownProps {
   onReject: () => void;
   onRevoke: () => void;
   onUnrevoke: () => void;
+  onEditProfile: () => void;
   isUpdating: boolean;
   triggerRef: React.RefObject<HTMLButtonElement | null>;
 }
@@ -53,6 +56,7 @@ const UserActionsDropdown: React.FC<UserActionsDropdownProps> = ({
   onReject,
   onRevoke,
   onUnrevoke,
+  onEditProfile,
   isUpdating,
   triggerRef,
 }) => {
@@ -93,6 +97,17 @@ const UserActionsDropdown: React.FC<UserActionsDropdownProps> = ({
           Approve User
         </button>
       )}
+      <button
+        onClick={() => {
+          onEditProfile();
+          onClose();
+        }}
+        disabled={isUpdating}
+        className="w-full flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 disabled:opacity-50 transition-colors"
+      >
+        <Edit className="h-4 w-4 mr-3" />
+        Edit Profile
+      </button>
       {canReject && (
         <button
           onClick={() => {
@@ -167,6 +182,9 @@ const UserManagementTable: React.FC = () => {
   const [dropdownRefs] = useState<{
     [key: string]: React.RefObject<HTMLButtonElement | null>;
   }>({});
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [selectedUserForProfile, setSelectedUserForProfile] =
+    useState<any>(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -219,6 +237,37 @@ const UserManagementTable: React.FC = () => {
   const handleUnrevokeUser = (userId: string) => {
     setConfirmModal({ open: true, userId, action: "unrevoke" });
   };
+
+  const handleEditProfile = (user: any) => {
+    setSelectedUserForProfile(user);
+    setProfileModalOpen(true);
+    setOpenDropdown(null);
+  };
+
+  const handleProfileSave = useCallback(
+    async (updated: Partial<any>) => {
+      if (!selectedUserForProfile) return;
+
+      try {
+        await dispatch(
+          updateUserThunk({
+            userId: selectedUserForProfile._id,
+            updateData: updated,
+          })
+        ).unwrap();
+        setProfileModalOpen(false);
+        setSelectedUserForProfile(null);
+      } catch (error) {
+        console.error("Failed to update user profile:", error);
+      }
+    },
+    [dispatch, selectedUserForProfile]
+  );
+
+  const handleProfileClose = useCallback(() => {
+    setProfileModalOpen(false);
+    setSelectedUserForProfile(null);
+  }, []);
 
   const handleConfirmAction = async () => {
     if (!confirmModal.userId || !confirmModal.action) return;
@@ -561,6 +610,7 @@ const UserManagementTable: React.FC = () => {
                             onReject={() => handleRejectUser(user._id)}
                             onRevoke={() => handleRevokeUser(user._id)}
                             onUnrevoke={() => handleUnrevokeUser(user._id)}
+                            onEditProfile={() => handleEditProfile(user)}
                             isUpdating={updatingUsers[user._id]}
                             triggerRef={dropdownRefs[user._id]}
                           />
@@ -688,6 +738,7 @@ const UserManagementTable: React.FC = () => {
                             onReject={() => handleRejectUser(user._id)}
                             onRevoke={() => handleRevokeUser(user._id)}
                             onUnrevoke={() => handleUnrevokeUser(user._id)}
+                            onEditProfile={() => handleEditProfile(user)}
                             isUpdating={updatingUsers[user._id]}
                             triggerRef={dropdownRefs[user._id]}
                           />
@@ -898,6 +949,17 @@ const UserManagementTable: React.FC = () => {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Profile Modal */}
+      {selectedUserForProfile && (
+        <ProfileModal
+          isOpen={profileModalOpen}
+          onClose={handleProfileClose}
+          onSave={handleProfileSave}
+          user={selectedUserForProfile}
+          showAllFields={true}
+        />
       )}
     </div>
   );

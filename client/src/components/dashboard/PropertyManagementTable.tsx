@@ -148,7 +148,7 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
                 className="bg-accent-500 text-white px-4 py-2 md:py-3 lg:py-2 rounded font-semibold hover:bg-accent-600 transition w-full sm:w-auto text-sm md:text-base lg:text-sm"
                 onClick={onCreateNew}
               >
-                Create
+                Create Property
               </button>
             ) : (
               <button

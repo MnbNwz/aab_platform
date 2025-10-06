@@ -287,7 +287,7 @@ const Settings: React.FC<SettingsProps> = ({
       });
     }
 
-    if (user.role === "customer") {
+    if (user.role === "contractor") {
       baseSections.splice(2, 0, {
         id: "preferences",
         title: "Service Preferences",
@@ -303,11 +303,25 @@ const Settings: React.FC<SettingsProps> = ({
             value: `${settings.serviceRadius} km`,
           },
           {
-            id: "property-type",
-            label: "Default Property Type",
-            description: "Your primary property type",
+            id: "auto-respond",
+            label: "Auto-Respond",
+            description: "Automatically respond to job requests",
             type: "info",
-            value: user.customer?.defaultPropertyType || "domestic",
+            value: settings.autoRespond ? "Enabled" : "Disabled",
+          },
+          {
+            id: "quote-timeframe",
+            label: "Quote Timeframe",
+            description: "Time to provide quotes",
+            type: "info",
+            value: settings.quoteTimeframe || "24h",
+          },
+          {
+            id: "min-job-value",
+            label: "Minimum Job Value",
+            description: "Minimum job value you accept",
+            type: "info",
+            value: `$${settings.minJobValue || 100}`,
           },
         ],
       });
@@ -326,6 +340,25 @@ const Settings: React.FC<SettingsProps> = ({
             description: "Your active membership tier",
             type: "info",
             value: currentMembership?.planId?.name || "No active plan",
+          },
+          {
+            id: "expires-on",
+            label: "Expiration Date",
+            description: "Your membership end date",
+            type: "info",
+            value: currentMembership?.endDate
+              ? (() => {
+                  const d = new Date(currentMembership.endDate as any);
+                  return d.toLocaleString("en-US", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: true,
+                  });
+                })()
+              : "—",
           },
           {
             id: "change-auto-renewal",

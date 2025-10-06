@@ -52,7 +52,14 @@ export const requireAdminOrSelf = async (req: any, res: Response, next: NextFunc
       });
     }
 
-    const { userId } = req.params;
+    // Support both 'userId' and 'id' parameter names
+    const targetUserId = req.params.userId || req.params.id;
+
+    if (!targetUserId) {
+      return res.status(400).json({
+        error: "User ID parameter is required",
+      });
+    }
 
     // Admin can access any user's data
     if (req.user.role === "admin") {
@@ -60,7 +67,8 @@ export const requireAdminOrSelf = async (req: any, res: Response, next: NextFunc
     }
 
     // Users can only access their own data
-    if (req.user._id === userId) {
+    // Convert both IDs to strings for comparison
+    if (req.user._id.toString() === targetUserId.toString()) {
       return next();
     }
 

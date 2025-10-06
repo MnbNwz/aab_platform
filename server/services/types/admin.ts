@@ -1,4 +1,4 @@
-import { UserRole, UserStatus, ApprovalStatus } from "@models/types/user";
+import { UserRole, UserStatus, ApprovalStatus, Customer, Contractor } from "@models/types/user";
 
 // Interface for user filtering
 export interface UserFilters {
@@ -18,8 +18,23 @@ export interface PaginationOptions {
   sortOrder?: "asc" | "desc";
 }
 
-// Interface for user update
+// Interface for user update (admin can update most fields)
 export interface UserUpdateData {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  role?: UserRole;
   status?: UserStatus;
   approval?: ApprovalStatus;
+  profileImage?: string;
+  geoHome?: {
+    type: string;
+    coordinates: [number, number];
+  };
+  customer?: Partial<Customer>;
+  contractor?: Partial<Contractor>;
+  stripeConnectAccountId?: string;
+  stripeConnectStatus?: "pending" | "active" | "rejected" | "disabled";
+  [key: string]: any; // Allow other fields for flexibility
 }

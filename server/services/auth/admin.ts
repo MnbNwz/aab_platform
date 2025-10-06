@@ -180,27 +180,34 @@ export async function getUserById(userId: string) {
   return user;
 }
 
-// Update user status or approval
+// Update user (admin can update all fields) - Optimized with single atomic operation
 export async function updateUser(userId: string, updateData: UserUpdateData) {
-  const user = await User.findById(userId);
-  if (!user) {
+  // Prevent updating sensitive fields
+  const restrictedFields = ["_id", "passwordHash", "createdAt", "stripeCustomerId", "__v"];
+  const safeUpdateData: any = {};
+
+  // Filter out restricted fields
+  Object.keys(updateData).forEach((key) => {
+    if (!restrictedFields.includes(key)) {
+      safeUpdateData[key] = updateData[key];
+    }
+  });
+
+  // Single atomic operation: find, update, and return in one query
+  const updatedUser = await User.findByIdAndUpdate(
+    userId,
+    { $set: safeUpdateData },
+    {
+      new: true, // Return updated document
+      runValidators: true, // Run Mongoose validators
+      lean: true, // Return plain JavaScript object
+    },
+  ).select("-passwordHash");
+
+  if (!updatedUser) {
     throw new Error("User not found");
   }
 
-  // Update user-level fields
-  if (updateData.status) {
-    user.status = updateData.status;
-  }
-
-  // Update user-level approval (moved from profile level)
-  if (updateData.approval) {
-    user.approval = updateData.approval;
-  }
-
-  await user.save();
-
-  // Return user without password hash
-  const updatedUser = await User.findById(userId).select("-passwordHash").lean();
   return updatedUser;
 }
 

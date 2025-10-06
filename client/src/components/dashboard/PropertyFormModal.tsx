@@ -15,9 +15,25 @@ interface PropertyFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: any) => void;
+  initialData?: any;
 }
 
-const initialState = {
+interface PropertyFormState {
+  title: string;
+  propertyType: string;
+  location: { type: string; coordinates: number[]; address: string };
+  area: number;
+  areaUnit: string;
+  totalRooms: number;
+  bedrooms: number;
+  bathrooms: number;
+  kitchens: number;
+  description: string;
+  images: string[];
+  isActive: boolean;
+}
+
+const initialState: PropertyFormState = {
   title: "",
   propertyType: "apartment",
   location: { type: "Point", coordinates: [0, 0], address: "" },
@@ -35,13 +51,30 @@ const initialState = {
 const PropertyFormModal: React.FC<PropertyFormProps> = ({
   isOpen,
   onClose,
+  initialData,
 }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { loading, error } = useSelector((state: RootState) => state.property);
-  const [form, setForm] = useState(initialState);
+  const [form, setForm] = useState(initialData || initialState);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [carouselIndex, setCarouselIndex] = useState(0);
+
+  // Reset form when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      if (initialData) {
+        setForm({ ...initialState, ...initialData });
+      } else {
+        setForm(initialState);
+      }
+      // Reset all other states
+      setImageFiles([]);
+      setCarouselIndex(0);
+      setImageError("");
+      setFormError("");
+    }
+  }, [initialData, isOpen]);
 
   // Get readable address from coordinates
   const { address: locationAddress, loading: addressLoading } = useGeocoding(
@@ -60,15 +93,15 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
     const { name, value } = e.target;
     if (name === "isActive") {
       const checked = (e.target as HTMLInputElement).checked;
-      setForm((prev) => ({ ...prev, isActive: checked }));
+      setForm((prev: PropertyFormState) => ({ ...prev, isActive: checked }));
     } else if (name === "area" || name === "areaUnit") {
-      setForm((prev) => ({
+      setForm((prev: PropertyFormState) => ({
         ...prev,
         [name]: name === "area" ? Number(value) : value,
       }));
     } else if (name.startsWith("location.")) {
       const idx = name.endsWith("0") ? 0 : 1;
-      setForm((prev) => ({
+      setForm((prev: PropertyFormState) => ({
         ...prev,
         location: {
           ...prev.location,
@@ -81,9 +114,12 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
     } else if (
       ["totalRooms", "bedrooms", "bathrooms", "kitchens"].includes(name)
     ) {
-      setForm((prev) => ({ ...prev, [name]: Number(value) }));
+      setForm((prev: PropertyFormState) => ({
+        ...prev,
+        [name]: Number(value),
+      }));
     } else {
-      setForm((prev) => ({ ...prev, [name]: value }));
+      setForm((prev: PropertyFormState) => ({ ...prev, [name]: value }));
     }
   };
 
@@ -91,8 +127,11 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
   const handleRemoveImage = (idx: number) => {
     const newFiles = imageFiles.filter((_, i) => i !== idx);
     setImageFiles(newFiles);
-    setCarouselIndex((prev) => (prev > 0 ? prev - 1 : 0));
-    setForm((prev) => ({ ...prev, images: newFiles.map(() => "") }));
+    setCarouselIndex((prev: number) => (prev > 0 ? prev - 1 : 0));
+    setForm((prev: PropertyFormState) => ({
+      ...prev,
+      images: newFiles.map(() => ""),
+    }));
   };
 
   // When picking new images, replace all
@@ -152,7 +191,10 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
 
       setImageFiles(compressedFiles);
       setCarouselIndex(0);
-      setForm((prev) => ({ ...prev, images: compressedFiles.map(() => "") }));
+      setForm((prev: PropertyFormState) => ({
+        ...prev,
+        images: compressedFiles.map(() => ""),
+      }));
     } catch (error) {
       console.error("Image compression failed:", error);
       showToast.error("Failed to process images. Please try again.");
@@ -307,7 +349,7 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
                   isOpen={showLocationModal}
                   onClose={() => setShowLocationModal(false)}
                   onLocationSelect={({ lat, lng }) => {
-                    setForm((prev) => ({
+                    setForm((prev: PropertyFormState) => ({
                       ...prev,
                       location: {
                         ...prev.location,

@@ -55,9 +55,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       },
       {
         id: "properties",
-        label: "My Properties",
+        label: "Off Market Properties",
         icon: Building,
-        description: "Manage your properties",
+        description: "Manage off market properties",
       },
       {
         id: "jobs",

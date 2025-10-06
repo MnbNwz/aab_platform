@@ -179,7 +179,21 @@ const getUserAnalytics = async () => {
 
 // Membership analytics aggregation
 const getMembershipAnalytics = async () => {
+  // Get current month date range
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
   const pipeline = [
+    {
+      // Filter memberships created in the current month
+      $match: {
+        createdAt: {
+          $gte: startOfMonth,
+          $lte: endOfMonth,
+        },
+      },
+    },
     {
       $lookup: {
         from: "membershipplans",
@@ -194,12 +208,24 @@ const getMembershipAnalytics = async () => {
       },
     },
     {
+      $addFields: {
+        // Calculate the actual price based on billingPeriod
+        actualPrice: {
+          $cond: {
+            if: { $eq: ["$billingPeriod", "yearly"] },
+            then: "$plan.yearlyPrice",
+            else: "$plan.monthlyPrice",
+          },
+        },
+      },
+    },
+    {
       $group: {
         _id: {
           status: "$status",
         },
         count: { $sum: 1 },
-        totalRevenue: { $sum: "$plan.price" },
+        totalRevenue: { $sum: "$actualPrice" },
       },
     },
     {
