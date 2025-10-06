@@ -6,11 +6,12 @@ import {
   ChangePasswordRequest,
 } from "@controllers/types/user";
 import S3Upload from "@utils/storage";
+import { sanitizeUser, sanitizeUsers } from "@utils/user/sanitize";
 
 export const createUser = async (req: Request, res: Response) => {
   try {
     const user = await userService.createUser(req.body as CreateUserRequest);
-    res.status(201).json(user);
+    res.status(201).json(sanitizeUser(user));
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
   }
@@ -20,7 +21,7 @@ export const getUser = async (req: Request, res: Response) => {
   try {
     const user = await userService.getUserById(req.params.id);
     if (!user) return res.status(404).json({ error: "User not found" });
-    res.json(user);
+    res.json(sanitizeUser(user));
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
   }
@@ -60,7 +61,7 @@ export const updateUser = async (req: Request & { file?: any }, res: Response) =
 
     const user = await userService.updateUser(req.params.id, updateData as UpdateUserRequest);
     if (!user) return res.status(404).json({ error: "User not found" });
-    res.json(user);
+    res.json(sanitizeUser(user));
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
   }
@@ -79,7 +80,7 @@ export const deleteUser = async (req: Request, res: Response) => {
 export const listUsers = async (req: Request, res: Response) => {
   try {
     const users = await userService.findUsers(req.query);
-    res.json(users);
+    res.json(sanitizeUsers(users));
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
   }
@@ -93,7 +94,7 @@ export const getAdminUsers = async (req: Request, res: Response) => {
     res.status(200).json({
       success: true,
       message: "Admin users retrieved successfully! 🎉",
-      admins,
+      admins: admins.map(sanitizeUser),
       count: admins.length,
     });
   } catch (error: any) {

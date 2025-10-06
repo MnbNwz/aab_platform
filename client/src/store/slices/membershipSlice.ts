@@ -75,7 +75,15 @@ const membershipSlice = createSlice({
         state.error = null;
       })
       .addCase(fetchCurrentMembership.fulfilled, (state, action) => {
-        state.current = action.payload || null;
+        if (
+          action.payload &&
+          typeof action.payload === "object" &&
+          "success" in action.payload
+        ) {
+          state.current = (action.payload as any).data;
+        } else {
+          state.current = action.payload;
+        }
         state.loading = false;
       })
       .addCase(fetchCurrentMembership.rejected, (state, action) => {

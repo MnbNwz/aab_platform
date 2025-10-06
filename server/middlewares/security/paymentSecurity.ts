@@ -180,7 +180,7 @@ export const validatePaymentAmount = async (
   next: NextFunction,
 ) => {
   try {
-    const { billingPeriod, billingType = "recurring" } = req.body;
+    const { billingPeriod } = req.body;
     const plan = (req as any).membershipPlan;
 
     if (!plan) {

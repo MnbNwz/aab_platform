@@ -8,7 +8,7 @@ import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 import { connectDB, disconnectDB } from "@config/db";
 import apiRoutes from "@routes/index";
-import { appLogger, errorLogger, logErrorWithContext } from "@utils/core";
+import { appLogger, logErrorWithContext } from "@utils/core";
 
 dotenv.config();
 
@@ -21,6 +21,10 @@ const PORT = process.env.PORT || 5000;
 app.use(helmet());
 app.use(compression());
 app.use(cors({ origin: true, credentials: true }));
+
+// Special handling for Stripe webhooks - must be before express.json()
+app.use("/api/payment/webhook/stripe", express.raw({ type: "application/json" }));
+
 app.use(express.json({ limit: "10mb" })); // Increased limit for other JSON data
 app.use(cookieParser());
 app.use(

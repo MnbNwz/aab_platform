@@ -8,6 +8,7 @@ import { fetchAdminProfileThunk } from "../../store/thunks/adminProfileThunks";
 import { Loader } from "../ui/Loader";
 import AdminContactInfo from "../ui/AdminContactInfo";
 import { RootState, AppDispatch } from "../../store";
+import MembershipPlans from "./MembershipPlans";
 
 const MembershipGate: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -27,7 +28,6 @@ const MembershipGate: React.FC<{ children: React.ReactNode }> = ({
     loading,
     error,
     current: currentMembership,
-    plans,
   } = useSelector((state: RootState) => state.membership);
 
   useEffect(() => {
@@ -91,19 +91,11 @@ const MembershipGate: React.FC<{ children: React.ReactNode }> = ({
     );
   }
 
-  // if (!currentMembership && user?.role !== "admin") {
-  //   return (
-  //     <MembershipPlans
-  //       plans={plans}
-  //       onSelect={(plan) => {
-  //         // TODO: Implement plan selection/payment logic here
-  //         alert(`Selected plan: ${plan.name}`);
-  //       }}
-  //     />
-  //   );
-  // }
-
-  return <>{children}</>;
+  return !currentMembership && user?.role !== "admin" ? (
+    <MembershipPlans />
+  ) : (
+    <>{children}</>
+  );
 };
 
 export default MembershipGate;

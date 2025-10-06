@@ -4,28 +4,51 @@ import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../../store";
 import { logoutThunk } from "../../store/thunks/authThunks";
 import ProfileModal from "../ProfileModal";
-import type { User, MembershipPlan, CurrentMembership } from "../../types";
+import { membershipService } from "../../services/membershipService";
+import type { User, CurrentMembership } from "../../types";
 
-interface Props {
-  plans: MembershipPlan[];
-  onSelect: (plan: MembershipPlan) => void;
-}
-
-const MembershipPlans: React.FC<Props> = ({ plans }) => {
+const MembershipPlans: React.FC = () => {
   const user = useSelector((state: RootState) => state.auth.user);
+  const { plans } = useSelector((state: RootState) => state.membership);
   const currentMembership = useSelector(
     (state: RootState) => state.membership.current
   ) as CurrentMembership | null;
   const dispatch = useDispatch<AppDispatch>();
   const [hoveredId] = useState<string | null>(null);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [loading, setLoading] = useState<string | null>(null);
 
-  // Animation: fade/scale in
-  // removed unused cardAnim
+  const handleCheckout = async (
+    planId: string,
+    billingPeriod: "monthly" | "yearly"
+  ) => {
+    const loadingKey = `${planId}-${billingPeriod}`;
+    setLoading(loadingKey);
 
-  // Custom grid logic: center last card only on desktop (lg+)
+    try {
+      const checkoutPayload = {
+        planId,
+        billingPeriod,
+        url: `${window.location.origin}/membership/success`,
+      };
+
+      const response = await membershipService.checkout(checkoutPayload);
+
+      if (response.success && response.data?.url) {
+        // Redirect to Stripe checkout
+        window.location.href = response.data.url;
+      } else {
+        throw new Error("No checkout URL received");
+      }
+    } catch (error) {
+      console.error("Checkout error:", error);
+      // Error is already handled by the service with toast
+    } finally {
+      setLoading(null);
+    }
+  };
+
   const getCardClass = (idx: number) => {
-    // Only apply centering if 3rd card in a row and it's the last card, and on large screens
     if ((idx + 1) % 3 === 0 && idx === plans.length - 1) {
       return "lg:mx-auto lg:col-span-1";
     }
@@ -34,7 +57,6 @@ const MembershipPlans: React.FC<Props> = ({ plans }) => {
 
   return (
     <div className="pt-12 xs:pt-16 px-2 xs:px-4 pb-4 min-h-screen bg-primary-50 flex flex-col items-center relative">
-      {/* Profile/Logout section top right */}
       <div className="absolute top-2 right-2 xs:top-4 xs:right-4 sm:top-6 sm:right-8 z-20">
         <UserDropdown
           user={user || {}}
@@ -69,7 +91,6 @@ const MembershipPlans: React.FC<Props> = ({ plans }) => {
         {plans.map((plan, idx) => {
           const isPremium = plan.tier === "premium";
 
-          // Only show selection for actual current membership, not default hover
           const isSelected =
             currentMembership && currentMembership.planId._id === plan._id;
 
@@ -192,32 +213,44 @@ const MembershipPlans: React.FC<Props> = ({ plans }) => {
                     ${
                       isSelected
                         ? "bg-accent-600 text-white cursor-default"
-                        : "bg-accent-500 text-white shadow-md"
+                        : "bg-accent-500 text-white shadow-md hover:bg-accent-600"
+                    }
+                    ${
+                      loading === `${plan._id}-monthly`
+                        ? "opacity-75 cursor-not-allowed"
+                        : ""
                     }
                     animate-fadein`}
                   onClick={() => {
-                    alert(
-                      "Payment functionality is temporarily unavailable. Please contact support."
-                    );
+                    if (!isSelected && loading !== `${plan._id}-monthly`) {
+                      handleCheckout(plan._id, "monthly");
+                    }
                   }}
+                  disabled={isSelected || loading === `${plan._id}-monthly`}
                 >
-                  Monthly
+                  {loading === `${plan._id}-monthly` ? "Loading..." : "Monthly"}
                 </button>
                 <button
                   className={`flex-1 py-2 xs:py-2.5 sm:py-3 px-1 xs:px-2 sm:px-4 text-xs xs:text-xs sm:text-sm font-semibold rounded-lg transition-all duration-200
                     ${
                       isSelected
                         ? "bg-accent-600 text-white cursor-default"
-                        : "bg-accent-500 text-white shadow-md"
+                        : "bg-accent-500 text-white shadow-md hover:bg-accent-600"
+                    }
+                    ${
+                      loading === `${plan._id}-yearly`
+                        ? "opacity-75 cursor-not-allowed"
+                        : ""
                     }
                     animate-fadein`}
                   onClick={() => {
-                    alert(
-                      "Payment functionality is temporarily unavailable. Please contact support."
-                    );
+                    if (!isSelected && loading !== `${plan._id}-yearly`) {
+                      handleCheckout(plan._id, "yearly");
+                    }
                   }}
+                  disabled={isSelected || loading === `${plan._id}-yearly`}
                 >
-                  Yearly
+                  {loading === `${plan._id}-yearly` ? "Loading..." : "Yearly"}
                 </button>
               </div>
             </div>

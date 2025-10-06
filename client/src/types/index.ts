@@ -301,49 +301,36 @@ export interface CurrentMembership {
     _id: string;
     name: string;
     tier: MembershipPlanTier;
-    price: number;
+    price: {
+      monthly: number;
+      yearly: number;
+    };
     features: string[];
     stripePriceIdMonthly: string;
     stripePriceIdYearly: string;
-    stripePriceIdOneTimeMonthly: string;
-    stripePriceIdOneTimeYearly: string;
   };
   paymentId: string;
   status: "active" | "inactive" | "cancelled" | "expired";
   billingPeriod: "monthly" | "yearly";
-  billingType: "recurring" | "one_time"; // Updated to match DB enum
   startDate: string;
   endDate?: string;
   isAutoRenew: boolean;
   stripeSubscriptionId: string | null;
-  cancelAtPeriodEnd: boolean;
-  canceledAt: string | null;
   leadsUsedThisMonth: number;
   lastLeadResetDate: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
-// Membership checkout payload (for recurring subscriptions)
+// Membership checkout payload
 export interface MembershipCheckoutPayload {
   planId: string;
-  billingType: "recurring" | "one_time"; // Updated to match DB enum
   billingPeriod: "monthly" | "yearly";
   url: string;
-}
-
-// One-time checkout payload (no billingType or url needed)
-export interface OneTimeCheckoutPayload {
-  planId: string;
-  billingPeriod: "monthly" | "yearly";
 }
 
 // Checkout response
 export interface CheckoutResponse {
   success: boolean;
-  data: {
-    sessionId: string;
-    checkoutUrl: string;
-    paymentId: string;
-  };
+  url: string;
 }

@@ -17,53 +17,62 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET as string;
 
+// In-memory deduplication of webhook events to avoid double-processing
+// Stripe may retry deliveries; we remember processed event ids briefly
+const processedEventIds = new Set<string>();
+const DEDUPE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+// Clean up old entries periodically (not on every request)
+let lastCleanup = Date.now();
+const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
+function isDuplicateAndMark(eventId: string): boolean {
+  const now = Date.now();
+
+  // Periodic cleanup (not on every request)
+  if (now - lastCleanup > CLEANUP_INTERVAL_MS) {
+    processedEventIds.clear(); // Simple: clear all, let them expire naturally
+    lastCleanup = now;
+  }
+
+  if (processedEventIds.has(eventId)) return true;
+  processedEventIds.add(eventId);
+  return false;
+}
+
 export const handleStripeWebhook = async (req: Request, res: Response) => {
   const sig = req.headers["stripe-signature"] as string;
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    // req.body is a Buffer because of express.raw() on this route
+    event = stripe.webhooks.constructEvent(req.body as Buffer, sig, endpointSecret);
   } catch (err) {
     console.error("Webhook signature verification failed:", err);
     return res.status(400).send(`Webhook Error: ${err}`);
   }
 
+  // Deduplicate retries/replays
+  if (event.id && isDuplicateAndMark(event.id)) {
+    console.log(`🟡 Skipping duplicate webhook event ${event.id} (${event.type})`);
+    return res.json({ received: true, duplicate: true });
+  }
+
+  console.log(`🔔 Webhook received: ${event.type} (id=${event.id})`);
+
   try {
     switch (event.type) {
-      // ===== MEMBERSHIP PURCHASE FLOW =====
+      // ===== ONE-TIME PAYMENT FLOW =====
       case "checkout.session.completed":
         await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
         break;
 
-      // ===== SUBSCRIPTION LIFECYCLE =====
-      case "customer.subscription.created":
-        await handleSubscriptionCreated(event.data.object as Stripe.Subscription);
-        break;
-
-      case "customer.subscription.updated":
-        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
-        break;
-
-      // ===== PAYMENT INTENT EVENTS =====
       case "payment_intent.succeeded":
         await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
         break;
 
       case "payment_intent.payment_failed":
         await handlePaymentIntentFailed(event.data.object as Stripe.PaymentIntent);
-        break;
-
-      // ===== INVOICE EVENTS =====
-      case "invoice.created":
-        await handleInvoiceCreated(event.data.object as Stripe.Invoice);
-        break;
-
-      case "invoice.payment_succeeded":
-        await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice);
-        break;
-
-      case "invoice.payment_failed":
-        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
         break;
 
       default:
@@ -79,6 +88,15 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
 
 // Handle successful checkout session completion
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
+  console.log("🧾 checkout.session.completed payload:", {
+    id: session.id,
+    customer: session.customer,
+    payment_intent: session.payment_intent,
+    amount_total: session.amount_total,
+    currency: session.currency,
+    metadata: session.metadata,
+  });
+
   const { userId, planId, billingPeriod } = session.metadata || {};
 
   if (!userId || !planId) {
@@ -90,6 +108,35 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     // Get the plan details
     const plan = await getPlanById(planId);
 
+    // Resolve a customer id for the session
+    let stripeCustomerId: string | null = (session.customer as string) || null;
+    if (!stripeCustomerId && session.payment_intent) {
+      try {
+        const pi = await stripe.paymentIntents.retrieve(session.payment_intent as string);
+        stripeCustomerId = (pi.customer as string) || null;
+        console.log("🔎 Resolved customer from PaymentIntent:", stripeCustomerId);
+      } catch (_) {
+        // ignore; will fallback to creating a customer if needed
+      }
+    }
+    if (!stripeCustomerId) {
+      // As a last resort, create a customer so Payment schema requirement is satisfied
+      const created = await stripe.customers.create({
+        email: session.customer_email || undefined,
+        metadata: { source: "checkout.session.completed" },
+      });
+      stripeCustomerId = created.id;
+      console.log("🆕 Created fallback Stripe customer:", stripeCustomerId);
+    }
+
+    // Ensure user's Stripe customer id is synced to the User document
+    if (stripeCustomerId && typeof userId === "string") {
+      const user = await User.findById(userId);
+      if (user && !user.stripeCustomerId) {
+        user.stripeCustomerId = stripeCustomerId;
+        await user.save();
+      }
+    }
     // Create payment record
     const payment = new Payment({
       userId: userId,
@@ -97,13 +144,20 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       amount: session.amount_total || 0,
       currency: session.currency || "usd",
       status: "succeeded",
-      stripeCustomerId: session.customer as string,
+      stripeCustomerId: stripeCustomerId as string,
       stripeSessionId: session.id,
-      stripeSubscriptionId: session.subscription as string,
+      stripePaymentIntentId: session.payment_intent as string,
       billingPeriod: billingPeriod as "monthly" | "yearly",
     });
 
     await payment.save();
+    console.log("💾 Payment saved:", {
+      paymentId: payment._id.toString(),
+      userId,
+      planId,
+      amount: payment.amount,
+      stripeCustomerId,
+    });
 
     // Check if user has active membership with same plan
     const existingMembership = await UserMembership.findOne({
@@ -123,12 +177,14 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       // Update existing membership
       existingMembership.endDate = newEndDate;
       existingMembership.isAutoRenew = false; // Default to false, user can toggle later
-      existingMembership.stripeSubscriptionId = session.subscription as string;
       await existingMembership.save();
 
-      console.log(
-        `✅ Extended existing membership for user ${userId}, plan ${planId}, from ${currentEndDate.toISOString()} to ${newEndDate.toISOString()}`,
-      );
+      console.log("✅ Membership extended:", {
+        userId,
+        planId,
+        from: currentEndDate.toISOString(),
+        to: newEndDate.toISOString(),
+      });
       return;
     }
 
@@ -153,9 +209,12 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
           billingPeriod as "monthly" | "yearly",
         );
 
-        console.log(
-          `🔄 Upgraded membership for user ${userId}: ${differentPlanMembership.planId} → ${planId}, preserved ${remainingDays} days`,
-        );
+        console.log("🔄 Upgraded membership (preserved days):", {
+          userId,
+          fromPlan: differentPlanMembership.planId,
+          toPlan: planId,
+          preservedDays: remainingDays,
+        });
       } else {
         // No remaining days, start immediately
         membershipEndDate = getMembershipEndDate(
@@ -163,9 +222,11 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
           billingPeriod as "monthly" | "yearly",
         );
 
-        console.log(
-          `🔄 Replaced expired membership for user ${userId}: ${differentPlanMembership.planId} → ${planId}`,
-        );
+        console.log("🔄 Replaced expired membership:", {
+          userId,
+          fromPlan: differentPlanMembership.planId,
+          toPlan: planId,
+        });
       }
 
       // Expire old membership
@@ -189,14 +250,18 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       startDate: membershipStartDate,
       endDate: membershipEndDate,
       isAutoRenew: false,
-      stripeSubscriptionId: session.subscription as string,
     });
 
     await userMembership.save();
 
-    console.log(
-      `✅ New membership created for user ${userId}, plan ${planId}, period: ${billingPeriod}, from ${membershipStartDate.toISOString()} to ${membershipEndDate.toISOString()}`,
-    );
+    console.log("✅ New membership created:", {
+      userId,
+      planId,
+      billingPeriod,
+      start: membershipStartDate.toISOString(),
+      end: membershipEndDate.toISOString(),
+      paymentId: payment._id.toString(),
+    });
   } catch (error) {
     console.error("❌ Error handling checkout session completion:", error);
   }
@@ -239,8 +304,8 @@ export const toggleAutoRenewal = async (req: AuthenticatedRequest, res: Response
     membership.isAutoRenew = isAutoRenew;
     await membership.save();
 
-    // TODO: If enabling auto-renewal, create Stripe subscription
-    // TODO: If disabling auto-renewal, cancel Stripe subscription
+    // Note: Auto-renewal is just a database flag for now
+    // Future implementation could create Stripe subscriptions when enabled
 
     res.status(200).json({
       success: true,
@@ -258,140 +323,6 @@ export const toggleAutoRenewal = async (req: AuthenticatedRequest, res: Response
     });
   }
 };
-
-// Handle successful invoice payment (for recurring subscriptions)
-async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
-  try {
-    const subscriptionId = (invoice as any).subscription as string;
-    const userMembership = await UserMembership.findOne({ stripeSubscriptionId: subscriptionId });
-
-    if (userMembership) {
-      // Extend membership period
-      const currentEndDate = userMembership.endDate;
-      const newEndDate = new Date(currentEndDate);
-
-      if (userMembership.billingPeriod === "monthly") {
-        newEndDate.setMonth(newEndDate.getMonth() + 1);
-      } else {
-        newEndDate.setFullYear(newEndDate.getFullYear() + 1);
-      }
-
-      userMembership.endDate = newEndDate;
-      userMembership.status = "active";
-      await userMembership.save();
-
-      console.log(`Membership renewed for user ${userMembership.userId}`);
-    }
-  } catch (error) {
-    console.error("Error handling invoice payment succeeded:", error);
-  }
-}
-
-// Handle failed invoice payment
-async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
-  try {
-    const subscriptionId = (invoice as any).subscription as string;
-
-    // Find the payment record for this subscription
-    const payment = await Payment.findOne({
-      stripeSubscriptionId: subscriptionId,
-      status: "succeeded", // Only update successful payments
-    });
-
-    if (payment) {
-      // Update payment status to failed
-      payment.status = "failed";
-      payment.failureReason = (invoice as any).last_payment_error?.message || "Payment failed";
-      await payment.save();
-
-      console.log(`💳 Payment failed for subscription ${subscriptionId}: ${payment.failureReason}`);
-
-      // Log membership that will be affected and send notification
-      const userMembership = await UserMembership.findOne({ stripeSubscriptionId: subscriptionId });
-      if (userMembership) {
-        const daysUntilExpiration = getDaysRemaining(userMembership.endDate);
-
-        console.log(
-          `⚠️ Membership ${userMembership._id} will expire in ${daysUntilExpiration} days if payment not resolved`,
-        );
-
-        // Get user and membership plan details for notification
-        const user = await User.findById(userMembership.userId);
-        const membershipPlan = await MembershipPlan.findById(userMembership.planId);
-
-        // Send payment failure notification email
-        if (user && membershipPlan) {
-          await sendPaymentFailedNotification(
-            user.email,
-            payment.amount,
-            payment.failureReason || "Payment failed",
-            membershipPlan.name,
-            `${process.env.FRONTEND_URL}/update-payment?subscription=${subscriptionId}`,
-          );
-        }
-
-        // Log payment failure details for monitoring
-        console.log(`Payment Failure Details:`, {
-          membershipId: userMembership._id,
-          userId: userMembership.userId,
-          planId: userMembership.planId,
-          endDate: userMembership.endDate,
-          daysUntilExpiration,
-          failureReason: payment.failureReason,
-        });
-      }
-    } else {
-      console.log(`⚠️ No successful payment found for subscription ${subscriptionId}`);
-    }
-  } catch (error) {
-    console.error("❌ Error handling invoice payment failed:", error);
-  }
-}
-
-// Handle subscription creation
-async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
-  try {
-    console.log(`🆕 Subscription created: ${subscription.id}`);
-
-    // Update any existing membership with the subscription ID
-    const customerId = subscription.customer as string;
-    const user = await User.findOne({ stripeCustomerId: customerId });
-
-    if (user) {
-      await UserMembership.updateOne(
-        { userId: user._id, status: "active" },
-        {
-          stripeSubscriptionId: subscription.id,
-          isAutoRenew: true,
-        },
-      );
-      console.log(
-        `✅ Updated membership for user ${user._id} with subscription ${subscription.id}`,
-      );
-    }
-  } catch (error) {
-    console.error("❌ Error handling subscription creation:", error);
-  }
-}
-
-// Handle subscription updates
-async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-  try {
-    const userMembership = await UserMembership.findOne({ stripeSubscriptionId: subscription.id });
-
-    if (userMembership) {
-      if (subscription.status === "active") {
-        userMembership.status = "active";
-      } else if (subscription.status === "canceled" || subscription.status === "unpaid") {
-        userMembership.status = "expired";
-      }
-
-      await userMembership.save();
-    }
-  } catch (error) {
-    console.error("Error handling subscription update:", error);
-  }
-}
 
 // Handle successful payment intent (for one-time payments)
 async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent) {
@@ -450,17 +381,5 @@ async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
     }
   } catch (error) {
     console.error("Error handling payment intent failed:", error);
-  }
-}
-
-// Handle invoice creation
-async function handleInvoiceCreated(invoice: Stripe.Invoice) {
-  try {
-    console.log(`📄 Invoice created: ${invoice.id}`);
-
-    // You can add logic here to notify users about upcoming charges
-    // For example, send an email notification about the upcoming payment
-  } catch (error) {
-    console.error("❌ Error handling invoice creation:", error);
   }
 }

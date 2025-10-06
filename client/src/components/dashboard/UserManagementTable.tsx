@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useSelector, useDispatch } from "react-redux";
 import {
   UserCheck,
@@ -62,10 +63,22 @@ const UserActionsDropdown: React.FC<UserActionsDropdownProps> = ({
   const canRevoke = user.role !== "admin" && user.status !== "revoke";
   const canUnrevoke = user.role !== "admin" && user.status === "revoke";
 
+  // Get position of trigger button
+  const triggerRect = triggerRef.current.getBoundingClientRect();
+  const dropdownPosition = {
+    top: triggerRect.bottom + window.scrollY + 4,
+    right: window.innerWidth - triggerRect.right - window.scrollX,
+  };
+
   const dropdown = (
     <div
-      className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-2xl border border-gray-200 py-2 z-50"
+      className="fixed w-48 bg-white rounded-lg shadow-2xl border border-gray-200 py-2 z-[9999]"
+      style={{
+        top: `${dropdownPosition.top}px`,
+        right: `${dropdownPosition.right}px`,
+      }}
       onClick={(e) => e.stopPropagation()}
+      data-dropdown-content
     >
       {canApprove && (
         <button
@@ -127,7 +140,7 @@ const UserActionsDropdown: React.FC<UserActionsDropdownProps> = ({
     </div>
   );
 
-  return dropdown;
+  return createPortal(dropdown, document.body);
 };
 
 const UserManagementTable: React.FC = () => {
@@ -158,11 +171,16 @@ const UserManagementTable: React.FC = () => {
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        openDropdown &&
-        !(event.target as Element).closest("[data-dropdown-portal]")
-      ) {
-        setOpenDropdown(null);
+      if (openDropdown) {
+        const target = event.target as Element;
+        // Check if click is outside both the trigger button and the dropdown
+        const isTriggerClick =
+          dropdownRefs[openDropdown]?.current?.contains(target);
+        const isDropdownClick = target.closest("[data-dropdown-content]");
+
+        if (!isTriggerClick && !isDropdownClick) {
+          setOpenDropdown(null);
+        }
       }
     };
 
@@ -171,7 +189,7 @@ const UserManagementTable: React.FC = () => {
       return () =>
         document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [openDropdown]);
+  }, [openDropdown, dropdownRefs]);
 
   useEffect(() => {
     dispatch(fetchUsersThunk(filters));
@@ -555,8 +573,8 @@ const UserManagementTable: React.FC = () => {
             </table>
           </div>
 
-          {/* Tablet Table View - MD to XL */}
-          <div className="hidden md:block xl:hidden overflow-x-auto">
+          {/* Tablet Table View - LG to XL */}
+          <div className="hidden lg:block xl:hidden overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
@@ -683,7 +701,7 @@ const UserManagementTable: React.FC = () => {
           </div>
 
           {/* Mobile Card View */}
-          <div className="md:hidden">
+          <div className="lg:hidden">
             <div className="p-4 space-y-4">
               {users.map((user) => (
                 <div

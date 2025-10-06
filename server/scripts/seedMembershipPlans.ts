@@ -23,7 +23,7 @@ const membershipPlans = [
       "1% platform fee",
     ],
     monthlyPrice: 10000, // $100.00
-    yearlyPrice: 120000, // $1,200.00 (before 15% discount = $1,020.00)
+    yearlyPrice: 120000, // $1,020.00 after 15% (full $1,200.00)
     annualDiscountRate: ANNUAL_DISCOUNT_RATE,
     duration: 30,
     // Customer-specific features
@@ -38,10 +38,8 @@ const membershipPlans = [
     certifiedAASWork: false,
     freeEvaluation: false,
     stripeProductId: "prod_T8w06nAcySkbqS",
-    stripePriceIdMonthly: "price_1SCe853U4RkW3GRdlLvgTMIR",
-    stripePriceIdYearly: "price_1SCe863U4RkW3GRdk6AqZxMF",
-    stripePriceIdOneTimeMonthly: "price_1SCeEn3U4RkW3GRd9Tgg2zzJ",
-    stripePriceIdOneTimeYearly: "price_1SCeEo3U4RkW3GRd8a2DGPLu",
+    stripePriceIdMonthly: "price_1SCeEn3U4RkW3GRd9Tgg2zzJ",
+    stripePriceIdYearly: "price_1SF8q43U4RkW3GRdWnYLtcaa",
   },
   {
     name: "Standard Plan",
@@ -55,7 +53,7 @@ const membershipPlans = [
       "1% platform fee",
     ],
     monthlyPrice: 20000, // $200.00
-    yearlyPrice: 240000, // $2,400.00 (before 15% discount = $2,040.00)
+    yearlyPrice: 240000, // $2,040.00 after 15% (full $2,400.00)
     annualDiscountRate: ANNUAL_DISCOUNT_RATE,
     duration: 30,
     // Customer-specific features
@@ -70,10 +68,8 @@ const membershipPlans = [
     certifiedAASWork: false,
     freeEvaluation: false,
     stripeProductId: "prod_T8w08g7VuknEVM",
-    stripePriceIdMonthly: "price_1SCe873U4RkW3GRd2yQiulm3",
-    stripePriceIdYearly: "price_1SCe873U4RkW3GRdvA6mX6sW",
-    stripePriceIdOneTimeMonthly: "price_1SCeEo3U4RkW3GRdADw6mie5",
-    stripePriceIdOneTimeYearly: "price_1SCeEp3U4RkW3GRd8mCCIQBq",
+    stripePriceIdMonthly: "price_1SCeEo3U4RkW3GRdADw6mie5",
+    stripePriceIdYearly: "price_1SF8q53U4RkW3GRdt9U45Oqw",
   },
   {
     name: "Premium Plan",
@@ -89,7 +85,7 @@ const membershipPlans = [
       "No platform fee",
     ],
     monthlyPrice: 30000, // $300.00
-    yearlyPrice: 360000, // $3,600.00 (before 15% discount = $3,060.00)
+    yearlyPrice: 360000, // $3,060.00 after 15% (full $3,600.00)
     annualDiscountRate: ANNUAL_DISCOUNT_RATE,
     duration: 30,
     // Customer-specific features
@@ -104,10 +100,8 @@ const membershipPlans = [
     certifiedAASWork: true,
     freeEvaluation: true,
     stripeProductId: "prod_T8w0Qce5IA3cBx",
-    stripePriceIdMonthly: "price_1SCe883U4RkW3GRdAld2FUof",
-    stripePriceIdYearly: "price_1SCe893U4RkW3GRdywczOsgm",
-    stripePriceIdOneTimeMonthly: "price_1SCeEp3U4RkW3GRdh3LxE7rP",
-    stripePriceIdOneTimeYearly: "price_1SCeEq3U4RkW3GRdUlmXYEB6",
+    stripePriceIdMonthly: "price_1SCeEp3U4RkW3GRdh3LxE7rP",
+    stripePriceIdYearly: "price_1SF8q73U4RkW3GRdpV0Hsz8E",
   },
 
   // CONTRACTOR PLANS
@@ -124,7 +118,7 @@ const membershipPlans = [
       "No publicity or references shown",
     ],
     monthlyPrice: 10000, // $100.00
-    yearlyPrice: 120000, // $1,200.00 (before 15% discount = $1,020.00)
+    yearlyPrice: 120000, // $1,020.00 after 15% (full $1,200.00)
     annualDiscountRate: ANNUAL_DISCOUNT_RATE,
     duration: 30,
     // Contractor-specific features
@@ -140,10 +134,8 @@ const membershipPlans = [
     // Property type access
     propertyType: "domestic", // Basic contractors: domestic properties only
     stripeProductId: "prod_T8w0AFxXjSW15v",
-    stripePriceIdMonthly: "price_1SCe8A3U4RkW3GRdNrlRqfSw",
-    stripePriceIdYearly: "price_1SCe8A3U4RkW3GRdZOWH2qgv",
-    stripePriceIdOneTimeMonthly: "price_1SCeEq3U4RkW3GRddiLDhV8N",
-    stripePriceIdOneTimeYearly: "price_1SCeEr3U4RkW3GRdzGGWcUCU",
+    stripePriceIdMonthly: "price_1SCeEq3U4RkW3GRddiLDhV8N",
+    stripePriceIdYearly: "price_1SF8q83U4RkW3GRdih1cues8",
   },
   {
     name: "Standard Plan",
@@ -159,7 +151,7 @@ const membershipPlans = [
       "Eligible for featured listing",
     ],
     monthlyPrice: 20000, // $200.00
-    yearlyPrice: 240000, // $2,400.00 (before 15% discount = $2,040.00)
+    yearlyPrice: 240000, // $2,040.00 after 15% (full $2,400.00)
     annualDiscountRate: ANNUAL_DISCOUNT_RATE,
     duration: 30,
     // Contractor-specific features
@@ -175,10 +167,8 @@ const membershipPlans = [
     // Property type access
     propertyType: "domestic", // Standard contractors: domestic properties only
     stripeProductId: "prod_T8w0n75f6Bsbok",
-    stripePriceIdMonthly: "price_1SCe8B3U4RkW3GRdJfaEmzS9",
-    stripePriceIdYearly: "price_1SCe8C3U4RkW3GRde9AHhDXu",
-    stripePriceIdOneTimeMonthly: "price_1SCeEr3U4RkW3GRdz4ZVC365",
-    stripePriceIdOneTimeYearly: "price_1SCeEs3U4RkW3GRdYBQWRQJj",
+    stripePriceIdMonthly: "price_1SCeEr3U4RkW3GRdz4ZVC365",
+    stripePriceIdYearly: "price_1SF8q93U4RkW3GRdvNeiLCgr",
   },
   {
     name: "Premium Plan",
@@ -186,36 +176,33 @@ const membershipPlans = [
     userType: "contractor",
     tier: "premium",
     features: [
-      "Unlimited leads",
-      "Instant access",
+      "60 leads/month",
+      "Access after 0h delay",
       "Unlimited radius",
       "Domestic + Commercial properties",
       "Publicity, references + verified badge",
       "Featured listing top priority",
       "Exclusive: Off-Market Opportunities + Financing support",
-      "Private network (notary, lawyer, specialists, discounts)",
     ],
     monthlyPrice: 30000, // $300.00
-    yearlyPrice: 360000, // $3,600.00 (before 15% discount = $3,060.00)
+    yearlyPrice: 360000, // $3,060.00 after 15% (full $3,600.00)
     annualDiscountRate: ANNUAL_DISCOUNT_RATE,
     duration: 30,
     // Contractor-specific features
-    leadsPerMonth: null, // unlimited
-    accessDelayHours: 0, // instant access
+    leadsPerMonth: 60,
+    accessDelayHours: 0,
     radiusKm: null, // unlimited
     featuredListing: true,
     offMarketAccess: true,
     publicityReferences: true,
     verifiedBadge: true,
     financingSupport: true,
-    privateNetwork: true,
+    privateNetwork: false,
     // Property type access
     propertyType: "commercial", // Premium contractors: domestic + commercial properties
     stripeProductId: "prod_T8w0Dx6DssNc0z",
-    stripePriceIdMonthly: "price_1SCe8D3U4RkW3GRdI2VVmlu2",
-    stripePriceIdYearly: "price_1SCe8D3U4RkW3GRddd5w5pRJ",
-    stripePriceIdOneTimeMonthly: "price_1SCeEs3U4RkW3GRdVMrohzaH",
-    stripePriceIdOneTimeYearly: "price_1SCeEt3U4RkW3GRd8vn08OG4",
+    stripePriceIdMonthly: "price_1SCeEs3U4RkW3GRdVMrohzaH",
+    stripePriceIdYearly: "price_1SF8qB3U4RkW3GRdEJq8UEe6",
   },
 ];
 

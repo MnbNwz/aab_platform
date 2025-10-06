@@ -8,6 +8,7 @@ export * as coreUtils from "./core";
 export * as constantsUtils from "./constants";
 export * as typesUtils from "./types";
 export * as membershipUtils from "./membership";
+export * as userUtils from "./user";
 
 // Also export commonly used utilities directly for backward compatibility
 export * from "./core"; // logger, date utilities

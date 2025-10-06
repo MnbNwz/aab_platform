@@ -62,8 +62,6 @@ export async function getCurrentMembership(userId: string): Promise<IUserMembers
               features: 1,
               stripePriceIdMonthly: 1,
               stripePriceIdYearly: 1,
-              stripePriceIdOneTimeMonthly: 1,
-              stripePriceIdOneTimeYearly: 1,
             },
           },
         ],

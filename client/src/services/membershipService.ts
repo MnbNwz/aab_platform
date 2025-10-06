@@ -1,4 +1,10 @@
-import type { ApiResponse, MembershipPlan, CurrentMembership } from "../types";
+import type {
+  ApiResponse,
+  MembershipPlan,
+  CurrentMembership,
+  MembershipCheckoutPayload,
+  CheckoutResponse,
+} from "../types";
 import showToast from "../utils/toast";
 
 const API_CONFIG = {
@@ -119,6 +125,24 @@ export const membershipService = {
   },
   getHistory: async (): Promise<ApiResponse<any[]>> => {
     return get<any[]>("/api/membership/history");
+  },
+  // Create checkout session for membership
+  checkout: async (
+    payload: MembershipCheckoutPayload
+  ): Promise<ApiResponse<CheckoutResponse>> => {
+    try {
+      showToast.loading("Creating checkout session...");
+      const res = await post<CheckoutResponse>(
+        "/api/membership/checkout",
+        payload
+      );
+      showToast.dismiss();
+      return res;
+    } catch (err: any) {
+      showToast.dismiss();
+      showToast.error(err.message || "Failed to create checkout session");
+      throw err;
+    }
   },
   // Toggle auto-renewal for membership
   toggleAutoRenewal: async (
