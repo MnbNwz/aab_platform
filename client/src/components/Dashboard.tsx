@@ -31,6 +31,7 @@ import ProfileViewModal from "./ProfileViewModal";
 import Settings from "./Settings";
 import JobManagementTable from "./dashboard/JobManagementTable";
 import ContractorJobRequestsTable from "./dashboard/ContractorJobRequestsTable";
+import FavoriteContractors from "./FavoriteContractors";
 import type { User } from "../types";
 import { handleApiError } from "../services/apiService";
 import {
@@ -349,6 +350,12 @@ const DashboardContent = memo<
           title: "Job Management",
           subtitle: "Manage job requests and assignments",
           children: <JobManagementTable />,
+        },
+        favorites: user.role === "customer" && {
+          ...baseProps,
+          title: "Favorite Contractors",
+          subtitle: "Manage your trusted contractors",
+          children: <FavoriteContractors />,
         },
         // Contractor job requests
         ...(user.role === "contractor"

@@ -15,6 +15,7 @@ import adminProfileReducer from "./slices/adminProfileSlice";
 import dashboardReducer from "./slices/dashboardSlice";
 import contractorJobReducer from "./slices/contractorJobSlice";
 import paymentReducer from "./slices/paymentSlice";
+import favoritesReducer from "./slices/favoritesSlice";
 
 export const store = configureStore({
   reducer: {
@@ -33,6 +34,7 @@ export const store = configureStore({
     dashboard: dashboardReducer,
     contractorJob: contractorJobReducer,
     payment: paymentReducer,
+    favorites: favoritesReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

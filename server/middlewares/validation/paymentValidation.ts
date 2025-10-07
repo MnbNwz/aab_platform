@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { PAYMENT_VALIDATION, MIDDLEWARE_ERROR_MESSAGES, HTTP_STATUS } from "../constants";
+import { PAYMENT_VALIDATION, MIDDLEWARE_ERROR_MESSAGES, HTTP_STATUS } from "@middlewares/constants";
 
 // Payment error types - moved here since they're only used in this file
 export enum PaymentErrorType {

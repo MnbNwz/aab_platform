@@ -50,6 +50,7 @@ export const authenticate = async (req: any, res: Response, next: NextFunction) 
     // Clean user data
     const userObj = user.toObject();
     delete userObj.passwordHash;
+    delete userObj.favoriteContractors; // Remove favorites from profile
     req.user = { ...userObj, _id: userObj._id.toString() };
 
     next();

@@ -3,7 +3,7 @@ import { Request, Response } from "express";
 import Stripe from "stripe";
 import { AuthenticatedRequest } from "@middlewares/types";
 import { getPlanById } from "@services/membership/membership";
-import { CONTROLLER_ERROR_MESSAGES, HTTP_STATUS } from "../constants";
+import { CONTROLLER_ERROR_MESSAGES, HTTP_STATUS } from "@controllers/constants";
 import { ALLOWED_STRIPE_DOMAINS } from "@controllers/constants/validation";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {

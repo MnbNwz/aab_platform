@@ -3,7 +3,7 @@ import { AuthenticatedRequest } from "@middlewares/types";
 import { getCustomerAnalytics } from "@services/dashboard/customer";
 import { getContractorAnalytics } from "@services/dashboard/contractor";
 import { getPlatformAnalytics } from "@services/dashboard/admin";
-import { CONTROLLER_ERROR_MESSAGES, HTTP_STATUS } from "../constants";
+import { CONTROLLER_ERROR_MESSAGES, HTTP_STATUS } from "@controllers/constants";
 
 // Single smart dashboard controller - returns role-based data automatically
 export const getPlatformDashboardController = async (req: AuthenticatedRequest, res: Response) => {

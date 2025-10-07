@@ -1,5 +1,5 @@
 import { Response, NextFunction } from "express";
-import { MIDDLEWARE_ERROR_MESSAGES, HTTP_STATUS } from "../constants";
+import { MIDDLEWARE_ERROR_MESSAGES, HTTP_STATUS } from "@middlewares/constants";
 
 export const requireRole = (roles: string[]) => {
   return (req: any, res: Response, next: NextFunction) => {

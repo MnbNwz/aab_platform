@@ -3,7 +3,7 @@ import * as userController from "@controllers/auth";
 import { authenticate } from "@middlewares/auth";
 import { requireAdminOrSelf, requireAdmin } from "@middlewares/authorization";
 import { upload } from "@middlewares/storage";
-import { USER_ROUTES } from "../constants/routes";
+import { USER_ROUTES } from "@routes/constants/routes";
 
 const router = Router();
 

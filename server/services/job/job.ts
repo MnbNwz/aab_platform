@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import { JobRequest } from "@models/job";
 import { ContractorServices } from "@models/system";
 import { FilterQuery } from "mongoose";
-import { validateJobRequestCreation } from "../property/typeEnforcement";
+import { validateJobRequestCreation } from "@services/property/typeEnforcement";
 import { VALID_SORT_FIELDS, ALLOWED_JOB_UPDATE_FIELDS } from "@services/constants/validation";
 
 // Helper function to get available services from database

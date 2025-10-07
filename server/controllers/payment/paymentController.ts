@@ -2,7 +2,7 @@ import { Response } from "express";
 import { AuthenticatedRequest } from "@middlewares/types";
 import * as paymentService from "@services/payment/payment";
 import * as offMarketPaymentService from "@services/payment/offMarket";
-import { CONTROLLER_ERROR_MESSAGES, HTTP_STATUS } from "../constants";
+import { CONTROLLER_ERROR_MESSAGES, HTTP_STATUS } from "@controllers/constants";
 
 // JOB PAYMENTS
 export const createJobPayment = async (req: AuthenticatedRequest, res: Response) => {

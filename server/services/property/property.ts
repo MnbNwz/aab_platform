@@ -1,7 +1,7 @@
 import { Property, IProperty } from "@models/property";
 import { Types } from "@models/types";
 import S3Upload from "@utils/storage";
-import { PropertyInput } from "../types/property";
+import { PropertyInput } from "@services/types/property";
 
 export const createProperty = async ({ userId, body, files }: PropertyInput) => {
   const {

@@ -2,7 +2,7 @@ import "dotenv/config";
 import { Request, Response } from "express";
 import Stripe from "stripe";
 import { AuthenticatedRequest } from "@middlewares/types";
-import { CONTROLLER_ERROR_MESSAGES, HTTP_STATUS } from "../constants";
+import { CONTROLLER_ERROR_MESSAGES, HTTP_STATUS } from "@controllers/constants";
 import { UserMembership } from "@models/user";
 import { Payment } from "@models/payment";
 import { User } from "@models/user";

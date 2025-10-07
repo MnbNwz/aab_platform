@@ -1,6 +1,6 @@
 import "dotenv/config";
 import Stripe from "stripe";
-import { SERVICE_ERROR_MESSAGES, SERVICE_CONSTANTS } from "../constants";
+import { SERVICE_ERROR_MESSAGES, SERVICE_CONSTANTS } from "@services/constants";
 import { User } from "@models/user";
 import { UserMembership } from "@models/user";
 import { JobPayment } from "@models/payment";

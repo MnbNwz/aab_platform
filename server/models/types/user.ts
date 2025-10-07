@@ -55,6 +55,8 @@ export interface IUser extends Document {
   stripeCustomerId?: string;
   stripeConnectAccountId?: string;
   stripeConnectStatus?: "pending" | "active" | "rejected" | "disabled";
+  // Favorites (customers only - max 10 contractors)
+  favoriteContractors?: Types.ObjectId[];
 }
 
 // DTO types for user operations

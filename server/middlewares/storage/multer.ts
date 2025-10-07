@@ -1,5 +1,5 @@
 import multer from "multer";
-import { FILE_UPLOAD_LIMITS } from "../constants";
+import { FILE_UPLOAD_LIMITS } from "@middlewares/constants";
 
 // File upload middleware with configurable limits
 const upload = multer({

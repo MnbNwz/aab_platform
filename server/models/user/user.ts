@@ -86,11 +86,36 @@ const UserSchema = new Schema<IUser>({
     enum: STRIPE_CONNECT_STATUSES,
     default: "pending",
   },
+  // Favorites (customers only - max 10 contractors)
+  favoriteContractors: {
+    type: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    default: [],
+    validate: [
+      {
+        validator: function (this: any, v: any[]) {
+          // Only customers can have favorites
+          if (this.role !== "customer" && v && v.length > 0) {
+            return false;
+          }
+          return true;
+        },
+        message: "Only customers can have favorite contractors",
+      },
+      {
+        validator: function (v: any[]) {
+          // Max 10 favorites
+          return v.length <= 10;
+        },
+        message: "Cannot have more than 10 favorite contractors",
+      },
+    ],
+  },
 });
 
 // Create indexes for better query performance
 UserSchema.index({ email: 1 }); // Already unique, but explicit index
 UserSchema.index({ geoHome: "2dsphere" }); // Geospatial index for contractor location queries
+UserSchema.index({ favoriteContractors: 1 }); // Index for favorites queries (who favorited whom)
 
 export const User = createModel<IUser>({
   schema: UserSchema,

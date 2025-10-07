@@ -163,77 +163,86 @@ const makeRequest = async <T = any>(
     body,
   };
 
-  try {
+  // Create a promise for the entire request flow to handle in-flight deduplication correctly
+  const executeRequest = async (): Promise<ApiResponse<T>> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.timeout);
 
-    const requestPromise = fetch(url, {
-      ...config,
-      signal: controller.signal,
-    });
-    if (method === "GET") inFlightRequests.set(cacheKey, requestPromise);
-
-    const response = await requestPromise;
-
-    clearTimeout(timeoutId);
-
-    let data;
-    const contentType = response.headers.get("content-type");
-
-    if (contentType && contentType.includes("application/json")) {
-      data = await response.json();
-    } else {
-      data = await response.text();
-    }
-
-    // Handle different HTTP status codes
-    if (response.status === 401) {
-      // Unauthorized - let the component handle the error
-      throw createApiError(ERROR_MESSAGES.UNAUTHORIZED, 401);
-    }
-
-    if (response.status === 403) {
-      // Forbidden - no permission
-      throw createApiError(ERROR_MESSAGES.UNAUTHORIZED, 403);
-    }
-
-    if (!response.ok) {
-      throw createApiError(
-        data?.message || data?.error || ERROR_MESSAGES.GENERIC_ERROR,
-        response.status,
-        data?.errors
-      );
-    }
-
-    const apiResponse: ApiResponse<T> = {
-      success: true,
-      data: data?.data || data,
-      message: data?.message || "Success",
-    };
-
-    // Cache GET responses with per-endpoint TTL
-    if (method === "GET") {
-      const ttl = getCacheTTL(endpoint);
-      getCache.set(cacheKey, {
-        expiresAt: Date.now() + ttl,
-        value: apiResponse,
+    try {
+      const response = await fetch(url, {
+        ...config,
+        signal: controller.signal,
       });
-    }
-    return apiResponse;
-  } catch (error) {
-    if (isApiError(error)) {
-      throw error;
-    }
 
-    if (error instanceof DOMException && error.name === "AbortError") {
-      throw createApiError("Request timeout Please refresh the page", 408);
-    }
+      clearTimeout(timeoutId);
 
-    // Network or other errors
-    throw createApiError(ERROR_MESSAGES.NETWORK_ERROR, 0);
-  } finally {
-    if (method === "GET") inFlightRequests.delete(cacheKey);
+      let data;
+      const contentType = response.headers.get("content-type");
+
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        data = await response.text();
+      }
+
+      // Handle different HTTP status codes
+      if (response.status === 401) {
+        // Unauthorized - let the component handle the error
+        throw createApiError(ERROR_MESSAGES.UNAUTHORIZED, 401);
+      }
+
+      if (response.status === 403) {
+        // Forbidden - no permission
+        throw createApiError(ERROR_MESSAGES.UNAUTHORIZED, 403);
+      }
+
+      if (!response.ok) {
+        throw createApiError(
+          data?.message || data?.error || ERROR_MESSAGES.GENERIC_ERROR,
+          response.status,
+          data?.errors
+        );
+      }
+
+      const apiResponse: ApiResponse<T> = {
+        success: true,
+        data: data?.data || data,
+        message: data?.message || "Success",
+      };
+
+      // Cache GET responses with per-endpoint TTL
+      if (method === "GET") {
+        const ttl = getCacheTTL(endpoint);
+        getCache.set(cacheKey, {
+          expiresAt: Date.now() + ttl,
+          value: apiResponse,
+        });
+      }
+      return apiResponse;
+    } catch (error) {
+      if (isApiError(error)) {
+        throw error;
+      }
+
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw createApiError("Request timeout Please refresh the page", 408);
+      }
+
+      // Network or other errors
+      throw createApiError(ERROR_MESSAGES.NETWORK_ERROR, 0);
+    } finally {
+      if (method === "GET") inFlightRequests.delete(cacheKey);
+    }
+  };
+
+  // For GET requests, store the promise for the entire request flow
+  if (method === "GET") {
+    const requestPromise = executeRequest();
+    inFlightRequests.set(cacheKey, requestPromise);
+    return requestPromise;
   }
+
+  return executeRequest();
 };
 
 // HTTP method helpers

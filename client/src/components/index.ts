@@ -5,6 +5,7 @@ export { default as PendingApproval } from "./PendingApproval";
 export { default as AutoRenewalModal } from "./AutoRenewalModal";
 export { default as PaymentHistoryModal } from "./PaymentHistoryModal";
 export { default as PaymentDetailModal } from "./PaymentDetailModal";
+export { default as FavoriteContractors } from "./FavoriteContractors";
 
 // Auth components
 export { default as AuthGuard } from "./auth/AuthGuard";

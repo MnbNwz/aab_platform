@@ -10,7 +10,7 @@ import {
 } from "@services/auth";
 import S3Upload from "@utils/storage";
 import { AUTHORIZATION_CONSTANTS, ENVIRONMENT_CONSTANTS } from "@middlewares/constants";
-import { CONTROLLER_CONSTANTS, FIELD_CONSTANTS } from "../constants";
+import { CONTROLLER_CONSTANTS, FIELD_CONSTANTS } from "@controllers/constants";
 
 export const signupController = async (req: Request & { files?: any[] }, res: Response) => {
   try {

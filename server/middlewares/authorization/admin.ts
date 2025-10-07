@@ -1,6 +1,6 @@
 import { Response, NextFunction } from "express";
 import { User } from "@models/user";
-import { MIDDLEWARE_ERROR_MESSAGES, HTTP_STATUS } from "../constants";
+import { MIDDLEWARE_ERROR_MESSAGES, HTTP_STATUS } from "@middlewares/constants";
 
 // Admin authorization middleware (enhanced version with database check)
 export const requireAdminEnhanced = async (req: any, res: Response, next: NextFunction) => {

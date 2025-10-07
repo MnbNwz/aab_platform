@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { Readable } from "stream";
-import { logErrorWithContext } from "../core/logger";
+import { logErrorWithContext } from "@utils/core/logger";
 
 dotenv.config();
 

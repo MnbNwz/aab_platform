@@ -1,5 +1,5 @@
 import { User } from "@models/user";
-import { UserFilters, PaginationOptions, UserUpdateData } from "../types/admin";
+import { UserFilters, PaginationOptions, UserUpdateData } from "@services/types/admin";
 
 // Get all users with filtering and pagination
 export async function getAllUsers(filters: UserFilters = {}, pagination: PaginationOptions) {

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { verifyAccessToken, verifyRefreshToken, generateAccessToken } from "@utils/auth";
 import { User } from "@models/user";
-import { AUTHORIZATION_CONSTANTS, ENVIRONMENT_CONSTANTS } from "../constants";
+import { AUTHORIZATION_CONSTANTS, ENVIRONMENT_CONSTANTS } from "@middlewares/constants";
 
 /**
  * Middleware that automatically handles token refresh when access token expires
