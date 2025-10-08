@@ -6,6 +6,10 @@ export { default as AutoRenewalModal } from "./AutoRenewalModal";
 export { default as PaymentHistoryModal } from "./PaymentHistoryModal";
 export { default as PaymentDetailModal } from "./PaymentDetailModal";
 export { default as FavoriteContractors } from "./FavoriteContractors";
+export { default as JobDetailsModal } from "./JobDetailsModal";
+export { default as ContractorJobDetailsModal } from "./ContractorJobDetailsModal";
+export { default as UpgradeMembershipModal } from "./UpgradeMembershipModal";
+export { default as MyBids } from "./MyBids";
 
 // Auth components
 export { default as AuthGuard } from "./auth/AuthGuard";

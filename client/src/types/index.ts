@@ -160,6 +160,7 @@ export interface ContractorJob {
   canAccessNow: boolean;
   distance: number;
   bidCount: number;
+  alreadyBid?: boolean; // Whether the contractor has already bid on this job
   createdBy: {
     _id: string;
     email: string;
@@ -207,8 +208,8 @@ export interface ContractorJobsResponse {
     hasNextPage: boolean;
     hasPrevPage: boolean;
   };
-  membershipInfo: MembershipInfo;
-  leadInfo: LeadInfo;
+  membershipInfo?: MembershipInfo; // Optional - backend no longer returns this
+  leadInfo?: LeadInfo; // Optional - backend no longer returns this
 }
 
 export interface ContractorJobFilters {

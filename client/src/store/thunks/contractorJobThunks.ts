@@ -35,20 +35,3 @@ export const getContractorJobByIdThunk = createAsyncThunk(
     }
   }
 );
-
-// Check Job Access (without consuming lead)
-export const checkContractorJobAccessThunk = createAsyncThunk(
-  "contractorJob/checkJobAccess",
-  async (jobId: string, { rejectWithValue }) => {
-    try {
-      const response = await contractorJobApi.checkJobAccess(jobId);
-      return response.data;
-    } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.message ||
-        err.message ||
-        "Failed to check job access";
-      return rejectWithValue(errorMessage);
-    }
-  }
-);

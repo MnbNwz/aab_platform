@@ -1,14 +1,22 @@
 import { Request, Response } from "express";
 import { Bid } from "@models/job";
 import { JobRequest } from "@models/job";
+import { LeadAccess } from "@models/job/leadAccess";
+import mongoose from "mongoose";
 import {
   CONTROLLER_ERROR_MESSAGES,
   HTTP_STATUS,
   CONTROLLER_CONSTANTS,
   FIELD_CONSTANTS,
 } from "../constants";
+import {
+  checkLeadLimit,
+  incrementLeadUsage,
+  getContractorMembership,
+  canAccessJob,
+} from "@services/job/contractorJobService";
 
-// Create a new bid
+// Create a new bid - THIS CONSUMES 1 LEAD
 export const createBid = async (req: Request & { user?: any }, res: Response) => {
   try {
     const { jobRequestId, bidAmount, message, timeline, materials, warranty } = req.body;
@@ -59,7 +67,7 @@ export const createBid = async (req: Request & { user?: any }, res: Response) =>
       });
     }
 
-    // Check if contractor already bid on this job
+    // CRITICAL: Check if contractor already bid on this job
     const existingBid = await Bid.findOne({
       jobRequest: jobRequestId,
       contractor: contractorId,
@@ -72,7 +80,35 @@ export const createBid = async (req: Request & { user?: any }, res: Response) =>
       });
     }
 
-    // Create the bid
+    // CRITICAL: Check if contractor can access this job (timing check)
+    const accessCheck = await canAccessJob(
+      contractorId.toString(),
+      jobRequestId,
+      jobRequest.createdAt,
+    );
+    if (!accessCheck.canAccess) {
+      return res.status(HTTP_STATUS.FORBIDDEN).json({
+        success: false,
+        message: accessCheck.reason,
+        accessTime: accessCheck.accessTime,
+      });
+    }
+
+    // CRITICAL: Check lead limit BEFORE creating bid
+    const leadCheck = await checkLeadLimit(contractorId.toString());
+    if (!leadCheck.canAccess) {
+      return res.status(HTTP_STATUS.FORBIDDEN).json({
+        success: false,
+        message: `Lead limit reached. ${leadCheck.reason}`,
+        leadInfo: leadCheck,
+      });
+    }
+
+    // OPTIMIZATION: Get membership info for lead tracking
+    const { effectivePlan } = await getContractorMembership(contractorId.toString());
+    const membershipTier = effectivePlan.tier.toLowerCase() as "basic" | "standard" | "premium";
+
+    // Create the bid first
     const bid = await Bid.create({
       jobRequest: jobRequestId,
       contractor: contractorId,
@@ -83,12 +119,46 @@ export const createBid = async (req: Request & { user?: any }, res: Response) =>
       warranty: warranty || { period: undefined, description: undefined },
     });
 
-    // Add bid to job request
-    await JobRequest.findByIdAndUpdate(jobRequestId, {
-      $push: { bids: bid._id },
-    });
+    // CRITICAL: Record lead consumption and update job request in parallel
+    // If ANY operation fails, we rollback the bid creation
+    try {
+      await Promise.all([
+        // Track lead consumption
+        new LeadAccess({
+          contractor: contractorId,
+          jobRequest: jobRequestId,
+          bid: bid._id,
+          membershipTier,
+        }).save(),
+        // Increment lead counter
+        incrementLeadUsage(contractorId.toString()),
+        // Add bid to job request
+        JobRequest.findByIdAndUpdate(jobRequestId, {
+          $push: { bids: bid._id },
+        }),
+      ]);
+    } catch (parallelError) {
+      // ROLLBACK: Delete the bid if any parallel operation failed
+      console.error("Parallel operations failed, rolling back bid:", parallelError);
+      await Bid.findByIdAndDelete(bid._id);
 
-    res.status(201).json({ success: true, data: bid });
+      return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: "Failed to complete bid placement. Please try again.",
+      });
+    }
+
+    // Get updated lead info
+    const updatedLeadCheck = await checkLeadLimit(contractorId.toString());
+
+    res.status(201).json({
+      success: true,
+      message: "Bid placed successfully. 1 lead consumed.",
+      data: {
+        bid,
+        leadInfo: updatedLeadCheck,
+      },
+    });
   } catch (error) {
     console.error(CONTROLLER_ERROR_MESSAGES.BID_CREATION_ERROR, error);
     res
@@ -156,30 +226,41 @@ export const acceptBid = async (req: Request & { user?: any }, res: Response) =>
       });
     }
 
-    // Update bid status to accepted
-    await Bid.findByIdAndUpdate(bidId, { status: CONTROLLER_CONSTANTS.ACCEPTED_STATUS });
-
-    // Reject all other bids for this job
-    await Bid.updateMany(
-      {
-        jobRequest: jobRequest._id,
-        _id: { $ne: bidId },
-      },
-      { status: CONTROLLER_CONSTANTS.REJECTED_STATUS },
-    );
-
-    // Update job request
-    await JobRequest.findByIdAndUpdate(jobRequest._id, {
-      acceptedBid: bidId,
-      status: CONTROLLER_CONSTANTS.INPROGRESS_STATUS,
-      $push: {
-        timelineHistory: {
-          status: CONTROLLER_CONSTANTS.ACCEPTED_STATUS,
-          date: new Date(),
-          by: userId,
-        },
-      },
-    });
+    // CRITICAL: Accept bid with error handling
+    // All operations must succeed together for data consistency
+    try {
+      await Promise.all([
+        // Update bid status to accepted
+        Bid.findByIdAndUpdate(bidId, { status: CONTROLLER_CONSTANTS.ACCEPTED_STATUS }),
+        // Reject all other bids for this job
+        Bid.updateMany(
+          {
+            jobRequest: jobRequest._id,
+            _id: { $ne: bidId },
+          },
+          { status: CONTROLLER_CONSTANTS.REJECTED_STATUS },
+        ),
+        // Update job request
+        JobRequest.findByIdAndUpdate(jobRequest._id, {
+          acceptedBid: bidId,
+          status: CONTROLLER_CONSTANTS.INPROGRESS_STATUS,
+          $push: {
+            timelineHistory: {
+              status: CONTROLLER_CONSTANTS.ACCEPTED_STATUS,
+              date: new Date(),
+              by: userId,
+            },
+          },
+        }),
+      ]);
+    } catch (updateError) {
+      // Log error but don't expose details to user
+      console.error("Failed to accept bid:", updateError);
+      return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+        success: false,
+        message: "Failed to accept bid. Please try again.",
+      });
+    }
 
     res.json({ success: true, message: CONTROLLER_ERROR_MESSAGES.BID_ACCEPTED_SUCCESS });
   } catch (error) {
@@ -190,7 +271,7 @@ export const acceptBid = async (req: Request & { user?: any }, res: Response) =>
   }
 };
 
-// Get contractor's bids
+// Get contractor's bids with filtering
 export const getContractorBids = async (req: Request & { user?: any }, res: Response) => {
   try {
     const contractorId = req.user?._id;
@@ -201,14 +282,109 @@ export const getContractorBids = async (req: Request & { user?: any }, res: Resp
         .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
     }
 
-    const bids = await Bid.find({ contractor: contractorId })
-      .populate(
-        "jobRequest",
-        `${FIELD_CONSTANTS.TITLE} ${FIELD_CONSTANTS.DESCRIPTION} ${FIELD_CONSTANTS.STATUS}`,
-      )
-      .sort({ createdAt: -1 });
+    // Build filter query with proper ObjectId conversion
+    const query: any = { contractor: new mongoose.Types.ObjectId(contractorId.toString()) };
 
-    res.json({ success: true, data: bids });
+    // Filter by bid status (pending, accepted, rejected)
+    if (req.query.status) {
+      query.status = req.query.status;
+    }
+
+    // Filter by date range
+    if (req.query.startDate || req.query.endDate) {
+      query.createdAt = {};
+      if (req.query.startDate) {
+        query.createdAt.$gte = new Date(req.query.startDate as string);
+      }
+      if (req.query.endDate) {
+        query.createdAt.$lte = new Date(req.query.endDate as string);
+      }
+    }
+
+    // Pagination
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
+    const skip = (page - 1) * limit;
+
+    // Get total count
+    const total = await Bid.countDocuments(query);
+
+    // Get bids with full job details using aggregation
+    const bids = await Bid.aggregate([
+      { $match: query },
+      { $sort: { updatedAt: -1 } }, // Most recently updated first
+      { $skip: skip },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: "jobrequests",
+          localField: "jobRequest",
+          foreignField: "_id",
+          as: "jobRequest",
+          pipeline: [
+            {
+              $lookup: {
+                from: "properties",
+                localField: "property",
+                foreignField: "_id",
+                as: "property",
+                pipeline: [
+                  {
+                    $project: {
+                      title: 1,
+                      location: 1,
+                      area: 1,
+                      areaUnit: 1,
+                    },
+                  },
+                ],
+              },
+            },
+            {
+              $addFields: {
+                property: { $arrayElemAt: ["$property", 0] },
+              },
+            },
+            {
+              $project: {
+                title: 1,
+                description: 1,
+                service: 1,
+                estimate: 1,
+                timeline: 1,
+                status: 1,
+                property: 1,
+                location: 1,
+                createdAt: 1,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $addFields: {
+          jobRequest: { $arrayElemAt: ["$jobRequest", 0] },
+        },
+      },
+    ]);
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(total / limit);
+
+    res.json({
+      success: true,
+      data: {
+        bids,
+        total,
+        pagination: {
+          page,
+          limit,
+          totalPages,
+          hasNextPage: page < totalPages,
+          hasPrevPage: page > 1,
+        },
+      },
+    });
   } catch (error) {
     console.error(CONTROLLER_ERROR_MESSAGES.CONTRACTOR_BID_FETCH_ERROR, error);
     res

@@ -27,6 +27,9 @@ const BidSchema = new Schema<IBid>({
   },
 });
 
+// PERFORMANCE INDEX for contractor bid queries
+BidSchema.index({ contractor: 1, updatedAt: -1 }); // For sorting contractor's bids by most recent
+
 const Bid = createModel<IBid>({
   schema: BidSchema,
   modelName: "Bid",

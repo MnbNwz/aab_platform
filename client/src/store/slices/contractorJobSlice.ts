@@ -2,7 +2,6 @@ import { createSlice } from "@reduxjs/toolkit";
 import {
   getContractorJobsThunk,
   getContractorJobByIdThunk,
-  checkContractorJobAccessThunk,
 } from "../thunks/contractorJobThunks";
 import type {
   ContractorJob,
@@ -14,7 +13,8 @@ import type {
 export interface ContractorJobState {
   jobs: ContractorJob[];
   currentJob: ContractorJob | null;
-  loading: boolean;
+  loading: boolean; // For jobs list
+  jobDetailsLoading: boolean; // For job details modal
   error: string | null;
   pagination: {
     page: number;
@@ -27,18 +27,13 @@ export interface ContractorJobState {
   membershipInfo: MembershipInfo | null;
   leadInfo: LeadInfo | null;
   filters: ContractorJobFilters;
-  accessCheck: {
-    canAccess: boolean;
-    accessTime?: string;
-    leadsUsed?: number;
-    leadsLimit?: number;
-  } | null;
 }
 
 const initialState: ContractorJobState = {
   jobs: [],
   currentJob: null,
   loading: false,
+  jobDetailsLoading: false,
   error: null,
   pagination: {
     page: 1,
@@ -56,7 +51,6 @@ const initialState: ContractorJobState = {
     service: "",
     search: "",
   },
-  accessCheck: null,
 };
 
 const contractorJobSlice = createSlice({
@@ -83,9 +77,6 @@ const contractorJobSlice = createSlice({
         search: "",
       };
     },
-    clearAccessCheck: (state) => {
-      state.accessCheck = null;
-    },
   },
   extraReducers: (builder) => {
     builder
@@ -97,12 +88,17 @@ const contractorJobSlice = createSlice({
       .addCase(getContractorJobsThunk.fulfilled, (state, action) => {
         state.loading = false;
         state.error = null;
-        if (action.payload.success) {
-          state.jobs = action.payload.data.jobs;
-          state.pagination = action.payload.data.pagination;
-          state.membershipInfo = action.payload.data.membershipInfo;
-          state.leadInfo = action.payload.data.leadInfo;
-        }
+        // action.payload is directly the data object from thunk (response.data)
+        // It contains: { jobs, total, pagination, membershipInfo?, leadInfo? }
+        state.jobs = action.payload.jobs || [];
+        state.pagination = {
+          ...action.payload.pagination,
+          total: action.payload.total,
+        };
+        // Backend no longer returns membershipInfo and leadInfo
+        // These are now handled separately or removed
+        state.membershipInfo = action.payload.membershipInfo || null;
+        state.leadInfo = action.payload.leadInfo || null;
       })
       .addCase(getContractorJobsThunk.rejected, (state, action) => {
         state.loading = false;
@@ -111,33 +107,17 @@ const contractorJobSlice = createSlice({
 
       // Get Contractor Job by ID
       .addCase(getContractorJobByIdThunk.pending, (state) => {
-        state.loading = true;
+        state.jobDetailsLoading = true; // Separate loader for job details
         state.error = null;
       })
       .addCase(getContractorJobByIdThunk.fulfilled, (state, action) => {
-        state.loading = false;
+        state.jobDetailsLoading = false;
         state.error = null;
-        if (action.payload.success) {
-          state.currentJob = action.payload.job;
-          state.leadInfo = action.payload.leadInfo;
-        }
+        // New API response: job data is directly in action.payload (no nested .job)
+        state.currentJob = action.payload || null;
       })
       .addCase(getContractorJobByIdThunk.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
-      })
-
-      // Check Job Access
-      .addCase(checkContractorJobAccessThunk.pending, (state) => {
-        state.error = null;
-      })
-      .addCase(checkContractorJobAccessThunk.fulfilled, (state, action) => {
-        state.error = null;
-        if (action.payload.success) {
-          state.accessCheck = action.payload.data;
-        }
-      })
-      .addCase(checkContractorJobAccessThunk.rejected, (state, action) => {
+        state.jobDetailsLoading = false;
         state.error = action.payload as string;
       });
   },
@@ -149,7 +129,6 @@ export const {
   setContractorJobFilters,
   setContractorJobPagination,
   clearContractorJobFilters,
-  clearAccessCheck,
 } = contractorJobSlice.actions;
 
 export default contractorJobSlice.reducer;

@@ -32,6 +32,7 @@ import Settings from "./Settings";
 import JobManagementTable from "./dashboard/JobManagementTable";
 import ContractorJobRequestsTable from "./dashboard/ContractorJobRequestsTable";
 import FavoriteContractors from "./FavoriteContractors";
+import MyBids from "./MyBids";
 import type { User } from "../types";
 import { handleApiError } from "../services/apiService";
 import {
@@ -365,6 +366,12 @@ const DashboardContent = memo<
                 title: "Job Requests",
                 subtitle: "View and manage available job requests",
                 children: <ContractorJobRequestsTable />,
+              },
+              bids: {
+                ...baseProps,
+                title: "My Bids",
+                subtitle: "Track and manage your submitted bids",
+                children: <MyBids />,
               },
             }
           : {}),

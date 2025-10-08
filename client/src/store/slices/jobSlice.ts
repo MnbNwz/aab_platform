@@ -7,6 +7,46 @@ import {
   cancelJobThunk,
 } from "../thunks/jobThunks";
 
+// Bid Contractor Interface
+export interface BidContractor {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  profileImage?: string | null;
+  contractor?: {
+    companyName?: string;
+    services?: string[];
+    license?: string;
+    taxId?: string;
+  };
+}
+
+// Bid Interface
+export interface Bid {
+  _id: string;
+  bidAmount: number;
+  status: "pending" | "accepted" | "rejected";
+  message?: string;
+  timeline?: {
+    startDate: string;
+    endDate: string;
+  };
+  materials?: {
+    included: boolean;
+    description?: string;
+  };
+  warranty?: {
+    period: number;
+    description?: string;
+  };
+  contractor: BidContractor;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Job Interface
 export interface Job {
   _id: string;
   createdBy: string;
@@ -18,7 +58,8 @@ export interface Job {
   estimate: number;
   type: string;
   status: "open" | "in_progress" | "completed" | "cancelled";
-  bids: any[];
+  bids: Bid[];
+  bidCount?: number;
   acceptedBid: string | null;
   paymentStatus: "pending" | "paid" | "refunded";
   timeline: number; // Changed from array to number (days count)

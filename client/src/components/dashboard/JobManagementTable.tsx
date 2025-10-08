@@ -9,6 +9,7 @@ import { getMyPropertiesThunk } from "../../store/thunks/propertyThunks";
 import Loader from "../ui/Loader";
 import JobCreate from "../JobCreate";
 import JobViewEditModal from "../JobViewEditModal";
+import JobDetailsModal from "../JobDetailsModal";
 import { showToast } from "../../utils/toast";
 import ConfirmModal from "../ui/ConfirmModal";
 
@@ -27,10 +28,13 @@ const JobManagementTable: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [viewEditModalOpen, setViewEditModalOpen] = useState(false);
+  const [jobDetailsModalOpen, setJobDetailsModalOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [jobToCancel, setJobToCancel] = useState<any>(null);
   const [noPropertyConfirmOpen, setNoPropertyConfirmOpen] = useState(false);
+  const [acceptingBid, setAcceptingBid] = useState<string | null>(null);
+  const [rejectingBid, setRejectingBid] = useState<string | null>(null);
 
   // Fetch jobs on mount and when filters change
   useEffect(() => {
@@ -68,6 +72,57 @@ const JobManagementTable: React.FC = () => {
   const handleCloseViewEditModal = () => {
     setViewEditModalOpen(false);
     setSelectedJob(null);
+  };
+
+  // Handle job details with bids
+  const handleViewJobDetails = (job: any) => {
+    setSelectedJob(job);
+    setJobDetailsModalOpen(true);
+  };
+
+  const handleCloseJobDetailsModal = () => {
+    setJobDetailsModalOpen(false);
+    setSelectedJob(null);
+  };
+
+  // Handle accept bid
+  const handleAcceptBid = async (bidId: string) => {
+    setAcceptingBid(bidId);
+    try {
+      // TODO: Implement accept bid API call
+      // await dispatch(acceptBidThunk({ jobId: selectedJob._id, bidId }));
+      showToast.success("Bid accepted successfully!");
+
+      // Refresh jobs to get updated data
+      dispatch(getJobsThunk(filters));
+
+      // Close modal after short delay
+      setTimeout(() => {
+        setJobDetailsModalOpen(false);
+        setSelectedJob(null);
+      }, 1000);
+    } catch (error) {
+      showToast.error("Failed to accept bid");
+    } finally {
+      setAcceptingBid(null);
+    }
+  };
+
+  // Handle reject bid
+  const handleRejectBid = async (bidId: string) => {
+    setRejectingBid(bidId);
+    try {
+      // TODO: Implement reject bid API call
+      // await dispatch(rejectBidThunk({ jobId: selectedJob._id, bidId }));
+      showToast.success("Bid rejected successfully!");
+
+      // Refresh jobs to get updated data
+      dispatch(getJobsThunk(filters));
+    } catch (error) {
+      showToast.error("Failed to reject bid");
+    } finally {
+      setRejectingBid(null);
+    }
   };
 
   // Handle cancel job
@@ -303,17 +358,25 @@ const JobManagementTable: React.FC = () => {
                   {new Date(job.createdAt).toLocaleDateString()}
                 </div>
 
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleViewJob(job)}
-                    className="flex-1 bg-accent-50 text-accent-600 px-3 py-2 rounded text-sm font-medium hover:bg-accent-100 transition"
-                  >
-                    View Details
-                  </button>
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleViewJob(job)}
+                      className="flex-1 bg-primary-50 text-primary-600 px-3 py-2 rounded text-sm font-medium hover:bg-primary-100 transition"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleViewJobDetails(job)}
+                      className="flex-1 bg-accent-50 text-accent-600 px-3 py-2 rounded text-sm font-medium hover:bg-accent-100 transition"
+                    >
+                      Bids ({job.bids?.length || 0})
+                    </button>
+                  </div>
                   {job.status === "open" && canCancelJob(job) && (
                     <button
                       onClick={(e) => handleCancelJob(job, e)}
-                      className="flex-1 bg-red-500 text-white px-3 py-2 rounded text-sm font-medium hover:bg-red-600 transition"
+                      className="w-full bg-red-500 text-white px-3 py-2 rounded text-sm font-medium hover:bg-red-600 transition"
                     >
                       Cancel Job
                     </button>
@@ -405,21 +468,28 @@ const JobManagementTable: React.FC = () => {
                     {new Date(job.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-3 lg:px-6 py-4 text-center">
-                    <div className="flex justify-center gap-2">
+                    <div className="flex justify-center gap-2 flex-wrap">
                       <button
                         onClick={() => handleViewJob(job)}
-                        className="text-blue-600 hover:underline text-sm"
+                        className="text-primary-600 hover:underline text-sm font-medium"
                       >
-                        View
+                        Edit
+                      </button>
+                      <span className="text-gray-300">|</span>
+                      <button
+                        onClick={() => handleViewJobDetails(job)}
+                        className="text-accent-600 hover:underline text-sm font-medium"
+                      >
+                        Bids ({job.bids?.length || 0})
                       </button>
                       {job.status === "open" && canCancelJob(job) && (
                         <>
                           <span className="text-gray-300">|</span>
                           <button
                             onClick={(e) => handleCancelJob(job, e)}
-                            className="text-red-600 hover:underline text-sm"
+                            className="text-red-600 hover:underline text-sm font-medium"
                           >
-                            Cancel Job
+                            Cancel
                           </button>
                         </>
                       )}
@@ -561,6 +631,19 @@ const JobManagementTable: React.FC = () => {
           onClose={handleCloseViewEditModal}
           job={selectedJob}
           properties={properties}
+        />
+      )}
+
+      {/* Job Details with Bids Modal */}
+      {jobDetailsModalOpen && selectedJob && (
+        <JobDetailsModal
+          isOpen={jobDetailsModalOpen}
+          onClose={handleCloseJobDetailsModal}
+          job={selectedJob}
+          onAcceptBid={handleAcceptBid}
+          onRejectBid={handleRejectBid}
+          acceptingBid={acceptingBid}
+          rejectingBid={rejectingBid}
         />
       )}
 

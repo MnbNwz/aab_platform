@@ -123,13 +123,8 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
       );
     }
 
-    // Handle both old structure (analytics) and new structure (contractor)
-    const analytics = dashboardData?.analytics || dashboardData?.contractor;
-
-    // Calculate monthly used leads (handle both array and number formats)
-    const monthlyUsed = Array.isArray(analytics?.leadStats?.monthlyUsed)
-      ? analytics.leadStats.monthlyUsed.length
-      : analytics?.leadStats?.monthlyUsed ?? 0;
+    const analytics =
+      dashboardData?.contractor || dashboardData?.analytics || dashboardData;
 
     const statCards = useMemo(
       () => [
@@ -140,6 +135,9 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
           color: "bg-primary-500",
           textColor: "text-primary-600",
           bgColor: "bg-primary-50",
+          subtitle: `${
+            analytics?.biddingStats?.totalBidsThisMonth ?? 0
+          } this month`,
         },
         {
           title: "Won Bids",
@@ -169,19 +167,17 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
         },
         {
           title: "Leads Used",
-          value: `${monthlyUsed}/${
-            analytics?.leadStats?.monthlyLimit === -1
-              ? "∞"
-              : analytics?.leadStats?.monthlyLimit ?? 0
+          value: `${analytics?.leadStats?.used ?? 0}/${
+            analytics?.leadStats?.limit ?? 0
           }`,
           icon: Users,
           color: "bg-cyan-500",
           textColor: "text-cyan-600",
           bgColor: "bg-cyan-50",
-          subtitle: "This month",
+          subtitle: `${analytics?.leadStats?.remaining ?? 0} remaining`,
         },
       ],
-      [analytics, monthlyUsed]
+      [analytics]
     );
 
     return (
@@ -227,33 +223,26 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">
-                    {bid.job?.title || bid.title || "Unknown Job"}
+                    {bid.jobTitle}
                   </p>
-                  <p className="text-xs text-gray-500">
-                    {bid.job?.service || bid.service || "Unknown Service"} •
-                    Estimate: $
-                    {(
-                      (bid.job?.estimate || bid.estimate || 0) / 100
-                    ).toLocaleString()}
-                  </p>
-                  <p className="text-xs text-gray-400 truncate mt-1">
-                    {bid.message || "No message"}
+                  <p className="text-xs text-gray-500 capitalize">
+                    {bid.service}
                   </p>
                 </div>
                 <div className="text-right ml-4">
-                  <p className="text-sm font-medium text-green-600">
+                  <p className="text-sm font-medium text-primary-700">
                     ${((bid.bidAmount || 0) / 100).toLocaleString()}
                   </p>
                   <span
-                    className={`inline-flex px-2 py-1 text-xs rounded-full ${
+                    className={`inline-flex px-2 py-1 text-xs rounded-full font-semibold ${
                       bid.status === "accepted"
                         ? "bg-green-100 text-green-800"
                         : bid.status === "pending"
-                        ? "bg-accent-100 text-accent-800"
+                        ? "bg-yellow-100 text-yellow-800"
                         : "bg-red-100 text-red-800"
                     }`}
                   >
-                    {bid.status || "unknown"}
+                    {bid.status}
                   </span>
                 </div>
               </div>
@@ -273,29 +262,19 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">
-                    {job.title || "Unknown Job"}
+                    {job.jobTitle}
                   </p>
-                  <p className="text-xs text-gray-500">
-                    {job.service || "Unknown Service"} • Estimate: $
-                    {((job.estimate || 0) / 100).toLocaleString()}
+                  <p className="text-xs text-gray-500 capitalize">
+                    {job.service}
                   </p>
                   <p className="text-xs text-gray-400">
-                    Won with: $
-                    {((job.acceptedBid?.bidAmount || 0) / 100).toLocaleString()}
+                    Accepted: {new Date(job.acceptedAt).toLocaleDateString()}
                   </p>
                 </div>
-                <div className="text-right">
-                  <span
-                    className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                      job.status === "completed"
-                        ? "bg-green-100 text-green-800"
-                        : job.status === "in_progress"
-                        ? "bg-blue-100 text-blue-800"
-                        : "bg-accent-100 text-accent-800"
-                    }`}
-                  >
-                    {job.status || "unknown"}
-                  </span>
+                <div className="text-right ml-4">
+                  <p className="text-sm font-semibold text-green-600">
+                    ${((job.bidAmount || 0) / 100).toLocaleString()}
+                  </p>
                 </div>
               </div>
             )}

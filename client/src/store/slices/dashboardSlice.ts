@@ -154,9 +154,10 @@ const dashboardSlice = createSlice({
         // Handle new API response structure for contractor
         const payload = action.payload;
 
-        // For contractor role, extract the contractor data directly
+        // For contractor role, extract and store the contractor data
         if (payload?.userRole === "contractor" && payload?.contractor) {
           state.data = payload.contractor;
+          state.contractorData = payload; // Store full payload including contractor
         } else {
           // For other roles or legacy format, use existing logic
           state.data = payload?.data || payload;

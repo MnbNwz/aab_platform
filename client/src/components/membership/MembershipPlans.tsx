@@ -143,15 +143,43 @@ const MembershipPlans: React.FC = () => {
                   {plan.description}
                 </p>
                 <ul className="mb-4 xs:mb-6 flex-1 space-y-2 xs:space-y-3">
-                  {plan.features.map((f, i) => (
-                    <li
-                      key={i}
-                      className="text-primary-700 text-sm xs:text-base flex items-start gap-2 xs:gap-3"
-                    >
-                      <span className="inline-block w-2 h-2 xs:w-2.5 xs:h-2.5 rounded-full bg-accent-500 flex-shrink-0 mt-1.5 xs:mt-2"></span>
-                      <span className="leading-relaxed">{f}</span>
-                    </li>
-                  ))}
+                  {plan.features.map((f, i) => {
+                    // Check if this is a contractor plan with leads information
+                    const isContractorPlan = plan.userType === "contractor";
+                    const leadsMatch = f.match(/^(\d+)\s+leads\/month$/);
+
+                    // If it's a leads feature, show both monthly and annual
+                    if (isContractorPlan && leadsMatch) {
+                      const monthlyLeads = parseInt(leadsMatch[1]);
+                      const annualLeads = monthlyLeads * 12;
+
+                      return (
+                        <li
+                          key={i}
+                          className="text-primary-700 text-sm xs:text-base flex items-start gap-2 xs:gap-3"
+                        >
+                          <span className="inline-block w-2 h-2 xs:w-2.5 xs:h-2.5 rounded-full bg-accent-500 flex-shrink-0 mt-1.5 xs:mt-2"></span>
+                          <span className="leading-relaxed">
+                            {monthlyLeads} leads/month{" "}
+                            <span className="text-primary-500">
+                              (or {annualLeads} leads/year)
+                            </span>
+                          </span>
+                        </li>
+                      );
+                    }
+
+                    // Regular feature display
+                    return (
+                      <li
+                        key={i}
+                        className="text-primary-700 text-sm xs:text-base flex items-start gap-2 xs:gap-3"
+                      >
+                        <span className="inline-block w-2 h-2 xs:w-2.5 xs:h-2.5 rounded-full bg-accent-500 flex-shrink-0 mt-1.5 xs:mt-2"></span>
+                        <span className="leading-relaxed">{f}</span>
+                      </li>
+                    );
+                  })}
                 </ul>
                 <div
                   className={`mt-auto space-y-3 xs:space-y-4 rounded-lg p-3 xs:p-4 transition-all duration-200 ${

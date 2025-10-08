@@ -68,46 +68,45 @@ export interface ContractorDashboardResponse {
   success: boolean;
   data: {
     userRole: string;
-    userId: string;
     timestamp: string;
     contractor: {
-      _id: string;
-      firstName: string;
-      lastName: string;
-      email: string;
-      contractor: {
-        companyName: string;
-        services: string[];
-        license: string;
-        taxId: string;
-        docs: Array<{
-          name: string;
-          url: string;
-        }>;
-        _id: string;
-      };
       biddingStats: {
         totalBids: number;
+        totalBidsThisMonth: number;
         acceptedBids: number;
         pendingBids: number;
         rejectedBids: number;
-        avgBidAmount: number | null;
+        avgBidAmount: number;
         winRate: number;
       };
       earningsStats: {
         totalEarnings: number;
         completedJobs: number;
-        avgJobValue: number | null;
-        totalJobValue: number;
+        avgJobValue: number;
       };
       leadStats: {
-        monthlyUsed: any[]; // Can be array or number
-        membershipTier: any[];
-        monthlyLimit: number;
-        monthlyRemaining: number;
+        used: number;
+        limit: number;
+        remaining: number;
+        resetDate: string;
+        canBid: boolean;
       };
-      recentBids: any[];
-      recentWonJobs: any[];
+      recentBids: Array<{
+        _id: string;
+        jobTitle: string;
+        service: string;
+        bidAmount: number;
+        status: "pending" | "accepted" | "rejected";
+        createdAt: string;
+        updatedAt: string;
+      }>;
+      recentWonJobs: Array<{
+        _id: string;
+        jobTitle: string;
+        service: string;
+        bidAmount: number;
+        acceptedAt: string;
+      }>;
     };
     description: string;
     isContractor: boolean;

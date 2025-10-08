@@ -3,7 +3,6 @@ import type {
   ContractorJobFilters,
   ContractorJobsResponse,
   ContractorJob,
-  ContractorJobAccessCheck,
 } from "../types";
 
 // Contractor Job API functions
@@ -22,10 +21,5 @@ export const contractorJobApi = {
   // Get Specific Job Details (consumes a lead)
   getContractorJobById: async (jobId: string) => {
     return api.get(`/api/job/contractor/jobs/${jobId}`);
-  },
-
-  // Check Job Access (without consuming lead)
-  checkJobAccess: async (jobId: string) => {
-    return api.get(`/api/job/contractor/jobs/${jobId}/access`);
   },
 };

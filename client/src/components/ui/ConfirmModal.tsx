@@ -4,7 +4,7 @@ import Loader from "./Loader";
 interface ConfirmModalProps {
   isOpen: boolean;
   title?: string;
-  message: string;
+  message: React.ReactNode;
   confirmText?: string;
   cancelText?: string;
   onConfirm: () => void;
@@ -59,9 +59,9 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
         <h2 className="text-xl font-semibold text-accent-600 mb-3 text-center tracking-tight">
           {title}
         </h2>
-        <p className="text-gray-600 mb-7 text-center text-base leading-relaxed">
+        <div className="text-gray-600 mb-7 text-center text-base leading-relaxed w-full">
           {message}
-        </p>
+        </div>
         <div className="flex w-full gap-3">
           {!isDefault && (
             <button

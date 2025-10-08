@@ -5,35 +5,30 @@ import type { ContractorJob } from "../../types";
 import {
   getContractorJobsThunk,
   getContractorJobByIdThunk,
-  checkContractorJobAccessThunk,
 } from "../../store/thunks/contractorJobThunks";
-import {
-  setContractorJobFilters,
-  clearAccessCheck,
-} from "../../store/slices/contractorJobSlice";
+import { setContractorJobFilters } from "../../store/slices/contractorJobSlice";
 import Loader from "../ui/Loader";
 import { showToast } from "../../utils/toast";
-import ConfirmModal from "../ui/ConfirmModal";
+import ContractorJobDetailsModal from "../ContractorJobDetailsModal";
 
 const ContractorJobRequestsTable: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const {
     jobs,
     loading: jobsLoading,
+    jobDetailsLoading,
     error: jobsError,
     pagination,
     filters,
     membershipInfo,
     leadInfo,
-    accessCheck,
   } = useSelector((state: RootState) => state.contractorJob);
-  const user = useSelector((state: RootState) => state.auth.user);
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [selectedJob, setSelectedJob] = useState<ContractorJob | null>(null);
+  const [selectedJobLeadInfo, setSelectedJobLeadInfo] = useState<any>(null);
+  const [selectedJobBidInfo, setSelectedJobBidInfo] = useState<any>(null);
   const [showJobDetails, setShowJobDetails] = useState(false);
-  const [accessCheckModal, setAccessCheckModal] = useState(false);
-  const [jobToCheck, setJobToCheck] = useState<ContractorJob | null>(null);
 
   // Fetch jobs on mount and when filters change
   useEffect(() => {
@@ -57,12 +52,13 @@ const ContractorJobRequestsTable: React.FC = () => {
 
   // Handle job view (consumes a lead)
   const handleViewJob = async (job: ContractorJob) => {
-    if (!leadInfo?.canAccess) {
-      showToast.error(
-        "You have reached your monthly lead limit. Please upgrade your membership."
-      );
-      return;
-    }
+    // Skip lead check if leadInfo is not available (backend no longer provides it)
+    // if (!leadInfo?.canAccess) {
+    //   showToast.error(
+    //     "You have reached your monthly lead limit. Please upgrade your membership."
+    //   );
+    //   return;
+    // }
 
     if (!job.canAccessNow) {
       showToast.error(
@@ -73,59 +69,38 @@ const ContractorJobRequestsTable: React.FC = () => {
       return;
     }
 
+    // Open modal immediately with loader
+    setSelectedJob(job);
+    setSelectedJobLeadInfo(null);
+    setSelectedJobBidInfo(null);
+    setShowJobDetails(true);
+
     try {
       const result = await dispatch(getContractorJobByIdThunk(job._id));
       if (getContractorJobByIdThunk.fulfilled.match(result)) {
-        setSelectedJob(result.payload.job);
-        setShowJobDetails(true);
-        showToast.success("Job details loaded successfully!");
-        // Refresh the job list to update lead count
-        dispatch(getContractorJobsThunk(filters));
+        // New API response: job data is directly in payload (no nested .job)
+        setSelectedJob(result.payload);
+        // No leadInfo or bidInfo in new response
+        setSelectedJobLeadInfo(null);
+        setSelectedJobBidInfo(null);
       }
     } catch (error) {
       showToast.error("Failed to load job details");
-    }
-  };
-
-  // Handle access check (without consuming lead)
-  const handleCheckAccess = async (job: ContractorJob) => {
-    setJobToCheck(job);
-    setAccessCheckModal(true);
-    dispatch(clearAccessCheck());
-
-    try {
-      await dispatch(checkContractorJobAccessThunk(job._id));
-    } catch (error) {
-      showToast.error("Failed to check job access");
+      // Close modal on error
+      handleCloseJobDetails();
     }
   };
 
   const handleCloseJobDetails = () => {
     setShowJobDetails(false);
     setSelectedJob(null);
+    setSelectedJobLeadInfo(null);
+    setSelectedJobBidInfo(null);
   };
 
-  const handleCloseAccessCheck = () => {
-    setAccessCheckModal(false);
-    setJobToCheck(null);
-    dispatch(clearAccessCheck());
-  };
-
-  // Format time remaining until access
-  const formatTimeRemaining = (accessTime: string) => {
-    const now = new Date();
-    const access = new Date(accessTime);
-    const diff = access.getTime() - now.getTime();
-
-    if (diff <= 0) return "Available now";
-
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-    if (hours > 0) {
-      return `${hours}h ${minutes}m remaining`;
-    }
-    return `${minutes}m remaining`;
+  const handleBidSubmitted = () => {
+    // Refresh job list after bid submission to update bid counts
+    dispatch(getContractorJobsThunk(filters));
   };
 
   // Get membership tier color
@@ -165,6 +140,11 @@ const ContractorJobRequestsTable: React.FC = () => {
                   used
                 </span>
               </div>
+            )}
+            {!membershipInfo && (
+              <p className="text-sm text-gray-500 mt-1">
+                Browse available job requests
+              </p>
             )}
           </div>
           {membershipInfo && (
@@ -254,83 +234,52 @@ const ContractorJobRequestsTable: React.FC = () => {
             {jobs.map((job: ContractorJob) => (
               <div
                 key={job._id}
-                className={`bg-white border rounded-lg p-4 shadow-sm transition-shadow w-full ${
-                  job.canAccessNow
-                    ? "border-green-200 hover:shadow-md"
-                    : "border-gray-300 hover:shadow-sm"
-                }`}
+                className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow w-full"
               >
-                <div className="flex justify-between items-start mb-3 gap-2">
-                  <h3 className="font-semibold text-gray-900 text-sm flex-1 min-w-0">
-                    <span className="block truncate" title={job.title}>
-                      {job.title.length > 30
-                        ? `${job.title.substring(0, 30)}...`
-                        : job.title}
+                <h3
+                  className="font-semibold text-gray-900 text-base mb-3 truncate"
+                  title={job.title}
+                >
+                  {job.title}
+                </h3>
+
+                <div className="space-y-2 text-sm mb-4">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Service:</span>
+                    <span className="font-medium text-gray-900 capitalize">
+                      {job.service}
                     </span>
-                  </h3>
-                  <div className="flex flex-col gap-1">
-                    {job.type === "off_market" && (
-                      <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded">
-                        Off-Market
-                      </span>
-                    )}
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-bold ${
-                        job.canAccessNow
-                          ? "bg-green-100 text-green-800"
-                          : "bg-yellow-100 text-yellow-800"
-                      }`}
-                    >
-                      {job.canAccessNow ? "Available" : "Locked"}
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Estimate:</span>
+                    <span className="font-semibold text-primary-700">
+                      ${(job.estimate / 100).toLocaleString()}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Timeline:</span>
+                    <span className="font-medium text-gray-900">
+                      {job.timeline} days
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Posted:</span>
+                    <span className="text-gray-900">
+                      {new Date(job.createdAt).toLocaleDateString()}
                     </span>
                   </div>
                 </div>
 
-                <div className="text-sm text-gray-600 mb-2">
-                  <span className="font-medium">Service:</span> {job.service}
-                </div>
-
-                <div className="text-sm text-gray-600 mb-2">
-                  <span className="font-medium">Estimate:</span> $
-                  {job.estimate.toLocaleString()}
-                </div>
-
-                <div className="text-sm text-gray-600 mb-2">
-                  <span className="font-medium">Distance:</span>{" "}
-                  {job.distance.toFixed(1)}km
-                </div>
-
-                <div className="text-sm text-gray-600 mb-2">
-                  <span className="font-medium">Bids:</span> {job.bidCount}
-                </div>
-
-                {!job.canAccessNow && (
-                  <div className="text-sm text-yellow-600 mb-3">
-                    <span className="font-medium">Available in:</span>{" "}
-                    {formatTimeRemaining(job.accessTime)}
-                  </div>
-                )}
-
-                <div className="text-sm text-gray-500 mb-3">
-                  <span className="font-medium">Created:</span>{" "}
-                  {new Date(job.createdAt).toLocaleDateString()}
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleViewJob(job)}
-                    disabled={!job.canAccessNow || !leadInfo?.canAccess}
-                    className="flex-1 bg-accent-50 text-accent-600 px-3 py-2 rounded text-sm font-medium hover:bg-accent-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    View Details
-                  </button>
-                  <button
-                    onClick={() => handleCheckAccess(job)}
-                    className="flex-1 bg-blue-50 text-blue-600 px-3 py-2 rounded text-sm font-medium hover:bg-blue-100 transition"
-                  >
-                    Check Access
-                  </button>
-                </div>
+                <button
+                  onClick={() => handleViewJob(job)}
+                  disabled={!job.canAccessNow}
+                  className="w-full bg-accent-50 text-accent-600 px-3 py-2 rounded text-sm font-medium hover:bg-accent-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  View Details
+                </button>
               </div>
             ))}
             {jobs.length === 0 && (
@@ -347,25 +296,22 @@ const ContractorJobRequestsTable: React.FC = () => {
         <table className="w-full divide-y divide-gray-200 text-sm">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-3 lg:px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">
-                Title
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Job Title
               </th>
-              <th className="px-3 lg:px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Service
               </th>
-              <th className="px-3 lg:px-6 py-3 text-center font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Estimate
               </th>
-              <th className="px-3 lg:px-6 py-3 text-center font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">
-                Distance
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Timeline
               </th>
-              <th className="px-3 lg:px-6 py-3 text-center font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">
-                Status
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Posted
               </th>
-              <th className="px-3 lg:px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">
-                Created
-              </th>
-              <th className="px-3 lg:px-6 py-3 text-center font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -373,7 +319,7 @@ const ContractorJobRequestsTable: React.FC = () => {
           <tbody className="bg-white divide-y divide-gray-200">
             {jobsLoading ? (
               <tr>
-                <td colSpan={7} className="py-12">
+                <td colSpan={6} className="py-12">
                   <div className="flex justify-center items-center w-full h-full">
                     <Loader size="large" color="accent" />
                   </div>
@@ -381,74 +327,41 @@ const ContractorJobRequestsTable: React.FC = () => {
               </tr>
             ) : jobs.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center text-gray-500 py-8">
+                <td colSpan={6} className="text-center text-gray-500 py-8">
                   No job requests found.
                 </td>
               </tr>
             ) : (
               jobs.map((job: ContractorJob) => (
                 <tr key={job._id} className="hover:bg-gray-50">
-                  <td className="px-3 lg:px-6 py-4 font-semibold text-gray-900 max-w-xs">
-                    <span className="block truncate" title={job.title}>
-                      {job.title.length > 40
-                        ? `${job.title.substring(0, 40)}...`
-                        : job.title}
-                    </span>
-                    <div className="text-xs text-gray-500 mt-1">
-                      {job.description?.slice(0, 60)}
-                      {job.description?.length > 60 ? "..." : ""}
+                  <td className="px-6 py-4">
+                    <div
+                      className="font-medium text-gray-900 truncate max-w-xs"
+                      title={job.title}
+                    >
+                      {job.title}
                     </div>
-                    {job.type === "off_market" && (
-                      <span className="inline-block text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded mt-1">
-                        Off-Market
-                      </span>
-                    )}
                   </td>
-                  <td className="px-3 lg:px-6 py-4 text-gray-700">
+                  <td className="px-6 py-4 text-gray-700 capitalize">
                     {job.service}
                   </td>
-                  <td className="px-3 lg:px-6 py-4 text-center text-gray-700">
-                    ${job.estimate.toLocaleString()}
+                  <td className="px-6 py-4 text-center font-semibold text-primary-700">
+                    ${(job.estimate / 100).toLocaleString()}
                   </td>
-                  <td className="px-3 lg:px-6 py-4 text-center text-gray-700">
-                    {job.distance.toFixed(1)}km
+                  <td className="px-6 py-4 text-center text-gray-700">
+                    {job.timeline} days
                   </td>
-                  <td className="px-3 lg:px-6 py-4 text-center">
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-bold ${
-                        job.canAccessNow
-                          ? "bg-green-100 text-green-800"
-                          : "bg-yellow-100 text-yellow-800"
-                      }`}
-                    >
-                      {job.canAccessNow ? "Available" : "Locked"}
-                    </span>
-                    {!job.canAccessNow && (
-                      <div className="text-xs text-yellow-600 mt-1">
-                        {formatTimeRemaining(job.accessTime)}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-3 lg:px-6 py-4 text-gray-500">
+                  <td className="px-6 py-4 text-center text-sm text-gray-600">
                     {new Date(job.createdAt).toLocaleDateString()}
                   </td>
-                  <td className="px-3 lg:px-6 py-4 text-center">
-                    <div className="flex justify-center gap-2">
-                      <button
-                        onClick={() => handleViewJob(job)}
-                        disabled={!job.canAccessNow || !leadInfo?.canAccess}
-                        className="text-blue-600 hover:underline text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        View
-                      </button>
-                      <span className="text-gray-300">|</span>
-                      <button
-                        onClick={() => handleCheckAccess(job)}
-                        className="text-green-600 hover:underline text-sm"
-                      >
-                        Check Access
-                      </button>
-                    </div>
+                  <td className="px-6 py-4 text-center">
+                    <button
+                      onClick={() => handleViewJob(job)}
+                      disabled={!job.canAccessNow}
+                      className="text-accent-600 hover:text-accent-700 font-medium text-sm hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      View
+                    </button>
                   </td>
                 </tr>
               ))
@@ -536,107 +449,14 @@ const ContractorJobRequestsTable: React.FC = () => {
       )}
 
       {/* Job Details Modal */}
-      {showJobDetails && selectedJob && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-60 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative">
-            <button
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl font-bold z-10"
-              onClick={handleCloseJobDetails}
-              aria-label="Close"
-            >
-              &times;
-            </button>
-            <div className="p-6">
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                {selectedJob.title}
-              </h3>
-
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium text-gray-900">Description</h4>
-                  <p className="text-gray-600">{selectedJob.description}</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <h4 className="font-medium text-gray-900">Service</h4>
-                    <p className="text-gray-600">{selectedJob.service}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-gray-900">Estimate</h4>
-                    <p className="text-gray-600">
-                      ${selectedJob.estimate.toLocaleString()}
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-gray-900">Timeline</h4>
-                    <p className="text-gray-600">{selectedJob.timeline} days</p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-gray-900">Distance</h4>
-                    <p className="text-gray-600">
-                      {selectedJob.distance.toFixed(1)}km
-                    </p>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="font-medium text-gray-900">
-                    Customer Contact
-                  </h4>
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <p className="text-gray-600">
-                      Email: {selectedJob.createdBy.email}
-                    </p>
-                    <p className="text-gray-600">
-                      Phone: {selectedJob.createdBy.phone}
-                    </p>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="font-medium text-gray-900">Property</h4>
-                  <p className="text-gray-600">{selectedJob.property.title}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Access Check Modal */}
-      <ConfirmModal
-        isOpen={accessCheckModal}
-        onCancel={handleCloseAccessCheck}
-        onConfirm={handleCloseAccessCheck}
-        title="Job Access Check"
-        message={
-          accessCheck ? (
-            <div className="space-y-2">
-              <p>
-                <strong>Can Access:</strong>{" "}
-                {accessCheck.canAccess ? "Yes" : "No"}
-              </p>
-              {accessCheck.accessTime && (
-                <p>
-                  <strong>Available at:</strong>{" "}
-                  {new Date(accessCheck.accessTime).toLocaleString()}
-                </p>
-              )}
-              {accessCheck.leadsUsed !== undefined && (
-                <p>
-                  <strong>Leads Used:</strong> {accessCheck.leadsUsed}/
-                  {accessCheck.leadsLimit}
-                </p>
-              )}
-            </div>
-          ) : (
-            "Checking access..."
-          )
-        }
-        confirmText="Close"
-        cancelText=""
-        default={true}
+      <ContractorJobDetailsModal
+        job={selectedJob}
+        isOpen={showJobDetails}
+        onClose={handleCloseJobDetails}
+        loading={jobDetailsLoading}
+        leadInfo={selectedJobLeadInfo}
+        bidInfo={selectedJobBidInfo}
+        onBidSubmitted={handleBidSubmitted}
       />
     </div>
   );

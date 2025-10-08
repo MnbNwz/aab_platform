@@ -44,12 +44,22 @@ export interface IMembershipPlan extends Document {
   updatedAt: Date;
 }
 
+export interface IUpgradeHistoryEntry {
+  fromPlanId: Types.ObjectId;
+  toPlanId: Types.ObjectId;
+  upgradedAt: Date;
+  daysAdded: number;
+  leadsAdded: number;
+  amountPaid: number;
+  paymentId: Types.ObjectId;
+}
+
 export interface IUserMembership extends Document {
   _id: Types.ObjectId;
   userId: Types.ObjectId;
   planId: Types.ObjectId;
   paymentId: Types.ObjectId;
-  status: "active" | "expired" | "cancelled";
+  status: "active" | "expired" | "cancelled" | "upgraded";
   billingPeriod: "monthly" | "yearly"; // Which billing option user chose
   startDate: Date;
   endDate: Date;
@@ -59,8 +69,19 @@ export interface IUserMembership extends Document {
   canceledAt?: Date;
 
   // Lead tracking for contractors
-  leadsUsedThisMonth?: number; // number of leads accessed this month
+  leadsUsedThisMonth?: number; // for monthly billing - leads used this month
+  leadsUsedThisYear?: number; // for yearly billing - leads used this year
   lastLeadResetDate?: Date; // when leads were last reset
+
+  // Upgrade tracking
+  isUpgraded?: boolean; // True if this membership was created via upgrade
+  upgradedFromMembershipId?: Types.ObjectId; // Reference to previous membership
+  upgradedToMembershipId?: Types.ObjectId; // Reference to new membership (if this was upgraded)
+  upgradeHistory?: IUpgradeHistoryEntry[]; // Track all upgrades in this membership
+
+  // Accumulated values (for display and tracking)
+  accumulatedLeads?: number; // Total leads available (from accumulation)
+  bonusLeadsFromUpgrade?: number; // Extra leads from previous plan
 
   createdAt: Date;
   updatedAt: Date;

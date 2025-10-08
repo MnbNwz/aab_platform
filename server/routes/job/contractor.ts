@@ -1,11 +1,7 @@
 import { Router } from "express";
 import { authenticate } from "@middlewares/auth";
 import { requireContractor } from "@middlewares/authorization/rbac";
-import {
-  getContractorJobs,
-  getContractorJobById,
-  checkContractorJobAccess,
-} from "@controllers/job/contractorJobController";
+import { getContractorJobs, getContractorJobById } from "@controllers/job/contractorJobController";
 
 const router = Router();
 
@@ -16,10 +12,7 @@ router.use(requireContractor);
 // Get jobs for contractor with membership-based filtering
 router.get("/jobs", getContractorJobs);
 
-// Check if contractor can access a specific job (without consuming lead)
-router.get("/jobs/:id/access", checkContractorJobAccess);
-
-// Get a specific job for contractor (consumes lead if accessible)
+// Get a specific job for contractor (free to view, shows bid status)
 router.get("/jobs/:id", getContractorJobById);
 
 export default router;

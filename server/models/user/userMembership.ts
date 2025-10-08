@@ -6,6 +6,31 @@ import { MEMBERSHIP_STATUSES, BILLING_PERIODS } from "@models/constants";
 // Re-export the interface
 export { IUserMembership };
 
+const UpgradeHistoryEntrySchema = new Schema(
+  {
+    fromPlanId: {
+      type: Schema.Types.ObjectId,
+      ref: "MembershipPlan",
+      required: true,
+    },
+    toPlanId: {
+      type: Schema.Types.ObjectId,
+      ref: "MembershipPlan",
+      required: true,
+    },
+    upgradedAt: { type: Date, required: true },
+    daysAdded: { type: Number, required: true },
+    leadsAdded: { type: Number, required: true },
+    amountPaid: { type: Number, required: true },
+    paymentId: {
+      type: Schema.Types.ObjectId,
+      ref: "Payment",
+      required: true,
+    },
+  },
+  { _id: false },
+);
+
 const UserMembershipSchema: Schema<IUserMembership> = new Schema(
   {
     userId: {
@@ -39,8 +64,19 @@ const UserMembershipSchema: Schema<IUserMembership> = new Schema(
     stripeSubscriptionId: { type: String }, // For recurring subscriptions
 
     // Lead tracking for contractors
-    leadsUsedThisMonth: { type: Number, default: 0 }, // number of leads accessed this month
+    leadsUsedThisMonth: { type: Number, default: 0 }, // for monthly billing - leads used this month
+    leadsUsedThisYear: { type: Number, default: 0 }, // for yearly billing - leads used this year
     lastLeadResetDate: { type: Date, default: Date.now }, // when leads were last reset
+
+    // Upgrade tracking
+    isUpgraded: { type: Boolean, default: false }, // True if this membership was created via upgrade
+    upgradedFromMembershipId: { type: Schema.Types.ObjectId, ref: "UserMembership" }, // Reference to previous membership
+    upgradedToMembershipId: { type: Schema.Types.ObjectId, ref: "UserMembership" }, // Reference to new membership (if this was upgraded)
+    upgradeHistory: { type: [UpgradeHistoryEntrySchema], default: [] }, // Track all upgrades in this membership
+
+    // Accumulated values (for display and tracking)
+    accumulatedLeads: { type: Number }, // Total leads available (from accumulation)
+    bonusLeadsFromUpgrade: { type: Number }, // Extra leads from previous plan
   },
   { timestamps: true },
 );

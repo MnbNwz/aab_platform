@@ -134,7 +134,16 @@ const App: React.FC = () => {
   return (
     <Provider store={store}>
       <AppContent />
-      <Toaster />
+      <Toaster
+        toastOptions={{
+          style: {
+            zIndex: 99999,
+          },
+        }}
+        containerStyle={{
+          zIndex: 99999,
+        }}
+      />
     </Provider>
   );
 };

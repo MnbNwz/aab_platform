@@ -4,8 +4,8 @@
   "main": "app.ts",
   "scripts": {
     "dev": "npm cache clean --f && reset && nodemon -r tsconfig-paths/register app.ts",
-    "build": "tsc",
-    "start": "node -r tsconfig-paths/register dist/app.js",
+    "build": "tsc && tsc-alias",
+    "start": "node dist/app.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{ts,js,json,md}\"",

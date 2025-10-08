@@ -33,6 +33,10 @@ const JobRequestSchema = new Schema<IJobRequest>({
   ],
 });
 
+// PERFORMANCE INDEXES (minimal, essential only)
+JobRequestSchema.index({ status: 1, service: 1, createdAt: -1 }); // Contractor queries (covers status, service, and sort)
+JobRequestSchema.index({ createdBy: 1, status: 1 }); // Customer queries
+
 const JobRequest = createModel<IJobRequest>({
   schema: JobRequestSchema,
   modelName: "JobRequest",

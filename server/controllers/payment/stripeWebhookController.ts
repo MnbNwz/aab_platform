@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { Request, Response } from "express";
 import Stripe from "stripe";
+import { Types } from "mongoose";
 import { AuthenticatedRequest } from "@middlewares/types";
 import { CONTROLLER_ERROR_MESSAGES, HTTP_STATUS } from "@controllers/constants";
 import { UserMembership } from "@models/user";
@@ -10,6 +11,7 @@ import { MembershipPlan } from "@models/membership";
 import { getPlanById } from "@services/membership/membership";
 import { getDaysRemaining, getMembershipEndDate } from "@utils/core/date";
 import { sendPaymentFailedNotification } from "@utils/email";
+import { calculateUpgradeValues } from "@services/membership/upgrade";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
   apiVersion: "2025-08-27.basil",
@@ -86,6 +88,230 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
   }
 };
 
+// Handle upgrade checkout session with optimized pipeline and transaction
+async function handleUpgradeCheckout(
+  session: Stripe.Checkout.Session,
+  userId: string,
+  currentMembershipId: string,
+  fromPlanId: string,
+  toPlanId: string,
+) {
+  console.log("🔄 Processing upgrade checkout:", {
+    userId,
+    currentMembershipId,
+    fromPlanId,
+    toPlanId,
+    amount: session.amount_total,
+  });
+
+  try {
+    // Single aggregation to fetch everything needed
+    const upgradeData = await UserMembership.aggregate([
+      {
+        $match: {
+          _id: new Types.ObjectId(currentMembershipId),
+          status: "active",
+        },
+      },
+      {
+        $lookup: {
+          from: "membershipplans",
+          localField: "planId",
+          foreignField: "_id",
+          as: "currentPlan",
+        },
+      },
+      { $unwind: "$currentPlan" },
+      {
+        $lookup: {
+          from: "membershipplans",
+          let: { newPlanId: new Types.ObjectId(toPlanId) },
+          pipeline: [{ $match: { $expr: { $eq: ["$_id", "$$newPlanId"] } } }],
+          as: "newPlan",
+        },
+      },
+      { $unwind: "$newPlan" },
+      {
+        $lookup: {
+          from: "users",
+          let: { userId: new Types.ObjectId(userId) },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$_id", "$$userId"] } } },
+            { $project: { stripeCustomerId: 1 } },
+          ],
+          as: "user",
+        },
+      },
+      { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+      // Calculate upgrade values in pipeline
+      {
+        $addFields: {
+          remainingDays: {
+            $ceil: {
+              $divide: [{ $subtract: ["$endDate", new Date()] }, 1000 * 60 * 60 * 24],
+            },
+          },
+          newPlanDuration: { $cond: [{ $eq: ["$billingPeriod", "monthly"] }, 30, 365] },
+          remainingLeads: {
+            $max: [0, { $subtract: ["$currentPlan.leadsPerMonth", "$leadsUsedThisMonth"] }],
+          },
+        },
+      },
+      {
+        $addFields: {
+          accumulatedDays: { $add: ["$remainingDays", "$newPlanDuration"] },
+          accumulatedLeads: { $add: ["$remainingLeads", "$newPlan.leadsPerMonth"] },
+        },
+      },
+      {
+        $project: {
+          membership: {
+            _id: "$_id",
+            userId: "$userId",
+            planId: "$planId",
+            paymentId: "$paymentId",
+            status: "$status",
+            billingPeriod: "$billingPeriod",
+            startDate: "$startDate",
+            endDate: "$endDate",
+            leadsUsedThisMonth: "$leadsUsedThisMonth",
+          },
+          currentPlan: 1,
+          newPlan: 1,
+          userStripeCustomerId: "$user.stripeCustomerId",
+          calculations: {
+            remainingDays: "$remainingDays",
+            newPlanDuration: "$newPlanDuration",
+            accumulatedDays: "$accumulatedDays",
+            remainingLeads: "$remainingLeads",
+            newLeadsPerMonth: "$newPlan.leadsPerMonth",
+            accumulatedLeads: "$accumulatedLeads",
+            newEndDate: {
+              $add: [new Date(), { $multiply: ["$accumulatedDays", 24 * 60 * 60 * 1000] }],
+            },
+          },
+        },
+      },
+    ]);
+
+    if (!upgradeData || upgradeData.length === 0) {
+      console.error("Upgrade data not found or membership not active");
+      return;
+    }
+
+    const data = upgradeData[0];
+
+    // Resolve Stripe customer
+    let stripeCustomerId = data.userStripeCustomerId || (session.customer as string) || null;
+    if (!stripeCustomerId && session.payment_intent) {
+      try {
+        const pi = await stripe.paymentIntents.retrieve(session.payment_intent as string);
+        stripeCustomerId = (pi.customer as string) || null;
+      } catch (error) {
+        console.log("Failed to retrieve payment intent:", error);
+      }
+    }
+    if (!stripeCustomerId) {
+      const created = await stripe.customers.create({
+        email: session.customer_email || undefined,
+        metadata: { source: "upgrade_checkout" },
+      });
+      stripeCustomerId = created.id;
+    }
+
+    // Use session/transaction for atomic upgrade
+    const mongoSession = await UserMembership.startSession();
+    await mongoSession.withTransaction(async () => {
+      // Create payment record
+      const payment = await Payment.create(
+        [
+          {
+            userId: userId,
+            email: session.customer_email || "",
+            amount: session.amount_total || 0,
+            currency: session.currency || "usd",
+            status: "succeeded",
+            stripeCustomerId: stripeCustomerId as string,
+            stripeSessionId: session.id,
+            stripePaymentIntentId: session.payment_intent as string,
+            billingPeriod: data.membership.billingPeriod,
+          },
+        ],
+        { session: mongoSession },
+      );
+
+      // Create new upgraded membership
+      const newMembership = await UserMembership.create(
+        [
+          {
+            userId: userId,
+            planId: toPlanId,
+            paymentId: payment[0]._id,
+            status: "active",
+            billingPeriod: data.membership.billingPeriod,
+            startDate: new Date(),
+            endDate: data.calculations.newEndDate,
+            isAutoRenew: false,
+            isUpgraded: true,
+            upgradedFromMembershipId: currentMembershipId,
+            leadsUsedThisMonth: 0,
+            lastLeadResetDate: new Date(),
+            accumulatedLeads: data.calculations.accumulatedLeads,
+            bonusLeadsFromUpgrade: data.calculations.remainingLeads,
+            upgradeHistory: [
+              {
+                fromPlanId: fromPlanId,
+                toPlanId: toPlanId,
+                upgradedAt: new Date(),
+                daysAdded: data.calculations.newPlanDuration,
+                leadsAdded: data.calculations.newLeadsPerMonth,
+                amountPaid: session.amount_total || 0,
+                paymentId: payment[0]._id,
+              },
+            ],
+          },
+        ],
+        { session: mongoSession },
+      );
+
+      // Update old membership atomically
+      await UserMembership.updateOne(
+        { _id: currentMembershipId, status: "active" }, // Ensure still active
+        {
+          $set: {
+            status: "upgraded",
+            upgradedToMembershipId: newMembership[0]._id,
+          },
+        },
+        { session: mongoSession },
+      );
+
+      // Update user's Stripe customer if needed
+      if (stripeCustomerId) {
+        await User.updateOne(
+          { _id: userId, stripeCustomerId: { $exists: false } },
+          { $set: { stripeCustomerId } },
+          { session: mongoSession },
+        );
+      }
+    });
+
+    await mongoSession.endSession();
+
+    console.log("✅ Upgrade completed successfully:", {
+      userId,
+      fromPlan: data.currentPlan.name,
+      toPlan: data.newPlan.name,
+      accumulatedDays: data.calculations.accumulatedDays,
+      accumulatedLeads: data.calculations.accumulatedLeads,
+      newEndDate: data.calculations.newEndDate,
+    });
+  } catch (error) {
+    console.error("❌ Error processing upgrade checkout:", error);
+    throw error; // Let webhook retry if transaction fails
+  }
+}
+
 // Handle successful checkout session completion
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
   console.log("🧾 checkout.session.completed payload:", {
@@ -97,7 +323,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     metadata: session.metadata,
   });
 
-  const { userId, planId, billingPeriod } = session.metadata || {};
+  const { userId, planId, billingPeriod, isUpgrade, currentMembershipId, fromPlanId, toPlanId } =
+    session.metadata || {};
 
   if (!userId || !planId) {
     console.error("Missing metadata in checkout session:", session.metadata);
@@ -105,7 +332,13 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   }
 
   try {
-    // Get the plan details
+    // Check if this is an upgrade
+    if (isUpgrade === "true" && currentMembershipId) {
+      await handleUpgradeCheckout(session, userId, currentMembershipId, fromPlanId!, toPlanId!);
+      return;
+    }
+
+    // Get the plan details (regular membership purchase)
     const plan = await getPlanById(planId);
 
     // Resolve a customer id for the session

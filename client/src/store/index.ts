@@ -14,6 +14,7 @@ import propertyReducer from "./slices/propertySlice";
 import adminProfileReducer from "./slices/adminProfileSlice";
 import dashboardReducer from "./slices/dashboardSlice";
 import contractorJobReducer from "./slices/contractorJobSlice";
+import contractorBidsReducer from "./slices/contractorBidsSlice";
 import paymentReducer from "./slices/paymentSlice";
 import favoritesReducer from "./slices/favoritesSlice";
 
@@ -33,6 +34,7 @@ export const store = configureStore({
     adminProfile: adminProfileReducer,
     dashboard: dashboardReducer,
     contractorJob: contractorJobReducer,
+    contractorBids: contractorBidsReducer,
     payment: paymentReducer,
     favorites: favoritesReducer,
   },

@@ -42,7 +42,7 @@ export const UNDERWRITING_STATUSES = ["pending", "approved", "rejected"] as cons
 // Membership-related enums
 export const MEMBERSHIP_TIERS = ["basic", "standard", "premium"] as const;
 export const USER_TYPES = ["customer", "contractor"] as const;
-export const MEMBERSHIP_STATUSES = ["active", "expired", "cancelled"] as const;
+export const MEMBERSHIP_STATUSES = ["active", "expired", "cancelled", "upgraded"] as const;
 
 // Property-related enums
 export const PROPERTY_TYPE_OPTIONS = ["apartment", "house", "villa"] as const;

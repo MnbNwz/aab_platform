@@ -63,7 +63,9 @@ export async function getContractorMembership(userId: string): Promise<{
       effectivePlan: {
         ...plan.toObject(),
         startDate: membership.startDate,
+        billingPeriod: membership.billingPeriod,
         leadsUsedThisMonth: membership.leadsUsedThisMonth || 0,
+        leadsUsedThisYear: membership.leadsUsedThisYear || 0,
         lastLeadResetDate: membership.lastLeadResetDate || membership.startDate,
       },
     };
@@ -114,6 +116,7 @@ export async function canAccessJob(
 }
 
 // OPTIMIZED: Check lead limit using UserMembership counter + LeadAccess for verification
+// SUPPORTS: Monthly billing (monthly reset) and Yearly billing (annual credit pool)
 export async function checkLeadLimit(userId: string): Promise<{
   canAccess: boolean;
   reason?: string;
@@ -124,51 +127,120 @@ export async function checkLeadLimit(userId: string): Promise<{
 }> {
   const { membership, effectivePlan } = await getContractorMembership(userId);
 
-  // If no limit (unlimited), always allow
-  if (effectivePlan.leadsPerMonth === null) {
-    return {
-      canAccess: true,
-      leadsUsed: 0,
-      leadsLimit: null,
-      remaining: -1, // -1 indicates unlimited
-      resetDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
-    };
-  }
-
-  // OPTIMIZATION 1: Use membership billing cycle for lead resets
   const now = new Date();
   const membershipStartDate = new Date(effectivePlan.startDate);
   const lastReset = new Date(effectivePlan.lastLeadResetDate);
+  const billingPeriod = effectivePlan.billingPeriod;
 
-  // Calculate if we should reset based on membership billing cycle
-  const shouldReset = shouldResetLeadLimits(
+  // ===========================
+  // YEARLY BILLING: ANNUAL CREDIT POOL
+  // ===========================
+  if (billingPeriod === "yearly") {
+    // Calculate total leads for the year
+    const yearlyLeadLimit =
+      effectivePlan.leadsPerMonth === null ? null : effectivePlan.leadsPerMonth * 12;
+
+    // Calculate which year period we're currently in
+    const millisecondsPerYear = 365 * 24 * 60 * 60 * 1000;
+    const timeSinceStart = now.getTime() - membershipStartDate.getTime();
+    const yearsPassed = Math.floor(timeSinceStart / millisecondsPerYear);
+
+    // Calculate current year period boundaries
+    const currentYearStart = new Date(
+      membershipStartDate.getTime() + yearsPassed * millisecondsPerYear,
+    );
+    const currentYearEnd = new Date(currentYearStart.getTime() + millisecondsPerYear);
+
+    // Check if we've entered a new year period since last reset
+    const shouldResetYearly = lastReset < currentYearStart;
+
+    let leadsUsed = effectivePlan.leadsUsedThisYear || 0;
+
+    // Reset yearly counter if we've entered a new year period
+    if (shouldResetYearly && membership) {
+      // Verify with LeadAccess count for the current year period
+      const actualCount = await LeadAccess.countDocuments({
+        contractor: userId,
+        accessedAt: {
+          $gte: currentYearStart,
+          $lte: now,
+        },
+      });
+
+      // Reset yearly counter
+      await UserMembership.findByIdAndUpdate(membership._id, {
+        leadsUsedThisYear: actualCount,
+        lastLeadResetDate: now,
+      });
+
+      leadsUsed = actualCount;
+    }
+
+    // Next reset date is the start of next year period
+    const nextYearReset = currentYearEnd;
+
+    // If unlimited, always allow
+    if (yearlyLeadLimit === null) {
+      return {
+        canAccess: true,
+        leadsUsed,
+        leadsLimit: null,
+        remaining: -1, // unlimited
+        resetDate: nextYearReset,
+      };
+    }
+
+    // Check if annual limit reached
+    if (leadsUsed >= yearlyLeadLimit) {
+      return {
+        canAccess: false,
+        reason: `Annual lead limit reached (${leadsUsed}/${yearlyLeadLimit}). Resets on ${nextYearReset.toLocaleDateString()}.`,
+        leadsUsed,
+        leadsLimit: yearlyLeadLimit,
+        remaining: 0,
+        resetDate: nextYearReset,
+      };
+    }
+
+    return {
+      canAccess: true,
+      leadsUsed,
+      leadsLimit: yearlyLeadLimit,
+      remaining: yearlyLeadLimit - leadsUsed,
+      resetDate: nextYearReset,
+    };
+  }
+
+  // ===========================
+  // MONTHLY BILLING: MONTHLY RESET
+  // ===========================
+  const shouldResetMonthly = shouldResetLeadLimits(
     now,
     membershipStartDate,
     lastReset,
-    effectivePlan.billingPeriod,
+    billingPeriod,
   );
 
   let leadsUsed = effectivePlan.leadsUsedThisMonth || 0;
 
-  // OPTIMIZATION 2: Only reset counter if billing cycle has passed
-  if (shouldReset && membership) {
-    // Calculate billing cycle period for lead counting
-    const billingPeriod = getBillingPeriodForLeadCount(
+  // Reset monthly counter if month has passed
+  if (shouldResetMonthly && membership) {
+    const billingPeriodDates = getBillingPeriodForLeadCount(
       now,
       membershipStartDate,
-      effectivePlan.billingPeriod,
+      billingPeriod,
     );
 
-    // Verify with LeadAccess count for the billing period
+    // Verify with LeadAccess count for the month
     const actualCount = await LeadAccess.countDocuments({
       contractor: userId,
       accessedAt: {
-        $gte: billingPeriod.start,
-        $lte: billingPeriod.end,
+        $gte: billingPeriodDates.start,
+        $lte: billingPeriodDates.end,
       },
     });
 
-    // Sync counter with actual count and update reset date
+    // Reset monthly counter
     await UserMembership.findByIdAndUpdate(membership._id, {
       leadsUsedThisMonth: actualCount,
       lastLeadResetDate: now,
@@ -177,13 +249,25 @@ export async function checkLeadLimit(userId: string): Promise<{
     leadsUsed = actualCount;
   }
 
-  // Calculate next reset date based on billing cycle
-  const resetDate = getNextBillingResetDate(now, membershipStartDate, effectivePlan.billingPeriod);
+  // Calculate next monthly reset date
+  const resetDate = getNextBillingResetDate(now, membershipStartDate, billingPeriod);
 
+  // If unlimited, always allow
+  if (effectivePlan.leadsPerMonth === null) {
+    return {
+      canAccess: true,
+      leadsUsed,
+      leadsLimit: null,
+      remaining: -1, // unlimited
+      resetDate,
+    };
+  }
+
+  // Check if monthly limit reached
   if (leadsUsed >= effectivePlan.leadsPerMonth) {
     return {
       canAccess: false,
-      reason: `Monthly lead limit reached (${leadsUsed}/${effectivePlan.leadsPerMonth})`,
+      reason: `Monthly lead limit reached (${leadsUsed}/${effectivePlan.leadsPerMonth}). Resets on ${resetDate.toLocaleDateString()}.`,
       leadsUsed,
       leadsLimit: effectivePlan.leadsPerMonth,
       remaining: 0,
@@ -201,6 +285,8 @@ export async function checkLeadLimit(userId: string): Promise<{
 }
 
 // OPTIMIZED: Determine if lead limits should reset (ultra-precise and fast)
+// CRITICAL: Lead limits ALWAYS reset monthly, regardless of billing period
+// "leadsPerMonth" means leads per month, not per billing period
 function shouldResetLeadLimits(
   now: Date,
   membershipStartDate: Date,
@@ -223,19 +309,13 @@ function shouldResetLeadLimits(
     ms: membershipStartDate.getUTCMilliseconds(),
   };
 
-  if (billingPeriod === "yearly") {
-    // OPTIMIZATION 3: Calculate anniversaries using cached time components
-    const currentAnniversaryMs = getYearlyAnniversaryMs(nowMs, startTime);
-    const lastResetAnniversaryMs = getYearlyAnniversaryMs(lastResetMs, startTime);
+  // CRITICAL FIX: Lead limits ALWAYS reset monthly
+  // Even for yearly plans, leads reset every month (12 times per year)
+  // The billing period only affects PAYMENT, not lead allocation
+  const currentAnniversaryMs = getMonthlyAnniversaryMs(nowMs, startTime);
+  const lastResetAnniversaryMs = getMonthlyAnniversaryMs(lastResetMs, startTime);
 
-    return currentAnniversaryMs > lastResetAnniversaryMs;
-  } else {
-    // OPTIMIZATION 4: Calculate anniversaries using cached time components
-    const currentAnniversaryMs = getMonthlyAnniversaryMs(nowMs, startTime);
-    const lastResetAnniversaryMs = getMonthlyAnniversaryMs(lastResetMs, startTime);
-
-    return currentAnniversaryMs > lastResetAnniversaryMs;
-  }
+  return currentAnniversaryMs > lastResetAnniversaryMs;
 }
 
 // Type for cached time components (performance optimization)
@@ -247,23 +327,6 @@ interface TimeComponents {
   minutes: number;
   seconds: number;
   ms: number;
-}
-
-// OPTIMIZED: Calculate yearly anniversary in UTC milliseconds (ultra-fast)
-function getYearlyAnniversaryMs(dateMs: number, startTime: TimeComponents): number {
-  const date = new Date(dateMs);
-  const currentYear = date.getUTCFullYear();
-
-  // OPTIMIZATION: Use Date.UTC for precise UTC calculation
-  return Date.UTC(
-    currentYear,
-    startTime.month,
-    startTime.date,
-    startTime.hours,
-    startTime.minutes,
-    startTime.seconds,
-    startTime.ms,
-  );
 }
 
 // OPTIMIZED: Calculate monthly anniversary in UTC milliseconds (ultra-fast)
@@ -284,29 +347,8 @@ function getMonthlyAnniversaryMs(dateMs: number, startTime: TimeComponents): num
   );
 }
 
-// OPTIMIZED: Calculate billing anniversary with exact time precision (legacy function for compatibility)
-function getBillingAnniversary(date: Date, membershipStartDate: Date, billingPeriod: string): Date {
-  // OPTIMIZATION: Use cached time components
-  const startTime = {
-    year: membershipStartDate.getUTCFullYear(),
-    month: membershipStartDate.getUTCMonth(),
-    date: membershipStartDate.getUTCDate(),
-    hours: membershipStartDate.getUTCHours(),
-    minutes: membershipStartDate.getUTCMinutes(),
-    seconds: membershipStartDate.getUTCSeconds(),
-    ms: membershipStartDate.getUTCMilliseconds(),
-  };
-
-  if (billingPeriod === "yearly") {
-    const anniversaryMs = getYearlyAnniversaryMs(date.getTime(), startTime);
-    return new Date(anniversaryMs);
-  } else {
-    const anniversaryMs = getMonthlyAnniversaryMs(date.getTime(), startTime);
-    return new Date(anniversaryMs);
-  }
-}
-
 // OPTIMIZED: Get billing period boundaries with ultra-precision (fast)
+// CRITICAL: Lead counts are ALWAYS monthly, regardless of payment billing period
 function getBillingPeriodForLeadCount(
   now: Date,
   membershipStartDate: Date,
@@ -328,69 +370,42 @@ function getBillingPeriodForLeadCount(
     month: now.getUTCMonth(),
   };
 
-  if (billingPeriod === "yearly") {
-    // OPTIMIZATION 2: Use Date.UTC for precise calculations
-    const startOfYearMs = Date.UTC(
-      nowTime.year,
-      startTime.month,
+  // CRITICAL FIX: Lead periods are ALWAYS monthly
+  // Even for yearly billing, leads reset monthly (12 times per year)
+  // Use Date.UTC for precise monthly calculations
+  const startOfMonthMs = Date.UTC(
+    nowTime.year,
+    nowTime.month,
+    startTime.date,
+    startTime.hours,
+    startTime.minutes,
+    startTime.seconds,
+    startTime.ms,
+  );
+
+  // Handle month overflow correctly
+  const nextMonth = nowTime.month === 11 ? 0 : nowTime.month + 1;
+  const nextYear = nowTime.month === 11 ? nowTime.year + 1 : nowTime.year;
+
+  const endOfMonthMs =
+    Date.UTC(
+      nextYear,
+      nextMonth,
       startTime.date,
       startTime.hours,
       startTime.minutes,
       startTime.seconds,
       startTime.ms,
-    );
+    ) - 1;
 
-    // OPTIMIZATION 3: End 1ms before next anniversary (precise boundary)
-    const endOfYearMs =
-      Date.UTC(
-        nowTime.year + 1,
-        startTime.month,
-        startTime.date,
-        startTime.hours,
-        startTime.minutes,
-        startTime.seconds,
-        startTime.ms,
-      ) - 1;
-
-    return {
-      start: new Date(startOfYearMs),
-      end: new Date(endOfYearMs),
-    };
-  } else {
-    // OPTIMIZATION 4: Use Date.UTC for precise monthly calculations
-    const startOfMonthMs = Date.UTC(
-      nowTime.year,
-      nowTime.month,
-      startTime.date,
-      startTime.hours,
-      startTime.minutes,
-      startTime.seconds,
-      startTime.ms,
-    );
-
-    // OPTIMIZATION 5: Handle month overflow correctly
-    const nextMonth = nowTime.month === 11 ? 0 : nowTime.month + 1;
-    const nextYear = nowTime.month === 11 ? nowTime.year + 1 : nowTime.year;
-
-    const endOfMonthMs =
-      Date.UTC(
-        nextYear,
-        nextMonth,
-        startTime.date,
-        startTime.hours,
-        startTime.minutes,
-        startTime.seconds,
-        startTime.ms,
-      ) - 1;
-
-    return {
-      start: new Date(startOfMonthMs),
-      end: new Date(endOfMonthMs),
-    };
-  }
+  return {
+    start: new Date(startOfMonthMs),
+    end: new Date(endOfMonthMs),
+  };
 }
 
-// OPTIMIZED: Calculate next billing reset date with ultra-precision (fast)
+// OPTIMIZED: Calculate next lead reset date with ultra-precision (fast)
+// CRITICAL: Lead resets are ALWAYS monthly, regardless of payment billing period
 function getNextBillingResetDate(
   now: Date,
   membershipStartDate: Date,
@@ -411,47 +426,41 @@ function getNextBillingResetDate(
     month: now.getUTCMonth(),
   };
 
-  if (billingPeriod === "yearly") {
-    // OPTIMIZATION 2: Use Date.UTC for precise yearly calculation
-    const nextResetMs = Date.UTC(
-      nowTime.year + 1,
-      startTime.month,
-      startTime.date,
-      startTime.hours,
-      startTime.minutes,
-      startTime.seconds,
-      startTime.ms,
-    );
+  // CRITICAL FIX: Lead resets are ALWAYS monthly
+  // Handle month overflow correctly with UTC
+  const nextMonth = nowTime.month === 11 ? 0 : nowTime.month + 1;
+  const nextYear = nowTime.month === 11 ? nowTime.year + 1 : nowTime.year;
 
-    return new Date(nextResetMs);
-  } else {
-    // OPTIMIZATION 3: Handle month overflow correctly with UTC
-    const nextMonth = nowTime.month === 11 ? 0 : nowTime.month + 1;
-    const nextYear = nowTime.month === 11 ? nowTime.year + 1 : nowTime.year;
+  const nextResetMs = Date.UTC(
+    nextYear,
+    nextMonth,
+    startTime.date,
+    startTime.hours,
+    startTime.minutes,
+    startTime.seconds,
+    startTime.ms,
+  );
 
-    const nextResetMs = Date.UTC(
-      nextYear,
-      nextMonth,
-      startTime.date,
-      startTime.hours,
-      startTime.minutes,
-      startTime.seconds,
-      startTime.ms,
-    );
-
-    return new Date(nextResetMs);
-  }
+  return new Date(nextResetMs);
 }
 
 // OPTIMIZED: Increment lead usage counter (fast operation)
 export async function incrementLeadUsage(userId: string): Promise<void> {
-  const { membership } = await getContractorMembership(userId);
+  const { membership, effectivePlan } = await getContractorMembership(userId);
 
   if (membership) {
-    // Fast atomic increment operation
-    await UserMembership.findByIdAndUpdate(membership._id, {
-      $inc: { leadsUsedThisMonth: 1 },
-    });
+    // Increment the correct counter based on billing period
+    if (effectivePlan.billingPeriod === "yearly") {
+      // Yearly billing: Increment annual credit pool counter
+      await UserMembership.findByIdAndUpdate(membership._id, {
+        $inc: { leadsUsedThisYear: 1 },
+      });
+    } else {
+      // Monthly billing: Increment monthly counter
+      await UserMembership.findByIdAndUpdate(membership._id, {
+        $inc: { leadsUsedThisMonth: 1 },
+      });
+    }
   }
 }
 
@@ -532,42 +541,9 @@ export async function getJobsForContractor(
   jobs: any[];
   total: number;
   pagination: any;
-  membershipInfo: any;
-  leadInfo: any;
-  contractorInfo: any;
 }> {
   try {
     const { effectivePlan } = await getContractorMembership(userId);
-    const leadCheck = await checkLeadLimit(userId);
-
-    if (!leadCheck.canAccess) {
-      // OPTIMIZATION 7: Get contractor data once for early returns
-      const contractor = await User.findById(userId).select("contractor.services geoHome");
-      const contractorLocation = contractor?.geoHome
-        ? {
-            lat: contractor.geoHome.coordinates[1],
-            lng: contractor.geoHome.coordinates[0],
-          }
-        : null;
-
-      return {
-        jobs: [],
-        total: 0,
-        pagination: {
-          page: 1,
-          limit: 10,
-          totalPages: 0,
-          hasNextPage: false,
-          hasPrevPage: false,
-        },
-        membershipInfo: effectivePlan,
-        leadInfo: leadCheck,
-        contractorInfo: {
-          services: contractor?.contractor?.services || [],
-          location: contractorLocation,
-        },
-      };
-    }
 
     // OPTIMIZATION 3: Get contractor data in single query
     const contractor = await User.findById(userId).select("contractor.services geoHome");
@@ -603,12 +579,6 @@ export async function getJobsForContractor(
           hasNextPage: false,
           hasPrevPage: false,
         },
-        membershipInfo: effectivePlan,
-        leadInfo: leadCheck,
-        contractorInfo: {
-          services: [],
-          location: contractorLocation,
-        },
       };
     }
 
@@ -629,12 +599,6 @@ export async function getJobsForContractor(
             totalPages: 0,
             hasNextPage: false,
             hasPrevPage: false,
-          },
-          membershipInfo: effectivePlan,
-          leadInfo: leadCheck,
-          contractorInfo: {
-            services: contractorServices,
-            location: contractorLocation,
           },
         };
       }
@@ -683,7 +647,7 @@ export async function getJobsForContractor(
         },
       },
 
-      // OPTIMIZATION 4: Optimized access history lookup with projection
+      // OPTIMIZATION 4: Check if contractor already bid on this job
       {
         $lookup: {
           from: "leadaccesses",
@@ -699,10 +663,10 @@ export async function getJobsForContractor(
                 },
               },
             },
-            { $limit: 1 }, // Only need one record to check access
-            { $project: { accessedAt: 1, membershipTier: 1 } },
+            { $limit: 1 }, // Only need one record to check if bid was placed
+            { $project: { accessedAt: 1, membershipTier: 1, bid: 1 } },
           ],
-          as: "accessHistory",
+          as: "bidHistory",
         },
       },
 
@@ -716,21 +680,11 @@ export async function getJobsForContractor(
           pipeline: [{ $project: { name: 1, email: 1, phone: 1 } }],
         },
       },
-      {
-        $lookup: {
-          from: "bids",
-          localField: "bids",
-          foreignField: "_id",
-          as: "bids",
-          pipeline: [{ $project: { bidAmount: 1, contractor: 1, status: 1 } }],
-        },
-      },
 
       // Add computed fields
       {
         $addFields: {
           createdBy: { $arrayElemAt: ["$createdBy", 0] },
-          bidCount: { $size: "$bids" },
           distance: 0,
           accessTime: {
             $add: [
@@ -749,13 +703,13 @@ export async function getJobsForContractor(
               new Date(),
             ],
           },
-          // ENHANCEMENT 2: Add access information
-          alreadyAccessed: { $gt: [{ $size: "$accessHistory" }, 0] },
-          accessInfo: { $arrayElemAt: ["$accessHistory", 0] },
+          // ENHANCEMENT: Track if contractor already bid on this job
+          alreadyBid: { $gt: [{ $size: "$bidHistory" }, 0] },
+          bidInfo: { $arrayElemAt: ["$bidHistory", 0] },
         },
       },
 
-      // Filter out jobs that are not accessible yet
+      // Filter out jobs that are not accessible yet (based on timing delay)
       {
         $match: {
           canAccessNow: true,
@@ -799,19 +753,6 @@ export async function getJobsForContractor(
         totalPages,
         hasNextPage,
         hasPrevPage,
-      },
-      membershipInfo: {
-        tier: effectivePlan.tier,
-        leadsPerMonth: effectivePlan.leadsPerMonth,
-        accessDelayHours: effectivePlan.accessDelayHours,
-        radiusKm: effectivePlan.radiusKm,
-        featuredListing: effectivePlan.featuredListing,
-        offMarketAccess: effectivePlan.offMarketAccess,
-      },
-      leadInfo: leadCheck,
-      contractorInfo: {
-        services: contractor?.contractor?.services || [],
-        location: contractorLocation,
       },
     };
   } catch (error) {

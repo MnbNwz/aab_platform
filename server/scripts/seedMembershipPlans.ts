@@ -176,7 +176,7 @@ const membershipPlans = [
     userType: "contractor",
     tier: "premium",
     features: [
-      "60 leads/month",
+      "75 leads/month",
       "Access after 0h delay",
       "Unlimited radius",
       "Domestic + Commercial properties",
@@ -189,7 +189,7 @@ const membershipPlans = [
     annualDiscountRate: ANNUAL_DISCOUNT_RATE,
     duration: 30,
     // Contractor-specific features
-    leadsPerMonth: 60,
+    leadsPerMonth: 75,
     accessDelayHours: 0,
     radiusKm: null, // unlimited
     featuredListing: true,

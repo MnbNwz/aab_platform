@@ -15,6 +15,7 @@ import ServicesManagement from "./ServicesManagement";
 import ImagePreviewModal from "./ImagePreviewModal";
 import AutoRenewalModal from "./AutoRenewalModal";
 import PaymentHistoryModal from "./PaymentHistoryModal";
+import UpgradeMembershipModal from "./UpgradeMembershipModal";
 import { useDispatch, useSelector } from "react-redux";
 import { updateProfileWithFormDataThunk } from "../store/thunks/userThunks";
 import { buildProfileImageFormData } from "../utils/profileFormData";
@@ -72,6 +73,8 @@ const Settings: React.FC<SettingsProps> = ({
   const [autoRenewalModalOpen, setAutoRenewalModalOpen] = useState(false);
   const [isSavingAutoRenewal, setIsSavingAutoRenewal] = useState(false);
   const [paymentHistoryModalOpen, setPaymentHistoryModalOpen] = useState(false);
+  const [upgradeMembershipModalOpen, setUpgradeMembershipModalOpen] =
+    useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [imagePreviewOpen, setImagePreviewOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<{
@@ -361,6 +364,13 @@ const Settings: React.FC<SettingsProps> = ({
               : "—",
           },
           {
+            id: "upgrade-membership",
+            label: "Upgrade Membership",
+            description: "View and upgrade to a different plan",
+            type: "button",
+            onClick: () => setUpgradeMembershipModalOpen(true),
+          },
+          {
             id: "change-auto-renewal",
             label: "Auto-Renewal",
             description: "Manage your membership auto-renewal preference",
@@ -581,6 +591,8 @@ const Settings: React.FC<SettingsProps> = ({
                               "Export"
                             ) : item.label.includes("Change") ? (
                               "Change"
+                            ) : item.label.includes("Upgrade") ? (
+                              "Upgrade"
                             ) : item.label.includes("View") ? (
                               "View"
                             ) : item.label.includes("Manage") ? (
@@ -695,6 +707,11 @@ const Settings: React.FC<SettingsProps> = ({
       <PaymentHistoryModal
         isOpen={paymentHistoryModalOpen}
         onClose={() => setPaymentHistoryModalOpen(false)}
+      />
+
+      <UpgradeMembershipModal
+        isOpen={upgradeMembershipModalOpen}
+        onClose={() => setUpgradeMembershipModalOpen(false)}
       />
     </div>
   );

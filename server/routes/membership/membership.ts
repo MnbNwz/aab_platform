@@ -8,7 +8,11 @@ import {
   getMembershipHistoryController,
   getMembershipStatsController,
 } from "@controllers/membership";
-import { createStripeSession, toggleAutoRenewal } from "@controllers/payment";
+import {
+  createStripeSession,
+  toggleAutoRenewal,
+  createUpgradeStripeSession,
+} from "@controllers/payment";
 
 const router = express.Router();
 
@@ -22,6 +26,9 @@ router.get("/current", getCurrentMembershipController);
 router.post("/checkout", createStripeSession);
 router.post("/toggle-auto-renewal", toggleAutoRenewal);
 router.get("/history", getMembershipHistoryController);
+
+// Upgrade route
+router.post("/upgrade/checkout", createUpgradeStripeSession); // Create Stripe session for upgrade
 
 // Admin routes
 router.get("/stats", requireRole(["admin"]), getMembershipStatsController);

@@ -241,35 +241,37 @@ export const getJobRequests = async (filters: any, user: any) => {
         localField: "property",
         foreignField: "_id",
         as: "property",
-        pipeline: [{ $project: { title: 1, address: 1 } }],
+        pipeline: [
+          {
+            $project: {
+              title: 1,
+              location: 1,
+              area: 1,
+              areaUnit: 1,
+              totalRooms: 1,
+              bedrooms: 1,
+              bathrooms: 1,
+              kitchens: 1,
+              description: 1,
+            },
+          },
+        ],
       },
     },
-    {
-      $lookup: {
-        from: "bids",
-        localField: "acceptedBid",
-        foreignField: "_id",
-        as: "acceptedBid",
-        pipeline: [{ $project: { bidAmount: 1, contractor: 1 } }],
-      },
-    },
-    {
-      $lookup: {
-        from: "bids",
-        localField: "bids",
-        foreignField: "_id",
-        as: "bids",
-        pipeline: [{ $project: { bidAmount: 1, contractor: 1, status: 1 } }],
-      },
-    },
-
-    // Add computed fields
+    // Add computed fields (high-level info only for list view)
     {
       $addFields: {
         createdBy: { $arrayElemAt: ["$createdBy", 0] },
         property: { $arrayElemAt: ["$property", 0] },
-        acceptedBid: { $arrayElemAt: ["$acceptedBid", 0] },
-        bidCount: { $size: "$bids" },
+        bidCount: { $size: "$bids" }, // Just the count, not the full array
+      },
+    },
+
+    // Remove full bids array and acceptedBid from list view
+    {
+      $project: {
+        bids: 0,
+        acceptedBid: 0,
       },
     },
 
@@ -342,35 +344,37 @@ export const getJobRequestById = async (id: string) => {
         localField: "property",
         foreignField: "_id",
         as: "property",
-        pipeline: [{ $project: { title: 1, address: 1 } }],
-      },
-    },
-    {
-      $lookup: {
-        from: "bids",
-        localField: "acceptedBid",
-        foreignField: "_id",
-        as: "acceptedBid",
-        pipeline: [{ $project: { bidAmount: 1, contractor: 1 } }],
-      },
-    },
-    {
-      $lookup: {
-        from: "bids",
-        localField: "bids",
-        foreignField: "_id",
-        as: "bids",
-        pipeline: [{ $project: { bidAmount: 1, contractor: 1, status: 1 } }],
+        pipeline: [
+          {
+            $project: {
+              title: 1,
+              location: 1,
+              area: 1,
+              areaUnit: 1,
+              totalRooms: 1,
+              bedrooms: 1,
+              bathrooms: 1,
+              kitchens: 1,
+              description: 1,
+            },
+          },
+        ],
       },
     },
 
-    // Transform arrays to single objects/arrays
+    // Transform arrays to single objects
     {
       $addFields: {
         createdBy: { $arrayElemAt: ["$createdBy", 0] },
         property: { $arrayElemAt: ["$property", 0] },
-        acceptedBid: { $arrayElemAt: ["$acceptedBid", 0] },
-        bidCount: { $size: "$bids" },
+      },
+    },
+
+    // Remove bid-related fields from contractor view
+    {
+      $project: {
+        bids: 0,
+        acceptedBid: 0,
       },
     },
   ];

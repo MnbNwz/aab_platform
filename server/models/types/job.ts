@@ -57,12 +57,13 @@ export interface IJobRequest extends Document {
   updatedAt: Date;
 }
 
-// Lead Access types
+// Lead Access types - tracks when contractors bid on jobs (consuming leads)
 export interface ILeadAccess extends Document {
   _id: Types.ObjectId;
   contractor: Types.ObjectId;
   jobRequest: Types.ObjectId;
-  accessedAt: Date;
+  bid: Types.ObjectId; // Reference to the bid that consumed the lead
+  accessedAt: Date; // When bid was placed (lead consumed)
   membershipTier: "basic" | "standard" | "premium";
   createdAt: Date;
   updatedAt: Date;
