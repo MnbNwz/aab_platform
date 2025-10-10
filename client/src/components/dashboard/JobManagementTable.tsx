@@ -201,7 +201,7 @@ const JobManagementTable: React.FC = () => {
               }}
               className="flex-1 min-w-0 pl-3 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
-            {(isAdmin || isCustomer) && (
+            {isCustomer && (
               <button
                 className="flex-shrink-0 flex items-center px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition"
                 onClick={() => {
@@ -214,6 +214,15 @@ const JobManagementTable: React.FC = () => {
                 title={searchTerm.trim() ? "Search Jobs" : "Create Job"}
               >
                 {searchTerm.trim() ? "Search" : "Create"}
+              </button>
+            )}
+            {isAdmin && searchTerm.trim() && (
+              <button
+                className="flex-shrink-0 flex items-center px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition"
+                onClick={handleSearch}
+                title="Search Jobs"
+              >
+                Search
               </button>
             )}
           </div>

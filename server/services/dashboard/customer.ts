@@ -1,10 +1,92 @@
-import { User } from "@models/user";
+import { User, UserMembership } from "@models/user";
 import { Types } from "@models/types";
 import { logErrorWithContext } from "@utils/core";
+import { IMembershipPlan, IUserMembership } from "@models/types/membership";
+
+// Get customer's current membership with effective benefits
+export async function getCustomerMembership(userId: string): Promise<{
+  membership: IUserMembership | null;
+  plan: IMembershipPlan | null;
+  effectiveBenefits: any;
+}> {
+  try {
+    // Get active membership
+    const membership = await UserMembership.findOne({
+      userId: new Types.ObjectId(userId),
+      status: "active",
+      endDate: { $gt: new Date() },
+    }).populate("planId");
+
+    if (!membership || !membership.planId) {
+      return {
+        membership: null,
+        plan: null,
+        effectiveBenefits: null,
+      };
+    }
+
+    const plan = membership.planId as any as IMembershipPlan;
+
+    // Check if user is customer
+    if (plan.userType !== "customer") {
+      return {
+        membership: null,
+        plan: null,
+        effectiveBenefits: null,
+      };
+    }
+
+    // Build effective benefits object using accumulated upgrade values
+    const effectiveBenefits = {
+      // Base membership info
+      tier: plan.tier,
+      planName: plan.name,
+      billingPeriod: membership.billingPeriod,
+      startDate: membership.startDate,
+      endDate: membership.endDate,
+      isUpgraded: membership.isUpgraded || false,
+
+      // Customer Effective Benefits (use effective values from membership, fallback to plan)
+      maxProperties: membership.effectiveMaxProperties ?? plan.maxProperties,
+      propertyType: membership.effectivePropertyType ?? plan.propertyType,
+      platformFeePercentage:
+        membership.effectivePlatformFeePercentage ?? plan.platformFeePercentage,
+      freeCalculators: membership.effectiveFreeCalculators ?? plan.freeCalculators,
+      unlimitedRequests: membership.effectiveUnlimitedRequests ?? plan.unlimitedRequests,
+      contractorReviewsVisible:
+        membership.effectiveContractorReviewsVisible ?? plan.contractorReviewsVisible,
+      priorityContractorAccess:
+        membership.effectivePriorityContractorAccess ?? plan.priorityContractorAccess,
+      propertyValuationSupport:
+        membership.effectivePropertyValuationSupport ?? plan.propertyValuationSupport,
+      certifiedAASWork: membership.effectiveCertifiedAASWork ?? plan.certifiedAASWork,
+      freeEvaluation: membership.effectiveFreeEvaluation ?? plan.freeEvaluation,
+
+      // Upgrade tracking
+      upgradeHistory: membership.upgradeHistory || [],
+    };
+
+    return {
+      membership: membership as IUserMembership,
+      plan,
+      effectiveBenefits,
+    };
+  } catch (error) {
+    console.error("Error getting customer membership:", error);
+    return {
+      membership: null,
+      plan: null,
+      effectiveBenefits: null,
+    };
+  }
+}
 
 // Get comprehensive customer dashboard analytics
 export const getCustomerAnalytics = async (customerId: string) => {
   try {
+    // Get effective membership benefits first
+    const { effectiveBenefits } = await getCustomerMembership(customerId);
+
     // Single aggregation pipeline to get all customer data
     const pipeline = [
       { $match: { _id: new Types.ObjectId(customerId) } },
@@ -116,39 +198,9 @@ export const getCustomerAnalytics = async (customerId: string) => {
         },
       },
 
-      // Get membership information
-      {
-        $lookup: {
-          from: "usermemberships",
-          localField: "_id",
-          foreignField: "userId",
-          as: "membership",
-          pipeline: [
-            { $match: { status: "active" } },
-            { $sort: { createdAt: -1 } },
-            { $limit: 1 },
-            {
-              $lookup: {
-                from: "membershipplans",
-                localField: "planId",
-                foreignField: "_id",
-                as: "plan",
-              },
-            },
-            {
-              $addFields: {
-                plan: { $arrayElemAt: ["$plan", 0] },
-              },
-            },
-          ],
-        },
-      },
-
       // Calculate customer statistics
       {
         $addFields: {
-          membership: { $arrayElemAt: ["$membership", 0] },
-
           // Job statistics
           jobStats: {
             totalJobs: { $size: "$jobs" },
@@ -204,7 +256,6 @@ export const getCustomerAnalytics = async (customerId: string) => {
           firstName: 1,
           lastName: 1,
           email: 1,
-          membership: 1,
           jobStats: 1,
           paymentStats: 1,
           propertyStats: 1,
@@ -216,6 +267,12 @@ export const getCustomerAnalytics = async (customerId: string) => {
     ];
 
     const [result] = await User.aggregate(pipeline as any);
+
+    // Add effective membership benefits to the result
+    if (result) {
+      result.membership = effectiveBenefits;
+    }
+
     return result || null;
   } catch (error) {
     logErrorWithContext(error as Error, {

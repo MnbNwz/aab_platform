@@ -14,10 +14,7 @@ import {
   calculateRefundAmount,
   roundToCents,
 } from "@utils/financial";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-  apiVersion: "2025-08-27.basil",
-});
+import { stripe } from "@config/stripe";
 
 // Stripe Connect configuration
 const PLATFORM_FEE_PERCENTAGE = 0.01; // 1% platform fee
@@ -90,10 +87,20 @@ export async function createJobPayment(
   try {
     // Get customer's membership to determine platform fee
     const membership = await getCurrentMembership(customerId);
-    const platformFeePercentage =
-      (membership?.planId as any)?.tier === SERVICE_CONSTANTS.PREMIUM_TIER
-        ? 0
-        : PLATFORM_FEE_PERCENTAGE;
+
+    // Use effective platform fee from membership (best of all upgrades)
+    // If no membership or no effective fee set, use default
+    let platformFeePercentage = PLATFORM_FEE_PERCENTAGE; // Default 1%
+
+    if (membership) {
+      // Use effective platform fee if available, otherwise fall back to plan fee
+      const effectiveFee = membership.effectivePlatformFeePercentage;
+      if (effectiveFee !== undefined && effectiveFee !== null) {
+        platformFeePercentage = effectiveFee / 100; // Convert percentage to decimal
+      } else if ((membership.planId as any)?.platformFeePercentage !== undefined) {
+        platformFeePercentage = ((membership.planId as any).platformFeePercentage || 0) / 100;
+      }
+    }
 
     // Calculate payment amounts using safe financial calculations
     const depositAmount = calculateDepositAmount(totalAmount); // 15% deposit

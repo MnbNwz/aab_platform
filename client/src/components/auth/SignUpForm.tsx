@@ -45,6 +45,8 @@ const SignUpForm: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
+  const [showPasswordRequirements, setShowPasswordRequirements] =
+    useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{
     lat: number;
     lng: number;
@@ -377,6 +379,7 @@ const SignUpForm: React.FC = () => {
                 <input
                   {...register("firstName")}
                   type="text"
+                  maxLength={50}
                   className={`w-full px-4 py-3 rounded-lg border bg-white/10 text-white placeholder-white/60 transition-colors ${
                     errors.firstName
                       ? "border-red-400 focus:border-red-500"
@@ -398,6 +401,7 @@ const SignUpForm: React.FC = () => {
                 <input
                   {...register("lastName")}
                   type="text"
+                  maxLength={50}
                   className={`w-full px-4 py-3 rounded-lg border bg-white/10 text-white placeholder-white/60 transition-colors ${
                     errors.lastName
                       ? "border-red-400 focus:border-red-500"
@@ -421,6 +425,7 @@ const SignUpForm: React.FC = () => {
               <input
                 {...register("email")}
                 type="email"
+                maxLength={100}
                 className={`w-full px-4 py-3 rounded-lg border bg-white/10 text-white placeholder-white/60 transition-colors ${
                   errors.email
                     ? "border-red-400 focus:border-red-500"
@@ -442,12 +447,13 @@ const SignUpForm: React.FC = () => {
               <input
                 {...register("phone")}
                 type="tel"
+                maxLength={20}
                 className={`w-full px-4 py-3 rounded-lg border bg-white/10 text-white placeholder-white/60 transition-colors ${
                   errors.phone
                     ? "border-red-400 focus:border-red-500"
                     : "border-white/20 focus:border-accent-500"
                 } focus:ring-2 focus:ring-accent-500/20`}
-                placeholder="Enter your phone number"
+                placeholder="e.g., +1 (555) 123-4567"
               />
               {errors.phone && (
                 <p className="mt-1 text-red-300 text-xs">
@@ -521,6 +527,7 @@ const SignUpForm: React.FC = () => {
                   <input
                     {...register("companyName" as keyof FormData)}
                     type="text"
+                    maxLength={100}
                     className={`w-full px-4 py-3 rounded-lg border bg-white/10 text-white placeholder-white/60 transition-colors ${
                       errors.companyName
                         ? "border-red-400 focus:border-red-500"
@@ -542,12 +549,13 @@ const SignUpForm: React.FC = () => {
                   <input
                     {...register("license" as keyof FormData)}
                     type="text"
+                    maxLength={50}
                     className={`w-full px-4 py-3 rounded-lg border bg-white/10 text-white placeholder-white/60 transition-colors ${
                       errors.license
                         ? "border-red-400 focus:border-red-500"
                         : "border-white/20 focus:border-accent-500"
                     } focus:ring-2 focus:ring-accent-500/20`}
-                    placeholder="Enter your license number"
+                    placeholder="e.g., ABC-123456"
                   />
                   {errors.license && (
                     <p className="mt-1 text-red-300 text-xs">
@@ -563,12 +571,13 @@ const SignUpForm: React.FC = () => {
                   <input
                     {...register("taxId" as keyof FormData)}
                     type="text"
+                    maxLength={20}
                     className={`w-full px-4 py-3 rounded-lg border bg-white/10 text-white placeholder-white/60 transition-colors ${
                       errors.taxId
                         ? "border-red-400 focus:border-red-500"
                         : "border-white/20 focus:border-accent-500"
                     } focus:ring-2 focus:ring-accent-500/20`}
-                    placeholder="Enter your tax ID"
+                    placeholder="e.g., 12-3456789"
                   />
                   {errors.taxId && (
                     <p className="mt-1 text-red-300 text-xs">
@@ -683,6 +692,11 @@ const SignUpForm: React.FC = () => {
                 <div>
                   <label className="block text-white text-sm font-medium mb-3">
                     Service Types (Select all that apply) *
+                    {watchedServices && watchedServices.length > 0 && (
+                      <span className="ml-2 text-accent-400 text-xs">
+                        ({watchedServices.length}/10 selected)
+                      </span>
+                    )}
                   </label>
                   {servicesLoading ? (
                     <div className="flex items-center justify-center py-8">
@@ -693,24 +707,36 @@ const SignUpForm: React.FC = () => {
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {services.map((service: string) => (
-                        <label key={service} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={(
-                              (watchedServices as string[]) || []
-                            ).includes(service)}
-                            onChange={(e) =>
-                              handleServiceChange(service, e.target.checked)
-                            }
-                            className="h-4 w-4 text-accent-500 border-white/20 rounded focus:ring-accent-500"
-                          />
-                          <span className="ml-2 text-white text-sm">
-                            {service.charAt(0).toUpperCase() +
-                              service.slice(1).replace("_", " ")}
-                          </span>
-                        </label>
-                      ))}
+                      {services.map((service: string) => {
+                        const isChecked = (
+                          (watchedServices as string[]) || []
+                        ).includes(service);
+                        const isDisabled =
+                          !isChecked &&
+                          (watchedServices as string[])?.length >= 10;
+                        return (
+                          <label
+                            key={service}
+                            className={`flex items-center ${
+                              isDisabled ? "opacity-50 cursor-not-allowed" : ""
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              disabled={isDisabled}
+                              onChange={(e) =>
+                                handleServiceChange(service, e.target.checked)
+                              }
+                              className="h-4 w-4 text-accent-500 border-white/20 rounded focus:ring-accent-500 disabled:cursor-not-allowed"
+                            />
+                            <span className="ml-2 text-white text-sm">
+                              {service.charAt(0).toUpperCase() +
+                                service.slice(1).replace("_", " ")}
+                            </span>
+                          </label>
+                        );
+                      })}
                     </div>
                   )}
                   {(errors.services || servicesError) && (
@@ -736,12 +762,15 @@ const SignUpForm: React.FC = () => {
                   <input
                     {...register("password")}
                     type={showPassword ? "text" : "password"}
+                    maxLength={128}
                     className={`w-full px-4 py-3 rounded-lg border bg-white/10 text-white placeholder-white/60 transition-colors pr-12 ${
                       errors.password
                         ? "border-red-400 focus:border-red-500"
                         : "border-white/20 focus:border-accent-500"
                     } focus:ring-2 focus:ring-accent-500/20`}
                     placeholder="Create password"
+                    onFocus={() => setShowPasswordRequirements(true)}
+                    onBlur={() => setShowPasswordRequirements(false)}
                   />
                   <button
                     type="button"
@@ -759,6 +788,77 @@ const SignUpForm: React.FC = () => {
                   <p className="mt-1 text-red-300 text-xs">
                     {String(errors.password.message)}
                   </p>
+                )}
+                {showPasswordRequirements && (
+                  <div className="mt-2 p-3 bg-white/5 rounded-lg border border-white/10">
+                    <p className="text-white/80 text-xs font-medium mb-2">
+                      Password must contain:
+                    </p>
+                    <ul className="space-y-1 text-xs">
+                      <li
+                        className={`flex items-center gap-2 ${
+                          watch("password")?.length >= 8
+                            ? "text-green-400"
+                            : "text-white/60"
+                        }`}
+                      >
+                        <span className="text-[10px]">
+                          {watch("password")?.length >= 8 ? "✓" : "○"}
+                        </span>
+                        At least 8 characters
+                      </li>
+                      <li
+                        className={`flex items-center gap-2 ${
+                          /[A-Z]/.test(watch("password") || "")
+                            ? "text-green-400"
+                            : "text-white/60"
+                        }`}
+                      >
+                        <span className="text-[10px]">
+                          {/[A-Z]/.test(watch("password") || "") ? "✓" : "○"}
+                        </span>
+                        One uppercase letter
+                      </li>
+                      <li
+                        className={`flex items-center gap-2 ${
+                          /[a-z]/.test(watch("password") || "")
+                            ? "text-green-400"
+                            : "text-white/60"
+                        }`}
+                      >
+                        <span className="text-[10px]">
+                          {/[a-z]/.test(watch("password") || "") ? "✓" : "○"}
+                        </span>
+                        One lowercase letter
+                      </li>
+                      <li
+                        className={`flex items-center gap-2 ${
+                          /[0-9]/.test(watch("password") || "")
+                            ? "text-green-400"
+                            : "text-white/60"
+                        }`}
+                      >
+                        <span className="text-[10px]">
+                          {/[0-9]/.test(watch("password") || "") ? "✓" : "○"}
+                        </span>
+                        One number
+                      </li>
+                      <li
+                        className={`flex items-center gap-2 ${
+                          /[^A-Za-z0-9]/.test(watch("password") || "")
+                            ? "text-green-400"
+                            : "text-white/60"
+                        }`}
+                      >
+                        <span className="text-[10px]">
+                          {/[^A-Za-z0-9]/.test(watch("password") || "")
+                            ? "✓"
+                            : "○"}
+                        </span>
+                        One special character (!@#$%^&*...)
+                      </li>
+                    </ul>
+                  </div>
                 )}
               </div>
 

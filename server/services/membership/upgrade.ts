@@ -3,7 +3,7 @@ import { UserMembership, IUserMembership } from "@models/user";
 import { Types } from "@models/types";
 import { getCurrentMembership } from "./membership";
 
-// Tier hierarchy for validation
+// Tier hierarchy for reference (not used for validation anymore)
 const TIER_HIERARCHY = {
   basic: 1,
   standard: 2,
@@ -29,7 +29,7 @@ export function addDays(date: Date, days: number): Date {
 }
 
 /**
- * Check if new plan is an upgrade (higher tier)
+ * Check if new plan is an upgrade (higher tier) - for reference only
  */
 export function isUpgrade(currentTier: string, newTier: string): boolean {
   return (
@@ -39,7 +39,27 @@ export function isUpgrade(currentTier: string, newTier: string): boolean {
 }
 
 /**
- * Validate upgrade eligibility with optimized single pipeline query
+ * Helper: Get maximum value, treating null as unlimited (always wins)
+ */
+function maxWithNull(a: number | null | undefined, b: number | null | undefined): number | null {
+  if (a === null || a === undefined) return null; // Unlimited
+  if (b === null || b === undefined) return null; // Unlimited
+  return Math.max(a, b);
+}
+
+/**
+ * Helper: Get minimum value, treating null as unlimited (for when lower is NOT better)
+ */
+function minValue(a: number | null | undefined, b: number | null | undefined): number {
+  const valA = a ?? Number.MAX_SAFE_INTEGER;
+  const valB = b ?? Number.MAX_SAFE_INTEGER;
+  const result = Math.min(valA, valB);
+  return result === Number.MAX_SAFE_INTEGER ? 0 : result;
+}
+
+/**
+ * Validate upgrade eligibility - UPDATED to allow same tier upgrades
+ * Now validates: same userType only
  */
 export async function validateUpgrade(
   userId: string,
@@ -89,33 +109,6 @@ export async function validateUpgrade(
         newPlan: "$newPlan",
         validations: {
           sameUserType: { $eq: ["$currentPlan.userType", "$newPlan.userType"] },
-          currentTierValue: {
-            $switch: {
-              branches: [
-                { case: { $eq: ["$currentPlan.tier", "basic"] }, then: 1 },
-                { case: { $eq: ["$currentPlan.tier", "standard"] }, then: 2 },
-                { case: { $eq: ["$currentPlan.tier", "premium"] }, then: 3 },
-              ],
-              default: 0,
-            },
-          },
-          newTierValue: {
-            $switch: {
-              branches: [
-                { case: { $eq: ["$newPlan.tier", "basic"] }, then: 1 },
-                { case: { $eq: ["$newPlan.tier", "standard"] }, then: 2 },
-                { case: { $eq: ["$newPlan.tier", "premium"] }, then: 3 },
-              ],
-              default: 0,
-            },
-          },
-        },
-      },
-    },
-    {
-      $addFields: {
-        "validations.isUpgrade": {
-          $gt: ["$validations.newTierValue", "$validations.currentTierValue"],
         },
       },
     },
@@ -132,10 +125,20 @@ export async function validateUpgrade(
     throw new Error("Cannot change user type during upgrade. Must remain customer or contractor.");
   }
 
-  // Validate it's an upgrade (higher tier)
-  if (!data.validations.isUpgrade) {
+  // CRITICAL: Restrict multiple upgrades - user must let current membership expire first
+  const hasUpgradeHistory =
+    data.membership.upgradeHistory && data.membership.upgradeHistory.length > 0;
+  const isUpgraded = data.membership.isUpgraded || false;
+
+  if (hasUpgradeHistory || isUpgraded) {
+    const membershipEndDate = new Date(data.membership.endDate);
+    const currentDate = new Date();
+    const daysRemaining = Math.ceil(
+      (membershipEndDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
     throw new Error(
-      `Can only upgrade to higher tier. Current: ${data.currentPlan.tier}, New: ${data.newPlan.tier}. Downgrades are not allowed.`,
+      `Multiple upgrades not allowed. Your current membership expires on ${membershipEndDate.toLocaleDateString()} (${daysRemaining} days remaining). Please wait for your current membership to expire before upgrading again.`,
     );
   }
 
@@ -151,121 +154,192 @@ export async function validateUpgrade(
 }
 
 /**
- * Calculate accumulated values when upgrading
+ * Calculate effective benefits when upgrading
+ * This applies the "best of both" logic for all benefits
  */
-export function calculateUpgradeValues(
+export function calculateEffectiveBenefits(
   currentMembership: IUserMembership,
   currentPlan: IMembershipPlan,
   newPlan: IMembershipPlan,
+  billingPeriod: "monthly" | "yearly",
 ) {
   const now = new Date();
   const remainingDays = getDaysRemaining(currentMembership.endDate);
 
   // Calculate new plan duration based on billing period
-  const newPlanDuration = currentMembership.billingPeriod === "monthly" ? 30 : 365;
+  const newPlanDuration = billingPeriod === "monthly" ? 30 : 365;
 
   // 1. DAYS - ADD remaining + new
   const accumulatedDays = remainingDays + newPlanDuration;
-  const newEndDate = addDays(now, accumulatedDays);
+  // CRITICAL FIX: Calculate endDate from ORIGINAL startDate, not current time
+  // This ensures the membership period is continuous from the original purchase date
+  const newEndDate = addDays(currentMembership.startDate, accumulatedDays);
 
-  // 2. LEADS - ADD remaining + new allocation (for contractors)
+  // 2. LEADS - Calculate remaining and accumulate (for contractors)
   let accumulatedLeads = 0;
   let bonusLeads = 0;
-  let newLeadsPerMonth = 0;
+  let effectiveLeadsPerMonth = newPlan.leadsPerMonth ?? null;
 
   if (currentPlan.userType === "contractor") {
-    // Calculate remaining leads from current plan
-    const currentLeadsLimit = currentPlan.leadsPerMonth || 0;
-    const usedLeads = currentMembership.leadsUsedThisMonth || 0;
+    // CRITICAL FIX: Preserve existing accumulated leads from previous upgrades
+    const existingAccumulatedLeads = currentMembership.accumulatedLeads || 0;
+
+    // CRITICAL FIX: For upgrades, use accumulated leads if available, otherwise use monthly limit
+    const currentLeadsLimit =
+      existingAccumulatedLeads > 0
+        ? existingAccumulatedLeads // Use accumulated leads from previous upgrades
+        : (currentMembership.effectiveLeadsPerMonth ?? currentPlan.leadsPerMonth ?? 0); // Fallback to monthly limit
+
+    // Calculate remaining leads from CURRENT membership
+    // Use the appropriate counter based on current billing period
+    const currentBillingPeriod = currentMembership.billingPeriod;
+    const usedLeads =
+      currentBillingPeriod === "yearly"
+        ? currentMembership.leadsUsedThisYear || 0
+        : currentMembership.leadsUsedThisMonth || 0;
+
     bonusLeads = Math.max(0, currentLeadsLimit - usedLeads);
 
-    // New plan allocation
-    newLeadsPerMonth = newPlan.leadsPerMonth || 0;
-
-    // Total accumulated leads
-    accumulatedLeads = bonusLeads + newLeadsPerMonth;
-  }
-
-  // 3. RADIUS - MAX (highest value, null = unlimited wins)
-  let effectiveRadius: number | null;
-  if (currentPlan.radiusKm === null || newPlan.radiusKm === null) {
-    effectiveRadius = null; // Unlimited wins
-  } else {
-    effectiveRadius = Math.max(currentPlan.radiusKm || 0, newPlan.radiusKm || 0);
-  }
-
-  // 4. ACCESS DELAY - MIN (lower is better for contractor)
-  let effectiveAccessDelay = 0;
-  if (currentPlan.userType === "contractor") {
-    effectiveAccessDelay = Math.min(
-      currentPlan.accessDelayHours || 0,
-      newPlan.accessDelayHours || 0,
-    );
-  }
-
-  // 5. MAX PROPERTIES - MAX (higher is better for customer)
-  let effectiveMaxProperties: number | null = null;
-  if (currentPlan.userType === "customer") {
-    if (currentPlan.maxProperties === null || newPlan.maxProperties === null) {
-      effectiveMaxProperties = null; // Unlimited wins
+    // If current or new has unlimited (null), keep unlimited
+    if (currentMembership.effectiveLeadsPerMonth === null || newPlan.leadsPerMonth === null) {
+      effectiveLeadsPerMonth = null;
+      accumulatedLeads = 0; // N/A for unlimited
     } else {
-      effectiveMaxProperties = Math.max(currentPlan.maxProperties || 0, newPlan.maxProperties || 0);
+      // Calculate new plan's TOTAL lead allocation based on NEW billing period
+      const newLeadsPerMonthBase = newPlan.leadsPerMonth || 0;
+      const newPlanTotalLeads =
+        billingPeriod === "yearly"
+          ? newLeadsPerMonthBase * 12 // Yearly: multiply by 12 months
+          : newLeadsPerMonthBase; // Monthly: just the monthly amount
+
+      // New plan allocation (base leads per month stays the same)
+      effectiveLeadsPerMonth = newPlan.leadsPerMonth;
+
+      // CRITICAL FIX: Accumulated leads = existing + bonus from previous + NEW plan's total allocation
+      accumulatedLeads = existingAccumulatedLeads + bonusLeads + newPlanTotalLeads;
     }
   }
 
-  // 6. PLATFORM FEE - MIN (lower is better for customer)
-  let effectivePlatformFee = 0;
-  if (currentPlan.userType === "customer") {
-    effectivePlatformFee = Math.min(
-      currentPlan.platformFeePercentage || 0,
-      newPlan.platformFeePercentage || 0,
-    );
+  // 3. CONTRACTOR BENEFITS - Best of both
+  let effectiveAccessDelayHours = newPlan.accessDelayHours ?? 24;
+  let effectiveRadiusKm = newPlan.radiusKm ?? null;
+
+  if (currentPlan.userType === "contractor") {
+    // Access Delay - MIN (lower is better for contractor)
+    const currentDelay =
+      currentMembership.effectiveAccessDelayHours ?? currentPlan.accessDelayHours ?? 24;
+    const newDelay = newPlan.accessDelayHours ?? 24;
+    effectiveAccessDelayHours = Math.min(currentDelay, newDelay);
+
+    // Radius - MAX (higher is better, null = unlimited wins)
+    const currentRadius = currentMembership.effectiveRadiusKm ?? currentPlan.radiusKm;
+    effectiveRadiusKm = maxWithNull(currentRadius, newPlan.radiusKm);
   }
 
-  // 7. BOOLEAN FEATURES - OR (true wins)
+  // 4. CUSTOMER BENEFITS - Best of both
+  let effectiveMaxProperties: number | null = null;
+  let effectivePlatformFeePercentage = 100;
+  let effectivePropertyType: "domestic" | "commercial" = "domestic";
+
+  if (currentPlan.userType === "customer") {
+    // Max Properties - MAX (higher is better, null = unlimited wins)
+    const currentMaxProps = currentMembership.effectiveMaxProperties ?? currentPlan.maxProperties;
+    effectiveMaxProperties = maxWithNull(currentMaxProps, newPlan.maxProperties);
+
+    // Platform Fee - MIN (lower is better for customer)
+    const currentFee =
+      currentMembership.effectivePlatformFeePercentage ?? currentPlan.platformFeePercentage ?? 100;
+    const newFee = newPlan.platformFeePercentage ?? 100;
+    effectivePlatformFeePercentage = Math.min(currentFee, newFee);
+
+    // Property Type - Commercial wins over Domestic
+    const currentType =
+      currentMembership.effectivePropertyType ?? currentPlan.propertyType ?? "domestic";
+    const newType = newPlan.propertyType ?? "domestic";
+    effectivePropertyType =
+      currentType === "commercial" || newType === "commercial" ? "commercial" : "domestic";
+  }
+
+  // 5. BOOLEAN FEATURES - OR (true wins)
   const effectiveFeatures = {
     // Contractor features
-    featuredListing: currentPlan.featuredListing || newPlan.featuredListing || false,
-    offMarketAccess: currentPlan.offMarketAccess || newPlan.offMarketAccess || false,
-    publicityReferences: currentPlan.publicityReferences || newPlan.publicityReferences || false,
-    verifiedBadge: currentPlan.verifiedBadge || newPlan.verifiedBadge || false,
-    financingSupport: currentPlan.financingSupport || newPlan.financingSupport || false,
-    privateNetwork: currentPlan.privateNetwork || newPlan.privateNetwork || false,
+    featuredListing:
+      (currentMembership.effectiveFeaturedListing ?? currentPlan.featuredListing ?? false) ||
+      (newPlan.featuredListing ?? false),
+    offMarketAccess:
+      (currentMembership.effectiveOffMarketAccess ?? currentPlan.offMarketAccess ?? false) ||
+      (newPlan.offMarketAccess ?? false),
+    publicityReferences:
+      (currentMembership.effectivePublicityReferences ??
+        currentPlan.publicityReferences ??
+        false) ||
+      (newPlan.publicityReferences ?? false),
+    verifiedBadge:
+      (currentMembership.effectiveVerifiedBadge ?? currentPlan.verifiedBadge ?? false) ||
+      (newPlan.verifiedBadge ?? false),
+    financingSupport:
+      (currentMembership.effectiveFinancingSupport ?? currentPlan.financingSupport ?? false) ||
+      (newPlan.financingSupport ?? false),
+    privateNetwork:
+      (currentMembership.effectivePrivateNetwork ?? currentPlan.privateNetwork ?? false) ||
+      (newPlan.privateNetwork ?? false),
 
     // Customer features
-    freeCalculators: currentPlan.freeCalculators || newPlan.freeCalculators || false,
-    unlimitedRequests: currentPlan.unlimitedRequests || newPlan.unlimitedRequests || false,
+    freeCalculators:
+      (currentMembership.effectiveFreeCalculators ?? currentPlan.freeCalculators ?? false) ||
+      (newPlan.freeCalculators ?? false),
+    unlimitedRequests:
+      (currentMembership.effectiveUnlimitedRequests ?? currentPlan.unlimitedRequests ?? false) ||
+      (newPlan.unlimitedRequests ?? false),
     contractorReviewsVisible:
-      currentPlan.contractorReviewsVisible || newPlan.contractorReviewsVisible || false,
+      (currentMembership.effectiveContractorReviewsVisible ??
+        currentPlan.contractorReviewsVisible ??
+        false) ||
+      (newPlan.contractorReviewsVisible ?? false),
     priorityContractorAccess:
-      currentPlan.priorityContractorAccess || newPlan.priorityContractorAccess || false,
+      (currentMembership.effectivePriorityContractorAccess ??
+        currentPlan.priorityContractorAccess ??
+        false) ||
+      (newPlan.priorityContractorAccess ?? false),
     propertyValuationSupport:
-      currentPlan.propertyValuationSupport || newPlan.propertyValuationSupport || false,
-    certifiedAASWork: currentPlan.certifiedAASWork || newPlan.certifiedAASWork || false,
-    freeEvaluation: currentPlan.freeEvaluation || newPlan.freeEvaluation || false,
+      (currentMembership.effectivePropertyValuationSupport ??
+        currentPlan.propertyValuationSupport ??
+        false) ||
+      (newPlan.propertyValuationSupport ?? false),
+    certifiedAASWork:
+      (currentMembership.effectiveCertifiedAASWork ?? currentPlan.certifiedAASWork ?? false) ||
+      (newPlan.certifiedAASWork ?? false),
+    freeEvaluation:
+      (currentMembership.effectiveFreeEvaluation ?? currentPlan.freeEvaluation ?? false) ||
+      (newPlan.freeEvaluation ?? false),
   };
 
-  // 8. Property Type - Use the higher access level
-  let effectivePropertyType: "domestic" | "commercial" = "domestic";
-  if (currentPlan.propertyType === "commercial" || newPlan.propertyType === "commercial") {
-    effectivePropertyType = "commercial";
-  }
-
-  return {
+  const result = {
+    // Duration
     accumulatedDays,
     newEndDate,
-    accumulatedLeads,
-    bonusLeads,
-    newLeadsPerMonth,
-    effectiveRadius,
-    effectiveAccessDelay,
-    effectiveMaxProperties,
-    effectivePlatformFee,
-    effectivePropertyType,
-    effectiveFeatures,
     remainingDays,
     newPlanDuration,
+
+    // Leads
+    accumulatedLeads,
+    bonusLeads,
+    effectiveLeadsPerMonth,
+
+    // Contractor benefits
+    effectiveAccessDelayHours,
+    effectiveRadiusKm,
+
+    // Customer benefits
+    effectiveMaxProperties,
+    effectivePlatformFeePercentage,
+    effectivePropertyType,
+
+    // All boolean features
+    ...effectiveFeatures,
   };
+
+  return result;
 }
 
 /**

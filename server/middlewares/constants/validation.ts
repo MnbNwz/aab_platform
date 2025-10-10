@@ -2,10 +2,27 @@
 
 // File upload limits
 export const FILE_UPLOAD_LIMITS = {
-  MAX_FILE_SIZE: 5 * 1024 * 1024, // 5MB max
+  MAX_FILE_SIZE: 5 * 1024 * 1024, // 5MB max for images
+  MAX_DOCUMENT_SIZE: 10 * 1024 * 1024, // 10MB max for documents
   ALLOWED_IMAGE_TYPES: ["image/jpeg", "image/jpg", "image/png", "image/webp"],
-  ALLOWED_DOCUMENT_TYPES: ["application/pdf"],
-  ALLOWED_FILE_TYPES: ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"],
+  ALLOWED_DOCUMENT_TYPES: [
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ],
+  ALLOWED_FILE_TYPES: [
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/webp",
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ],
 } as const;
 
 // Payment validation constants

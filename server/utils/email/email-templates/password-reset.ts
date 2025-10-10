@@ -146,9 +146,8 @@ export const passwordResetTemplate = (data: PasswordResetData) => ({
 
 
       <div class="security-note">
-        <strong>🛡️ Important:</strong> If you did not request a password reset, please ignore this email. Your account will remain secure.
-        </br>
-          <strong>⏰ For your security: This link will expire in 1 hour.</strong>
+        <p><strong>🛡️ Important:</strong> If you did not request a password reset, please ignore this email. Your account will remain secure.</p>
+        <p><strong>⏰ For your security:</strong> This link will expire in 1 hour.</p>
       </div>
 
       <p>If you continue to experience issues, please request a new password reset or contact our support team for assistance.</p>

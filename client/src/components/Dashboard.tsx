@@ -26,6 +26,7 @@ import PlatformDashboardCards from "./dashboard/PlatformDashboardCards";
 import { fetchDashboardThunk } from "../store/thunks/dashboardThunks";
 import { useDashboardRefresh } from "../hooks/useDashboardRefresh";
 import { AppDispatch, RootState } from "../store";
+import { fetchInvestmentStatisticsThunk } from "../store/slices/investmentOpportunitySlice";
 import ProfileModal from "./ProfileModal";
 import ProfileViewModal from "./ProfileViewModal";
 import Settings from "./Settings";
@@ -33,6 +34,9 @@ import JobManagementTable from "./dashboard/JobManagementTable";
 import ContractorJobRequestsTable from "./dashboard/ContractorJobRequestsTable";
 import FavoriteContractors from "./FavoriteContractors";
 import MyBids from "./MyBids";
+import InvestmentOpportunitiesManagement from "./dashboard/InvestmentOpportunitiesManagement";
+import ContractorOffMarketOpportunities from "./contractor/ContractorOffMarketOpportunities";
+import InterestedProperties from "./contractor/InterestedProperties";
 import type { User } from "../types";
 import { handleApiError } from "../services/apiService";
 import {
@@ -340,12 +344,22 @@ const DashboardContent = memo<
           subtitle: "Manage system users",
           children: <UserManagementTable />,
         },
-        properties: (user.role === "admin" || user.role === "customer") && {
-          ...baseProps,
-          title: "My Properties",
-          subtitle: "Manage your property listings",
-          children: <MyProperties userRole={user.role} />,
-        },
+        properties:
+          user.role === "admin"
+            ? {
+                ...baseProps,
+                title: "Off Market Properties",
+                subtitle: "Manage investment opportunities for contractors",
+                children: <InvestmentOpportunitiesManagement />,
+              }
+            : user.role === "customer"
+            ? {
+                ...baseProps,
+                title: "My Properties",
+                subtitle: "Manage your property listings",
+                children: <MyProperties userRole={user.role} />,
+              }
+            : null,
         jobs: (user.role === "admin" || user.role === "customer") && {
           ...baseProps,
           title: "Job Management",
@@ -372,6 +386,19 @@ const DashboardContent = memo<
                 title: "My Bids",
                 subtitle: "Track and manage your submitted bids",
                 children: <MyBids />,
+              },
+              offMarket: {
+                ...baseProps,
+                title: "Off Market Opportunities",
+                subtitle:
+                  "Exclusive investment opportunities for premium members",
+                children: <ContractorOffMarketOpportunities />,
+              },
+              interestedProperties: {
+                ...baseProps,
+                title: "Interested Properties",
+                subtitle: "Track all properties you've expressed interest in",
+                children: <InterestedProperties />,
               },
             }
           : {}),
@@ -461,6 +488,12 @@ const Dashboard: React.FC = () => {
 
       if (!unifiedData) {
         dispatch(fetchDashboardThunk({ showToast: false })); // Silent initial load, no toast
+      }
+
+      // Fetch investment statistics in parallel for admin users (independent of unifiedData)
+      if (user.role === "admin") {
+        console.log("Fetching investment statistics for admin user");
+        dispatch(fetchInvestmentStatisticsThunk());
       }
     }
   }, [dispatch, user, activeTab, unifiedData]);

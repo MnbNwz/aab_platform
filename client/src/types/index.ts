@@ -319,6 +319,18 @@ export interface CurrentMembership {
   stripeSubscriptionId: string | null;
   leadsUsedThisMonth: number;
   lastLeadResetDate: string | null;
+  isUpgraded?: boolean;
+  upgradedFromMembershipId?: string;
+  upgradedToMembershipId?: string;
+  upgradeHistory?: Array<{
+    fromPlanId: string;
+    toPlanId: string;
+    upgradedAt: string;
+    daysAdded: number;
+    leadsAdded: number;
+    amountPaid: number;
+    paymentId: string;
+  }>;
   createdAt: string;
   updatedAt: string;
 }
@@ -334,4 +346,166 @@ export interface MembershipCheckoutPayload {
 export interface CheckoutResponse {
   success: boolean;
   url: string;
+}
+
+// Investment Opportunity Types
+export type InvestmentPropertyType =
+  | "house"
+  | "duplex"
+  | "triplex"
+  | "sixplex"
+  | "land"
+  | "commercial";
+export type InvestmentStatus = "available" | "under_offer" | "sold";
+export type ContactStatus = "pending" | "accepted" | "rejected";
+
+export interface InvestmentLocation {
+  type: "Point";
+  coordinates: [number, number]; // [longitude, latitude]
+  city?: string;
+  province?: string;
+  fullAddress?: string;
+}
+
+export interface InvestmentPhoto {
+  url: string;
+  caption?: string;
+}
+
+export interface InvestmentDocument {
+  url: string;
+  name: string;
+  type: string;
+}
+
+export interface InvestmentInterest {
+  contractorId: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    profileImage?: string;
+    contractor?: {
+      companyName?: string;
+      license?: string;
+      services?: string[];
+      taxId?: string;
+    };
+  };
+  expressedAt: string;
+  message?: string;
+  adminNotes?: string;
+  contactStatus: ContactStatus;
+}
+
+export interface InvestmentOpportunity {
+  _id: string;
+  title: string;
+  propertyType: InvestmentPropertyType;
+  location: InvestmentLocation;
+  askingPrice: number; // in cents
+  projectedROI?: number;
+  description: string;
+  lotSize?: string;
+  buildingSize?: string;
+  numberOfUnits?: number;
+  yearBuilt?: number;
+  renovationNeeded?: boolean;
+  estimatedRenovationCost?: number;
+  estimatedCompletionTime?: number;
+  renovationDetails?: string;
+  highlights?: string[];
+  photos?: InvestmentPhoto[];
+  documents?: InvestmentDocument[];
+  status: InvestmentStatus;
+  interests: InvestmentInterest[];
+  interestCount?: number;
+  totalRenovationCost?: number;
+  totalInvestment?: number;
+  hasExpressedInterest?: boolean; // Whether the current user has expressed interest
+  createdBy: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InvestmentOpportunityFilters {
+  page?: number;
+  limit?: number;
+  status?: InvestmentStatus;
+  propertyType?: InvestmentPropertyType;
+  province?: string;
+  maxPrice?: number;
+  minROI?: number;
+  maxROI?: number;
+  renovationNeeded?: boolean;
+  search?: string;
+}
+
+export interface InvestmentOpportunitiesResponse {
+  success: boolean;
+  data: InvestmentOpportunity[];
+  pagination: {
+    total: number;
+    page: number;
+    pages: number;
+    limit: number;
+  };
+}
+
+export interface ContractorInvestmentInterest {
+  opportunityId: string;
+  title: string;
+  propertyType: InvestmentPropertyType;
+  location: InvestmentLocation;
+  askingPrice: number;
+  projectedROI?: number;
+  totalInvestment?: number;
+  status: InvestmentStatus;
+  photos?: InvestmentPhoto[];
+  interest: {
+    expressedAt: string;
+    message?: string;
+    contactStatus: ContactStatus;
+  };
+}
+
+export interface InvestmentStatistics {
+  statusBreakdown: Array<{
+    _id: InvestmentStatus;
+    count: number;
+    totalValue: number;
+    avgROI: number;
+  }>;
+  propertyTypeBreakdown: Array<{
+    _id: InvestmentPropertyType;
+    count: number;
+    avgPrice: number;
+  }>;
+  provinceBreakdown: Array<{
+    _id: string;
+    count: number;
+    avgPrice: number;
+  }>;
+  overallStats: Array<{
+    _id: null;
+    totalOpportunities: number;
+    totalValue: number;
+    avgPrice: number;
+    avgROI: number;
+    totalInterests: number;
+  }>;
+  recentOpportunities: Array<{
+    _id: string;
+    title: string;
+    askingPrice: number;
+    status: InvestmentStatus;
+    interestCount: number;
+    createdAt: string;
+  }>;
 }

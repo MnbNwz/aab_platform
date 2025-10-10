@@ -14,8 +14,7 @@
     "seed:admin": "npx ts-node -r tsconfig-paths/register scripts/seedAdmin.ts",
     "seed:memberships": "npx ts-node -r tsconfig-paths/register scripts/seedMembershipPlans.ts",
     "seed:services": "npx ts-node -r tsconfig-paths/register scripts/seedServices.ts",
-    "seed:all": "npm run seed:admin && npm run seed:memberships && npm run seed:services",
-    "postman:setup": "./postman/setup.sh"
+    "seed:all": "npm run seed:admin && npm run seed:memberships && npm run seed:services"
   },
   "keywords": [],
   "author": "",
@@ -62,6 +61,7 @@
     "@types/helmet": "^0.0.48",
     "@types/mongoose": "^5.11.96",
     "@types/morgan": "^1.9.10",
+    "@types/multer": "^2.0.0",
     "@types/node": "^24.3.0",
     "@types/stripe": "^8.0.416",
     "@types/winston": "^2.4.4",

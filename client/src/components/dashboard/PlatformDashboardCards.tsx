@@ -10,6 +10,8 @@ import {
   TrendingUp,
   Calendar,
   Shield,
+  Building2,
+  Eye,
 } from "lucide-react";
 import type { RootState } from "../../store";
 import Loader from "../ui/Loader";
@@ -78,25 +80,36 @@ const selectDashboardData = createSelector(
     (state: RootState) => state.dashboard.platformError,
     (state: RootState) => state.dashboard.platformLastFetched,
     (state: RootState) => state.dashboard.platformLoading,
+    (state: RootState) => state.investmentOpportunity.statistics,
   ],
   (
     data,
     platformData,
     platformError,
     platformLastFetched,
-    platformLoading
+    platformLoading,
+    investmentStatistics
   ) => ({
     data,
     platformData,
     platformError,
     platformLastFetched,
     platformLoading,
+    investmentStatistics,
   })
 );
 
 export const PlatformDashboardCards = React.memo<PlatformDashboardCardsProps>(
   ({ data, onRefresh }) => {
     const dashboardState = useSelector(selectDashboardData);
+
+    // Debug logging
+    React.useEffect(() => {
+      console.log(
+        "Investment Statistics in Component:",
+        dashboardState.investmentStatistics
+      );
+    }, [dashboardState.investmentStatistics]);
 
     const dashboardData =
       data || dashboardState.data || dashboardState.platformData;
@@ -167,9 +180,18 @@ export const PlatformDashboardCards = React.memo<PlatformDashboardCardsProps>(
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
           <div>
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-              Platform Analytics
-            </h2>
+            <div className="flex items-center gap-3 mb-1">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+                Platform Analytics
+              </h2>
+              <div className="flex items-center px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+                <Calendar className="h-3 w-3 mr-1" />
+                {new Date().toLocaleDateString("en-US", {
+                  month: "long",
+                  year: "numeric",
+                })}
+              </div>
+            </div>
             {dashboardState.platformLastFetched && (
               <p className="text-xs sm:text-sm text-gray-500">
                 Last updated:{" "}
@@ -427,34 +449,140 @@ export const PlatformDashboardCards = React.memo<PlatformDashboardCardsProps>(
           </div>
         )}
 
-        {/* Period Information */}
-        {dashboardData?.period && (
+        {/* Investment Opportunities Overview */}
+        {console.log(
+          "Checking investmentStatistics:",
+          dashboardState.investmentStatistics
+        )}
+        {dashboardState.investmentStatistics && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
             <div className="flex items-center mb-4">
-              <div className="p-2 rounded-full bg-gradient-to-r from-orange-500 to-red-600 mr-3">
-                <Calendar className="h-5 w-5 text-white" />
+              <div className="p-2 rounded-full bg-gradient-to-r from-orange-500 to-amber-600 mr-3">
+                <Building2 className="h-5 w-5 text-white" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900">
-                Reporting Period
+                Investment Opportunities
               </h3>
             </div>
-            <div className="bg-gradient-to-br from-orange-50 to-red-100 border border-orange-200 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-orange-600">
-                    Current Period
-                  </p>
-                  <p className="text-lg font-bold text-orange-700">
-                    {dashboardData.period.current.month}/
-                    {dashboardData.period.current.year}
-                  </p>
-                  <p className="text-sm text-orange-600 mt-1">
-                    {dashboardData.period.description}
-                  </p>
+            {console.log("Rendering Investment Opportunities section")}
+
+            {/* Overall Stats */}
+            {dashboardState.investmentStatistics.overallStats &&
+              dashboardState.investmentStatistics.overallStats[0] && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4">
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-100 border border-blue-200 rounded-lg p-3 sm:p-4 text-center">
+                    <div className="text-xl sm:text-2xl font-bold text-blue-700">
+                      {
+                        dashboardState.investmentStatistics.overallStats[0]
+                          .totalOpportunities
+                      }
+                    </div>
+                    <div className="text-xs sm:text-sm font-medium text-blue-600 uppercase tracking-wide">
+                      Total
+                    </div>
+                  </div>
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-100 border border-green-200 rounded-lg p-3 sm:p-4 text-center">
+                    <div className="text-xl sm:text-2xl font-bold text-green-700">
+                      $
+                      {(
+                        dashboardState.investmentStatistics.overallStats[0]
+                          .totalValue / 100
+                      ).toLocaleString()}
+                    </div>
+                    <div className="text-xs sm:text-sm font-medium text-green-600 uppercase tracking-wide">
+                      Value
+                    </div>
+                  </div>
+                  <div className="bg-gradient-to-br from-purple-50 to-pink-100 border border-purple-200 rounded-lg p-3 sm:p-4 text-center">
+                    <div className="text-xl sm:text-2xl font-bold text-purple-700">
+                      {dashboardState.investmentStatistics.overallStats[0].avgROI.toFixed(
+                        1
+                      )}
+                      %
+                    </div>
+                    <div className="text-xs sm:text-sm font-medium text-purple-600 uppercase tracking-wide">
+                      Avg ROI
+                    </div>
+                  </div>
+                  <div className="bg-gradient-to-br from-orange-50 to-amber-100 border border-orange-200 rounded-lg p-3 sm:p-4 text-center">
+                    <div className="text-xl sm:text-2xl font-bold text-orange-700">
+                      {
+                        dashboardState.investmentStatistics.overallStats[0]
+                          .totalInterests
+                      }
+                    </div>
+                    <div className="text-xs sm:text-sm font-medium text-orange-600 uppercase tracking-wide">
+                      Interests
+                    </div>
+                  </div>
                 </div>
-                <Calendar className="h-8 w-8 text-orange-500" />
-              </div>
-            </div>
+              )}
+
+            {/* Status Breakdown */}
+            {dashboardState.investmentStatistics.statusBreakdown &&
+              dashboardState.investmentStatistics.statusBreakdown.length >
+                0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {dashboardState.investmentStatistics.statusBreakdown.map(
+                    (status: any) => {
+                      const statusColors = {
+                        available: {
+                          bg: "from-green-50 to-emerald-100",
+                          border: "border-green-200",
+                          text: "text-green-700",
+                        },
+                        under_offer: {
+                          bg: "from-amber-50 to-yellow-100",
+                          border: "border-amber-200",
+                          text: "text-amber-700",
+                        },
+                        sold: {
+                          bg: "from-gray-50 to-slate-100",
+                          border: "border-gray-200",
+                          text: "text-gray-700",
+                        },
+                      };
+                      const colors =
+                        statusColors[status._id as keyof typeof statusColors] ||
+                        statusColors.available;
+
+                      return (
+                        <div
+                          key={status._id}
+                          className={`bg-gradient-to-br ${colors.bg} border ${colors.border} rounded-lg p-3 sm:p-4`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <h4
+                              className={`text-sm sm:text-base font-medium ${colors.text} capitalize`}
+                            >
+                              {status._id.replace("_", " ")}
+                            </h4>
+                            <span
+                              className={`text-lg sm:text-xl font-bold ${colors.text}`}
+                            >
+                              {status.count}
+                            </span>
+                          </div>
+                          <div className="space-y-1 text-xs sm:text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Value:</span>
+                              <span className="font-medium">
+                                ${(status.totalValue / 100).toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Avg ROI:</span>
+                              <span className="font-medium">
+                                {status.avgROI.toFixed(1)}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                  )}
+                </div>
+              )}
           </div>
         )}
       </div>

@@ -7,6 +7,7 @@ import jobRoutes from "@routes/job";
 import propertyRoutes from "@routes/property";
 import paymentRoutes from "@routes/payment";
 import dashboardRoutes from "@routes/dashboard";
+import investmentRoutes from "@routes/investment";
 import { authenticate } from "@middlewares/auth";
 import serviceRoutes from "@routes/admin/service";
 import favoriteRoutes from "@routes/user/favorites";
@@ -22,6 +23,27 @@ router.use("/payment", paymentRoutes);
 router.use("/auth", authRoutes);
 router.use("/services", serviceRoutes);
 
+// Public endpoint to fetch all user memberships
+router.get("/user-memberships", async (req: Request, res: Response) => {
+  try {
+    const { UserMembership } = await import("@models/user/userMembership");
+
+    const memberships = await UserMembership.find().sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: memberships.length,
+      data: memberships,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch user memberships",
+      error: error.message,
+    });
+  }
+});
+
 router.use(autoRefreshToken);
 router.use(authenticate);
 
@@ -31,6 +53,7 @@ router.use("/admin", adminRoutes);
 router.use("/membership", membershipRoutes);
 router.use("/job", jobRoutes); // All job-related routes under /job
 router.use("/property", propertyRoutes);
+router.use("/investment", investmentRoutes); // Investment opportunities with role-based access
 router.use("/dashboard", dashboardRoutes); // Dashboard and analytics
 
 // Example route

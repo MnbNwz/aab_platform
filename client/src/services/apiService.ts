@@ -208,6 +208,7 @@ const makeRequest = async <T = any>(
         success: true,
         data: data?.data || data,
         message: data?.message || "Success",
+        ...(data?.pagination && { pagination: data.pagination }),
       };
 
       // Cache GET responses with per-endpoint TTL

@@ -77,6 +77,36 @@ const UserMembershipSchema: Schema<IUserMembership> = new Schema(
     // Accumulated values (for display and tracking)
     accumulatedLeads: { type: Number }, // Total leads available (from accumulation)
     bonusLeadsFromUpgrade: { type: Number }, // Extra leads from previous plan
+
+    // ==== EFFECTIVE BENEFIT SNAPSHOTS (Best of previous + new plan) ====
+    // These are the ACTUAL benefits the user gets, accumulated from upgrades
+
+    // Contractor Effective Benefits
+    effectiveLeadsPerMonth: { type: Number, default: null }, // Base leads per month (null = unlimited)
+    effectiveAccessDelayHours: { type: Number, default: null }, // Best access delay (lower is better)
+    effectiveRadiusKm: { type: Number, default: null }, // Best radius (higher is better, null = unlimited)
+    effectiveFeaturedListing: { type: Boolean, default: false },
+    effectiveOffMarketAccess: { type: Boolean, default: false },
+    effectivePublicityReferences: { type: Boolean, default: false },
+    effectiveVerifiedBadge: { type: Boolean, default: false },
+    effectiveFinancingSupport: { type: Boolean, default: false },
+    effectivePrivateNetwork: { type: Boolean, default: false },
+
+    // Customer Effective Benefits
+    effectiveMaxProperties: { type: Number, default: null }, // Max properties (null = unlimited)
+    effectivePropertyType: {
+      type: String,
+      enum: ["domestic", "commercial"],
+      default: "domestic",
+    },
+    effectivePlatformFeePercentage: { type: Number, default: null }, // Platform fee (lower is better)
+    effectiveFreeCalculators: { type: Boolean, default: false },
+    effectiveUnlimitedRequests: { type: Boolean, default: false },
+    effectiveContractorReviewsVisible: { type: Boolean, default: false },
+    effectivePriorityContractorAccess: { type: Boolean, default: false },
+    effectivePropertyValuationSupport: { type: Boolean, default: false },
+    effectiveCertifiedAASWork: { type: Boolean, default: false },
+    effectiveFreeEvaluation: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

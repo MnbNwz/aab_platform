@@ -99,9 +99,7 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
   // Set job type based on user role
   useEffect(() => {
     if (!user) return;
-    if (user.role === "admin") {
-      setJobType("off_market");
-    } else if (user.role === "customer") {
+    if (user.role === "customer" || user.role === "admin") {
       setJobType("regular");
     } else {
       setJobType("");
@@ -364,8 +362,6 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
     switch (type) {
       case "regular":
         return "bg-accent-100 text-accent-800 border-accent-200";
-      case "off_market":
-        return "bg-primary-100 text-primary-800 border-primary-200";
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
     }

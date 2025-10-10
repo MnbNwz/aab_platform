@@ -59,29 +59,70 @@ export interface IUserMembership extends Document {
   userId: Types.ObjectId;
   planId: Types.ObjectId;
   paymentId: Types.ObjectId;
-  status: "active" | "expired" | "cancelled" | "upgraded";
-  billingPeriod: "monthly" | "yearly"; // Which billing option user chose
+  status: "active" | "expired" | "cancelled";
+  billingPeriod: "monthly" | "yearly";
   startDate: Date;
   endDate: Date;
   isAutoRenew: boolean;
-  stripeSubscriptionId?: string; // For recurring subscriptions
+  stripeSubscriptionId?: string;
   cancelAtPeriodEnd: boolean;
   canceledAt?: Date;
 
   // Lead tracking for contractors
-  leadsUsedThisMonth?: number; // for monthly billing - leads used this month
-  leadsUsedThisYear?: number; // for yearly billing - leads used this year
-  lastLeadResetDate?: Date; // when leads were last reset
+  leadsUsedThisMonth?: number;
+  leadsUsedThisYear?: number;
+  lastLeadResetDate?: Date;
 
-  // Upgrade tracking
-  isUpgraded?: boolean; // True if this membership was created via upgrade
-  upgradedFromMembershipId?: Types.ObjectId; // Reference to previous membership
-  upgradedToMembershipId?: Types.ObjectId; // Reference to new membership (if this was upgraded)
-  upgradeHistory?: IUpgradeHistoryEntry[]; // Track all upgrades in this membership
+  // Upgrade tracking (removed extension)
+  isUpgraded?: boolean;
+  upgradedFromMembershipId?: Types.ObjectId;
+  upgradedToMembershipId?: Types.ObjectId;
+  upgradeHistory?: IUpgradeHistoryEntry[];
 
   // Accumulated values (for display and tracking)
   accumulatedLeads?: number; // Total leads available (from accumulation)
   bonusLeadsFromUpgrade?: number; // Extra leads from previous plan
+
+  // ==== Snapshot fields (immutable per membership period) ====
+  leadsPerMonthSnapshot?: number | null;
+  periodMonthsSnapshot?: number; // 1 for monthly, 12 for yearly
+  baseAllowance?: number | null; // leadsPerMonthSnapshot * periodMonthsSnapshot (null for unlimited)
+  carryOverLeads?: number; // remaining leads carried from previous membership period
+  totalLeadsAllowance?: number | null; // baseAllowance + carryOverLeads (null for unlimited)
+  resetAnchorDate?: Date; // anchor for monthly reset calculations
+  computedAt?: Date; // when the snapshot was computed
+
+  // Selected plan benefit snapshots for consistency
+  accessDelayHoursSnapshot?: number | null;
+  radiusKmSnapshot?: number | null;
+  featuredListingSnapshot?: boolean;
+  offMarketAccessSnapshot?: boolean;
+
+  // ==== EFFECTIVE BENEFIT SNAPSHOTS (Best of previous + new plan) ====
+  // These are the ACTUAL benefits the user gets, accumulated from upgrades
+
+  // Contractor Effective Benefits
+  effectiveLeadsPerMonth?: number | null;
+  effectiveAccessDelayHours?: number | null;
+  effectiveRadiusKm?: number | null;
+  effectiveFeaturedListing?: boolean;
+  effectiveOffMarketAccess?: boolean;
+  effectivePublicityReferences?: boolean;
+  effectiveVerifiedBadge?: boolean;
+  effectiveFinancingSupport?: boolean;
+  effectivePrivateNetwork?: boolean;
+
+  // Customer Effective Benefits
+  effectiveMaxProperties?: number | null;
+  effectivePropertyType?: "domestic" | "commercial";
+  effectivePlatformFeePercentage?: number | null;
+  effectiveFreeCalculators?: boolean;
+  effectiveUnlimitedRequests?: boolean;
+  effectiveContractorReviewsVisible?: boolean;
+  effectivePriorityContractorAccess?: boolean;
+  effectivePropertyValuationSupport?: boolean;
+  effectiveCertifiedAASWork?: boolean;
+  effectiveFreeEvaluation?: boolean;
 
   createdAt: Date;
   updatedAt: Date;

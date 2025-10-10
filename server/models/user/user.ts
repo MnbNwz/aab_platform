@@ -113,7 +113,7 @@ const UserSchema = new Schema<IUser>({
 });
 
 // Create indexes for better query performance
-UserSchema.index({ email: 1 }); // Already unique, but explicit index
+// Note: email index is automatically created by unique: true
 UserSchema.index({ geoHome: "2dsphere" }); // Geospatial index for contractor location queries
 UserSchema.index({ favoriteContractors: 1 }); // Index for favorites queries (who favorited whom)
 

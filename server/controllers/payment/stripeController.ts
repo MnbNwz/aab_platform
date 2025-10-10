@@ -6,10 +6,7 @@ import { getPlanById, getCurrentMembership } from "@services/membership/membersh
 import { validateUpgrade, getUpgradePaymentAmount } from "@services/membership/upgrade";
 import { CONTROLLER_ERROR_MESSAGES, HTTP_STATUS } from "@controllers/constants";
 import { ALLOWED_STRIPE_DOMAINS } from "@controllers/constants/validation";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-  apiVersion: "2025-08-27.basil",
-});
+import { stripe } from "@config/stripe";
 
 export const createStripeSession = async (req: Request, res: Response) => {
   try {
@@ -87,7 +84,7 @@ export const createStripeSession = async (req: Request, res: Response) => {
 
 export const createUpgradeStripeSession = async (req: Request, res: Response) => {
   try {
-    const { newPlanId, url } = req.body;
+    const { newPlanId, url, newBillingPeriod } = req.body;
     const authReq = req as AuthenticatedRequest;
     const userId = authReq.user?._id;
 
@@ -102,6 +99,14 @@ export const createUpgradeStripeSession = async (req: Request, res: Response) =>
     }
     if (!url || typeof url !== "string") {
       return res.status(400).json({ success: false, message: "Missing or invalid url" });
+    }
+
+    // Validate new billing period (optional - defaults to current if not provided)
+    if (newBillingPeriod && newBillingPeriod !== "monthly" && newBillingPeriod !== "yearly") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid newBillingPeriod (must be 'monthly' or 'yearly')",
+      });
     }
 
     // Validate url
@@ -126,14 +131,17 @@ export const createUpgradeStripeSession = async (req: Request, res: Response) =>
       newPlanId,
     );
 
-    // Calculate upgrade payment amount (full price of new plan)
-    const paymentAmount = getUpgradePaymentAmount(newPlan, currentMembership.billingPeriod);
+    // Determine the billing period to use (allow changing billing period during upgrade)
+    const targetBillingPeriod =
+      (newBillingPeriod as "monthly" | "yearly") || currentMembership.billingPeriod;
 
-    // Determine Stripe price ID
+    // Calculate upgrade payment amount (full price of new plan with new billing period)
+    const paymentAmount = getUpgradePaymentAmount(newPlan, targetBillingPeriod);
+
+    // Determine Stripe price ID based on target billing period
     let stripePriceId: string | undefined;
-    if (currentMembership.billingPeriod === "monthly") stripePriceId = newPlan.stripePriceIdMonthly;
-    else if (currentMembership.billingPeriod === "yearly")
-      stripePriceId = newPlan.stripePriceIdYearly;
+    if (targetBillingPeriod === "monthly") stripePriceId = newPlan.stripePriceIdMonthly;
+    else if (targetBillingPeriod === "yearly") stripePriceId = newPlan.stripePriceIdYearly;
 
     if (!stripePriceId)
       return res
@@ -151,7 +159,7 @@ export const createUpgradeStripeSession = async (req: Request, res: Response) =>
       metadata: {
         userId: userId.toString(),
         planId: newPlanId.toString(),
-        billingPeriod: currentMembership.billingPeriod,
+        billingPeriod: targetBillingPeriod, // Use new billing period
         isUpgrade: "true", // Flag to identify this as an upgrade
         currentMembershipId: currentMembership._id.toString(),
         fromPlanId: currentPlan._id.toString(),

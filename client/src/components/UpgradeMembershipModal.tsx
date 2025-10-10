@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, CreditCard, Crown } from "lucide-react";
+import { X, CreditCard } from "lucide-react";
 import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
 import { RootState } from "../store";
@@ -60,15 +60,28 @@ const UpgradeMembershipModal: React.FC<UpgradeMembershipModalProps> = ({
     plans.length > 0 &&
     currentMembership.planId?.tier === "premium";
 
+  // Check if user has a pending upgrade
+  // A pending upgrade is indicated by:
+  // 1. isUpgraded flag is true
+  // 2. upgradedToMembershipId exists (means there's a future membership scheduled)
+  const hasPendingUpgrade =
+    currentMembership?.isUpgraded === true ||
+    !!currentMembership?.upgradedToMembershipId;
+
   // Show toast when user is on premium tier
   useEffect(() => {
-    if (isOpen && isPremiumUser && !hasShownPremiumToast) {
+    if (
+      isOpen &&
+      isPremiumUser &&
+      !hasShownPremiumToast &&
+      !hasPendingUpgrade
+    ) {
       toast(
         "You already have the highest membership tier. Please wait for your current plan to expire before upgrading.",
         {
-          duration: 5000,
+          duration: 8000,
           icon: "👑",
-          position: "top-center",
+          position: "top-right",
           style: {
             background: "#fef3c7",
             color: "#78350f",
@@ -82,7 +95,31 @@ const UpgradeMembershipModal: React.FC<UpgradeMembershipModalProps> = ({
       );
       setHasShownPremiumToast(true);
     }
-  }, [isOpen, isPremiumUser, hasShownPremiumToast]);
+  }, [isOpen, isPremiumUser, hasShownPremiumToast, hasPendingUpgrade]);
+
+  // Show toast when user has a pending upgrade
+  useEffect(() => {
+    if (isOpen && hasPendingUpgrade && !hasShownPremiumToast) {
+      toast(
+        "You have already upgraded your membership. Can't upgrade more until the current membership gets expired.",
+        {
+          duration: 8000,
+          icon: "⏳",
+          position: "top-right",
+          style: {
+            background: "#dbeafe",
+            color: "#1e3a8a",
+            borderRadius: "8px",
+            fontSize: "14px",
+            fontWeight: "500",
+            padding: "12px 16px",
+            border: "2px solid #3b82f6",
+          },
+        }
+      );
+      setHasShownPremiumToast(true);
+    }
+  }, [isOpen, hasPendingUpgrade, hasShownPremiumToast]);
 
   // Reset toast flag when modal closes
   useEffect(() => {
@@ -97,6 +134,11 @@ const UpgradeMembershipModal: React.FC<UpgradeMembershipModalProps> = ({
     billingPeriod: "monthly" | "yearly"
   ) => {
     if (!currentMembership) return false;
+
+    // 0. If user has a pending upgrade, disable ALL buttons
+    if (hasPendingUpgrade) {
+      return true;
+    }
 
     const currentTier = currentMembership.planId?.tier;
     const currentBillingPeriod = currentMembership.billingPeriod;
@@ -205,27 +247,6 @@ const UpgradeMembershipModal: React.FC<UpgradeMembershipModalProps> = ({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-          {/* Premium User Notice */}
-          {isPremiumUser && (
-            <div className="mb-6 bg-gradient-to-r from-amber-50 to-yellow-50 border-2 border-amber-300 rounded-lg p-4 sm:p-5 shadow-sm">
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0">
-                  <Crown className="h-6 w-6 sm:h-7 sm:w-7 text-amber-500" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="text-base sm:text-lg font-bold text-amber-900 mb-1">
-                    You're on the Premium Plan! 👑
-                  </h4>
-                  <p className="text-sm sm:text-base text-amber-800 leading-relaxed">
-                    You already have the highest membership tier. All buttons
-                    are disabled. Please wait for your current plan to expire
-                    before making changes to your membership.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
           <div
             className={`grid gap-3 xs:gap-4 sm:gap-6 lg:gap-8 ${
               plans.length === 3

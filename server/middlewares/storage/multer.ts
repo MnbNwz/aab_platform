@@ -3,12 +3,14 @@ import { FILE_UPLOAD_LIMITS } from "@middlewares/constants";
 
 // File upload middleware with configurable limits
 const upload = multer({
-  limits: { fileSize: FILE_UPLOAD_LIMITS.MAX_FILE_SIZE },
+  storage: multer.memoryStorage(),
+  limits: { fileSize: FILE_UPLOAD_LIMITS.MAX_DOCUMENT_SIZE }, // 10MB for documents
   fileFilter: (req, file, cb) => {
-    if (FILE_UPLOAD_LIMITS.ALLOWED_FILE_TYPES.includes(file.mimetype)) {
+    const allowedTypes = FILE_UPLOAD_LIMITS.ALLOWED_FILE_TYPES as readonly string[];
+    if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error("Only JPEG, PNG, WebP images and PDF files are allowed"));
+      cb(new Error("File type not allowed. Allowed: images, PDFs, Word, Excel documents"));
     }
   },
 });

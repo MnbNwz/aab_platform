@@ -185,7 +185,7 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
                   {job.service}
                 </span>
                 <span className="bg-white bg-opacity-20 px-3 py-1 rounded-full">
-                  {job.type === "off_market" ? "Off-Market" : "Regular"}
+                  Regular
                 </span>
                 <span
                   className={`px-3 py-1 rounded-full ${

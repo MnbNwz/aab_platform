@@ -4,10 +4,7 @@ import { getOrCreateCustomer, createJobPaymentIntent } from "./stripe";
 import { roundToCents } from "@utils/financial";
 import { Types } from "@models/types";
 import Stripe from "stripe";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-08-27.basil",
-});
+import { stripe } from "@config/stripe";
 
 // Create off-market payment
 export async function createOffMarketPayment(

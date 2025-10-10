@@ -84,9 +84,12 @@ const ForgotPassword: React.FC = () => {
             </p>
 
             <div className="bg-blue-50/10 border border-blue-200/20 rounded-lg p-4 mb-6">
-              <p className="text-sm text-white/70">
+              <p className="text-sm text-white/70 mb-2">
                 📧 <strong>Check your email</strong> and click the reset link to
                 create a new password.
+              </p>
+              <p className="text-xs text-yellow-300">
+                <em>Don't see it? Check your spam folder.</em>
               </p>
             </div>
 

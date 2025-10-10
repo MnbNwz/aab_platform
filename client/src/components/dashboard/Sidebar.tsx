@@ -13,8 +13,8 @@ import {
   ChartBar,
   ShieldCheck,
 } from "lucide-react";
-import { useDispatch } from "react-redux";
-import type { AppDispatch } from "../../store";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "../../store";
 import { logoutThunk } from "../../store/thunks/authThunks";
 
 interface SidebarProps {
@@ -33,6 +33,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
   userRole,
 }) => {
   const dispatch = useDispatch<AppDispatch>();
+  const currentMembership = useSelector(
+    (state: RootState) => state.membership.current
+  );
+
+  // Check if user has premium access (for contractors)
+  const hasPremiumAccess =
+    userRole === "contractor" &&
+    currentMembership &&
+    currentMembership.status === "active" &&
+    currentMembership.planId.tier === "premium";
 
   const handleLogout = () => {
     dispatch(logoutThunk());
@@ -142,16 +152,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
         description: "View job requests",
       },
       {
-        id: "leads",
-        label: "Active Leads",
-        icon: FileText,
-        description: "View available leads",
-      },
-      {
         id: "bids",
         label: "My Bids",
         icon: ClipboardList,
         description: "Manage your bids",
+      },
+      {
+        id: "offMarket",
+        label: "Off Market Properties",
+        icon: Building,
+        description: "Investment opportunities",
+      },
+      {
+        id: "interestedProperties",
+        label: "Interested Properties",
+        icon: Heart,
+        description: "Your expressed interests",
       },
       {
         id: "reviews",
@@ -168,7 +184,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
     ],
   };
 
-  const menuItems = menuItemsByRole[userRole] || [];
+  let menuItems = menuItemsByRole[userRole] || [];
+
+  // Filter premium-only items for contractors
+  if (userRole === "contractor" && !hasPremiumAccess) {
+    menuItems = menuItems.filter((item: any) => {
+      // Hide premium-only tabs if not premium
+      return item.id !== "interestedProperties" && item.id !== "offMarket";
+    });
+  }
 
   return (
     <>
@@ -182,22 +206,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sidebar */}
       <div
-        className={`sidebar-container bg-primary-900 shadow-lg flex flex-col fixed md:sticky top-0 z-40 w-[240px] sm:w-[260px] md:w-[280px] transition-transform duration-300 transform ${
+        className={`sidebar-container bg-primary-900 shadow-lg flex flex-col fixed md:sticky top-0 z-40 w-[220px] sm:w-[260px] md:w-[280px] transition-transform duration-300 transform ${
           isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
         {/* Site Icon at Top */}
-        <div className="flex items-center justify-center py-4 sm:py-6 flex-shrink-0">
+        <div className="flex items-center justify-center py-3 sm:py-4 md:py-6 flex-shrink-0">
           <img
             src="https://aasquebec.com/wp-content/uploads/2025/07/aasquebec-logo.svg"
             alt="Site Icon"
-            className="w-20 h-20 bg-primary-700 rounded-full"
+            className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-primary-700 rounded-full"
           />
         </div>
 
         {/* Navigation - Scrollable */}
         <nav className="flex-1 p-3 sm:p-4 space-y-2 overflow-y-auto">
-          {menuItems.map((item) => {
+          {menuItems.map((item: any) => {
             const IconComponent = item.icon;
             const isActive = activeTab === item.id;
 
@@ -205,17 +229,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
-                className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors duration-200 ${
+                className={`w-full flex items-center justify-between p-2.5 sm:p-3 rounded-lg transition-colors duration-200 ${
                   isActive
                     ? "bg-primary-700 text-accent-500 border border-primary-400"
                     : "text-primary-100 hover:bg-primary-800"
                 }`}
               >
-                <div className="flex items-center space-x-3">
-                  <IconComponent className="h-5 w-5" />
+                <div className="flex items-center space-x-2 sm:space-x-3">
+                  <IconComponent className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                   <div className="text-left">
-                    <p className="text-sm font-medium">{item.label}</p>
-                    <p className="text-xs opacity-75">{item.description}</p>
+                    <p className="text-xs sm:text-sm font-medium">
+                      {item.label}
+                    </p>
+                    <p className="text-[10px] sm:text-xs opacity-75 hidden sm:block">
+                      {item.description}
+                    </p>
                   </div>
                 </div>
               </button>
@@ -227,10 +255,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="p-3 sm:p-4 border-t border-primary-700 flex-shrink-0">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center space-x-3 p-3 rounded-lg text-accent-500 hover:bg-accent-100 transition-colors duration-200"
+            className="w-full flex items-center space-x-2 sm:space-x-3 p-2.5 sm:p-3 rounded-lg text-accent-500 hover:bg-accent-100 transition-colors duration-200"
           >
-            <LogOut className="h-5 w-5" />
-            <span className="text-sm font-medium">Sign Out</span>
+            <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
+            <span className="text-xs sm:text-sm font-medium">Sign Out</span>
           </button>
         </div>
       </div>

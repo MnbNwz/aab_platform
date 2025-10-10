@@ -69,9 +69,7 @@ const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
 
   useEffect(() => {
     if (!user) return;
-    if (user.role === "admin") {
-      setJobType("off_market");
-    } else if (user.role === "customer") {
+    if (user.role === "customer" || user.role === "admin") {
       setJobType("regular");
     } else if (user.role === "contractor") {
       // Contractors cannot create jobs

@@ -1,0 +1,1 @@
+export { InvestmentOpportunity } from "./investmentOpportunity";

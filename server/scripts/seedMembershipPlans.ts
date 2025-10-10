@@ -26,6 +26,7 @@ const membershipPlans = [
     yearlyPrice: 120000, // $1,020.00 after 15% (full $1,200.00)
     annualDiscountRate: ANNUAL_DISCOUNT_RATE,
     duration: 30,
+    accessDelayHours: 0,
     // Customer-specific features
     maxProperties: 1,
     propertyType: "domestic",
@@ -56,6 +57,8 @@ const membershipPlans = [
     yearlyPrice: 240000, // $2,040.00 after 15% (full $2,400.00)
     annualDiscountRate: ANNUAL_DISCOUNT_RATE,
     duration: 30,
+    accessDelayHours: 0,
+
     // Customer-specific features
     maxProperties: null, // unlimited
     propertyType: "commercial", // Commercial includes all domestic benefits
@@ -88,6 +91,7 @@ const membershipPlans = [
     yearlyPrice: 360000, // $3,060.00 after 15% (full $3,600.00)
     annualDiscountRate: ANNUAL_DISCOUNT_RATE,
     duration: 30,
+    accessDelayHours: 0,
     // Customer-specific features
     maxProperties: null, // unlimited
     propertyType: "commercial",

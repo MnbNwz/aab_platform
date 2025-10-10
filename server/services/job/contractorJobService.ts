@@ -57,6 +57,7 @@ export async function getContractorMembership(userId: string): Promise<{
       };
     }
 
+    // Use effective benefits from membership (best of all upgrades)
     return {
       membership: membership as IUserMembership,
       plan,
@@ -67,6 +68,21 @@ export async function getContractorMembership(userId: string): Promise<{
         leadsUsedThisMonth: membership.leadsUsedThisMonth || 0,
         leadsUsedThisYear: membership.leadsUsedThisYear || 0,
         lastLeadResetDate: membership.lastLeadResetDate || membership.startDate,
+
+        // CRITICAL: Include accumulated leads from upgrades
+        accumulatedLeads: membership.accumulatedLeads || null,
+        bonusLeadsFromUpgrade: membership.bonusLeadsFromUpgrade || 0,
+
+        // Override with effective benefits (best of previous + current plan)
+        leadsPerMonth: membership.effectiveLeadsPerMonth ?? plan.leadsPerMonth,
+        accessDelayHours: membership.effectiveAccessDelayHours ?? plan.accessDelayHours,
+        radiusKm: membership.effectiveRadiusKm ?? plan.radiusKm,
+        featuredListing: membership.effectiveFeaturedListing ?? plan.featuredListing,
+        offMarketAccess: membership.effectiveOffMarketAccess ?? plan.offMarketAccess,
+        publicityReferences: membership.effectivePublicityReferences ?? plan.publicityReferences,
+        verifiedBadge: membership.effectiveVerifiedBadge ?? plan.verifiedBadge,
+        financingSupport: membership.effectiveFinancingSupport ?? plan.financingSupport,
+        privateNetwork: membership.effectivePrivateNetwork ?? plan.privateNetwork,
       },
     };
   } catch (error) {
@@ -136,9 +152,14 @@ export async function checkLeadLimit(userId: string): Promise<{
   // YEARLY BILLING: ANNUAL CREDIT POOL
   // ===========================
   if (billingPeriod === "yearly") {
-    // Calculate total leads for the year
+    // PRIORITY 1: Use accumulated leads if available (from upgrades)
+    // PRIORITY 2: Calculate from monthly leads * 12
     const yearlyLeadLimit =
-      effectivePlan.leadsPerMonth === null ? null : effectivePlan.leadsPerMonth * 12;
+      effectivePlan.accumulatedLeads !== null && effectivePlan.accumulatedLeads !== undefined
+        ? effectivePlan.accumulatedLeads // Use accumulated leads from upgrades
+        : effectivePlan.leadsPerMonth === null
+          ? null
+          : effectivePlan.leadsPerMonth * 12; // Fallback to calculated
 
     // Calculate which year period we're currently in
     const millisecondsPerYear = 365 * 24 * 60 * 60 * 1000;
@@ -252,8 +273,15 @@ export async function checkLeadLimit(userId: string): Promise<{
   // Calculate next monthly reset date
   const resetDate = getNextBillingResetDate(now, membershipStartDate, billingPeriod);
 
+  // PRIORITY 1: Use accumulated leads if available (from upgrades)
+  // PRIORITY 2: Use monthly leads from plan
+  const monthlyLeadLimit =
+    effectivePlan.accumulatedLeads !== null && effectivePlan.accumulatedLeads !== undefined
+      ? effectivePlan.accumulatedLeads // Use accumulated leads from upgrades
+      : effectivePlan.leadsPerMonth; // Fallback to monthly plan
+
   // If unlimited, always allow
-  if (effectivePlan.leadsPerMonth === null) {
+  if (monthlyLeadLimit === null) {
     return {
       canAccess: true,
       leadsUsed,
@@ -264,12 +292,12 @@ export async function checkLeadLimit(userId: string): Promise<{
   }
 
   // Check if monthly limit reached
-  if (leadsUsed >= effectivePlan.leadsPerMonth) {
+  if (leadsUsed >= monthlyLeadLimit) {
     return {
       canAccess: false,
-      reason: `Monthly lead limit reached (${leadsUsed}/${effectivePlan.leadsPerMonth}). Resets on ${resetDate.toLocaleDateString()}.`,
+      reason: `Monthly lead limit reached (${leadsUsed}/${monthlyLeadLimit}). Resets on ${resetDate.toLocaleDateString()}.`,
       leadsUsed,
-      leadsLimit: effectivePlan.leadsPerMonth,
+      leadsLimit: monthlyLeadLimit,
       remaining: 0,
       resetDate,
     };
@@ -278,8 +306,8 @@ export async function checkLeadLimit(userId: string): Promise<{
   return {
     canAccess: true,
     leadsUsed,
-    leadsLimit: effectivePlan.leadsPerMonth,
-    remaining: Math.max(0, effectivePlan.leadsPerMonth - leadsUsed),
+    leadsLimit: monthlyLeadLimit,
+    remaining: Math.max(0, monthlyLeadLimit - leadsUsed),
     resetDate,
   };
 }

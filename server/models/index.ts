@@ -4,6 +4,7 @@ export * from "./payment";
 export * from "./job";
 export * from "./property";
 export * from "./system";
+export * from "./investment";
 export * from "./utils";
 export * from "./types";
 export * from "./constants";

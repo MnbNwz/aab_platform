@@ -49,6 +49,19 @@ export const PROPERTY_TYPE_OPTIONS = ["apartment", "house", "villa"] as const;
 export const LOCATION_TYPES = ["Point"] as const;
 export const AREA_UNITS = ["sqft", "sqm", "marla", "kanal"] as const;
 
+// Investment Opportunity enums
+export const INVESTMENT_PROPERTY_TYPES = [
+  "house",
+  "duplex",
+  "triplex",
+  "sixplex",
+  "land",
+  "commercial",
+] as const;
+export const INVESTMENT_STATUSES = ["available", "under_offer", "sold"] as const;
+export const INTEREST_STATUSES = ["pending", "accepted", "rejected"] as const;
+export const INTEREST_CONTACT_STATUSES = ["pending", "accepted", "rejected"] as const;
+
 // Payment and currency constants
 export const CURRENCIES = ["usd"] as const;
 export const PAYMENT_TYPES = ["deposit", "prestart", "completion"] as const;

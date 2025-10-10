@@ -25,11 +25,7 @@ import {
 import { getMembershipEndDate, getDaysRemaining } from "@utils/core";
 import { Types } from "@models/types";
 import mongoose from "mongoose";
-
-// Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-08-27.basil",
-});
+import { stripe } from "@config/stripe";
 
 // MEMBERSHIP PAYMENTS
 export const createMembershipCheckout = async (
@@ -212,15 +208,6 @@ export const confirmMembershipPayment = async (paymentIntentId: string) => {
       { upsert: true },
     );
 
-    // Send payment receipt notification
-    const user = await User.findById(payment.userId);
-    if (user) {
-      await sendPaymentReceipt(user.email, "membership", payment.amount, payment._id.toString(), {
-        firstName: user.firstName,
-        planName: membershipPlan.name,
-      });
-    }
-
     return payment;
   } catch (error) {
     console.error("Error confirming membership payment:", error);
@@ -276,15 +263,6 @@ export const confirmOneTimeMembershipPayment = async (sessionId: string) => {
       },
       { upsert: true },
     );
-
-    // Send payment receipt notification
-    const user = await User.findById(payment.userId);
-    if (user) {
-      await sendPaymentReceipt(user.email, "membership", payment.amount, payment._id.toString(), {
-        firstName: user.firstName,
-        planName: membershipPlan.name,
-      });
-    }
 
     return payment;
   } catch (error) {

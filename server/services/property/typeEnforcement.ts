@@ -1,7 +1,8 @@
 import { JobRequest } from "@models/job";
 import { Property } from "@models/property";
-import { User } from "@models/user";
+import { User, UserMembership } from "@models/user";
 import { logErrorWithContext } from "@utils/core";
+import { getCurrentMembership } from "@services/membership/membership";
 
 // Check if customer can use a specific property for job request
 export const canUsePropertyForJobRequest = async (
@@ -15,8 +16,10 @@ export const canUsePropertyForJobRequest = async (
       return { canUse: false, reason: "Customer not found or invalid role" };
     }
 
-    // Get customer's default property type
-    const defaultPropertyType = customer.customer?.defaultPropertyType || "domestic";
+    // Get customer's property type from membership (use effective benefit from upgrades)
+    const membership = await getCurrentMembership(customerId);
+    const defaultPropertyType =
+      membership?.effectivePropertyType || customer.customer?.defaultPropertyType || "domestic";
 
     // Get the property they want to use
     const property = await Property.findById(propertyId);
@@ -86,8 +89,10 @@ export const getAllowedPropertiesForJobRequest = async (
       return { properties: [], message: "Customer not found or invalid role" };
     }
 
-    // Get customer's default property type
-    const defaultPropertyType = customer.customer?.defaultPropertyType || "domestic";
+    // Get customer's property type from membership (use effective benefit from upgrades)
+    const membership = await getCurrentMembership(customerId);
+    const defaultPropertyType =
+      membership?.effectivePropertyType || customer.customer?.defaultPropertyType || "domestic";
 
     // Get all customer's properties
     const allProperties = await Property.find({ userId: customerId, isActive: true });

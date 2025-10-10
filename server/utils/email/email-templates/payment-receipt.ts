@@ -8,10 +8,26 @@ interface PaymentReceiptData {
   planName?: string;
   jobTitle?: string;
   date: string;
+  // Membership-specific fields
+  isUpgrade?: boolean;
+  isNew?: boolean;
+  fromPlan?: string;
+  billingPeriod?: string;
+  // Upgrade benefit details
+  accumulatedDays?: number;
+  accumulatedLeads?: number;
+  effectivePlatformFee?: number;
+  effectivePropertyType?: string;
+  effectiveAccessDelayHours?: number;
+  effectiveRadiusKm?: number | null;
 }
 
 export const paymentReceiptTemplate = (data: PaymentReceiptData) => ({
-  subject: `💳 Payment Receipt - $${(data.amount / 100).toFixed(2)} - AAS Platform`,
+  subject: data.isUpgrade
+    ? `🎉 Membership Upgraded - ${data.planName} - $${(data.amount / 100).toFixed(2)}`
+    : data.isNew
+      ? `🎊 Welcome to AAS Platform - ${data.planName} - $${(data.amount / 100).toFixed(2)}`
+      : `💳 Payment Receipt - $${(data.amount / 100).toFixed(2)} - AAS Platform`,
   html: `
     <!DOCTYPE html>
     <html>
@@ -132,7 +148,26 @@ export const paymentReceiptTemplate = (data: PaymentReceiptData) => ({
         </div>
         <div class="content">
           <h2>Hello ${data.firstName}!</h2>
+          ${
+            data.isUpgrade
+              ? `
+          <p style="font-size: 18px; color: ${emailColors.successColor}; font-weight: 600;">
+            🎉 Congratulations! Your membership has been upgraded!
+          </p>
+          <p>You've upgraded from <strong>${data.fromPlan || "your previous plan"}</strong> to <strong>${data.planName}</strong>. 
+          Your existing benefits have been preserved and enhanced with the new plan benefits.</p>
+          `
+              : data.isNew
+                ? `
+          <p style="font-size: 18px; color: ${emailColors.successColor}; font-weight: 600;">
+            🎊 Welcome to AAS Platform Membership!
+          </p>
+          <p>Thank you for subscribing to <strong>${data.planName}</strong>. Your membership is now active.</p>
+          `
+                : `
           <p>Thank you for your payment. Here are the details of your successful transaction:</p>
+          `
+          }
           
           <div class="amount-highlight">$${(data.amount / 100).toFixed(2)}</div>
           
@@ -178,6 +213,70 @@ export const paymentReceiptTemplate = (data: PaymentReceiptData) => ({
               <span class="detail-value">$${(data.amount / 100).toFixed(2)}</span>
             </div>
           </div>
+          
+          ${
+            data.isUpgrade
+              ? `
+          <div style="background: linear-gradient(135deg, ${emailColors.primary[50]}, ${emailColors.successColor}20); 
+                      border-left: 4px solid ${emailColors.successColor}; 
+                      border-radius: 8px; 
+                      padding: 20px; 
+                      margin: 30px 0;">
+            <h3 style="margin-top: 0; color: ${emailColors.successColor};">✨ Your Upgraded Benefits</h3>
+            <p style="margin: 10px 0; font-size: 14px; color: ${emailColors.textSecondary};">
+              You're getting the <strong>best of both plans</strong>! Here's what you now have:
+            </p>
+            <ul style="list-style: none; padding: 0; margin: 15px 0;">
+              ${
+                data.accumulatedDays
+                  ? `<li style="padding: 8px 0; color: ${emailColors.textPrimary};">
+                    ⏰ <strong>Extended Duration:</strong> ${data.accumulatedDays} days total
+                  </li>`
+                  : ""
+              }
+              ${
+                data.accumulatedLeads
+                  ? `<li style="padding: 8px 0; color: ${emailColors.textPrimary};">
+                    🎯 <strong>Accumulated Leads:</strong> ${data.accumulatedLeads} leads available
+                  </li>`
+                  : ""
+              }
+              ${
+                data.effectivePlatformFee !== undefined
+                  ? `<li style="padding: 8px 0; color: ${emailColors.textPrimary};">
+                    💰 <strong>Platform Fee:</strong> ${data.effectivePlatformFee}% (best rate)
+                  </li>`
+                  : ""
+              }
+              ${
+                data.effectivePropertyType
+                  ? `<li style="padding: 8px 0; color: ${emailColors.textPrimary};">
+                    🏠 <strong>Property Access:</strong> ${data.effectivePropertyType === "commercial" ? "Commercial + Domestic" : "Domestic only"}
+                  </li>`
+                  : ""
+              }
+              ${
+                data.effectiveAccessDelayHours !== undefined
+                  ? `<li style="padding: 8px 0; color: ${emailColors.textPrimary};">
+                    ⚡ <strong>Job Access:</strong> ${data.effectiveAccessDelayHours}h delay (faster access)
+                  </li>`
+                  : ""
+              }
+              ${
+                data.effectiveRadiusKm !== undefined
+                  ? `<li style="padding: 8px 0; color: ${emailColors.textPrimary};">
+                    📍 <strong>Service Radius:</strong> ${data.effectiveRadiusKm === null ? "Unlimited" : data.effectiveRadiusKm + " km"}
+                  </li>`
+                  : ""
+              }
+            </ul>
+            <p style="font-size: 13px; color: ${emailColors.textLight}; margin-top: 15px;">
+              💡 Your benefits are cumulative - you keep the best features from both your previous and new plan!
+            </p>
+          </div>
+          `
+              : ""
+          }
           
           <p>This receipt serves as confirmation of your payment. Please keep this email for your records.</p>
           <p>If you have any questions about this payment, please contact our support team with your payment ID.</p>

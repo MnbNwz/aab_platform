@@ -1,11 +1,14 @@
 import { Bid } from "@models/job";
 import { Types } from "@models/types";
 import { logErrorWithContext } from "@utils/core";
-import { checkLeadLimit } from "@services/job/contractorJobService";
+import { checkLeadLimit, getContractorMembership } from "@services/job/contractorJobService";
 
 // Get comprehensive contractor dashboard analytics - OPTIMIZED
 export const getContractorAnalytics = async (contractorId: string) => {
   try {
+    // Get contractor membership with effective benefits
+    const { membership, plan, effectivePlan } = await getContractorMembership(contractorId);
+
     // Get lead info using the actual service
     const leadInfo = await checkLeadLimit(contractorId);
 
@@ -125,8 +128,40 @@ export const getContractorAnalytics = async (contractorId: string) => {
     const winRate =
       stats.totalBids > 0 ? Math.round((stats.acceptedBids / stats.totalBids) * 1000) / 10 : 0;
 
+    // Build effective membership benefits object
+    const membershipBenefits =
+      membership && plan
+        ? {
+            tier: plan.tier,
+            planName: plan.name,
+            billingPeriod: membership.billingPeriod,
+            startDate: membership.startDate,
+            endDate: membership.endDate,
+            isUpgraded: membership.isUpgraded || false,
+
+            // Contractor Effective Benefits (from effectivePlan which already has effective values)
+            leadsPerMonth: effectivePlan.leadsPerMonth,
+            accessDelayHours: effectivePlan.accessDelayHours,
+            radiusKm: effectivePlan.radiusKm,
+            featuredListing: effectivePlan.featuredListing,
+            offMarketAccess: effectivePlan.offMarketAccess,
+            publicityReferences: effectivePlan.publicityReferences,
+            verifiedBadge: effectivePlan.verifiedBadge,
+            financingSupport: effectivePlan.financingSupport,
+            privateNetwork: effectivePlan.privateNetwork,
+
+            // CRITICAL: Show accumulated leads from upgrades
+            accumulatedLeads: effectivePlan.accumulatedLeads,
+            bonusLeadsFromUpgrade: effectivePlan.bonusLeadsFromUpgrade,
+
+            // Upgrade tracking
+            upgradeHistory: membership.upgradeHistory || [],
+          }
+        : null;
+
     // Build final response
     return {
+      membership: membershipBenefits,
       biddingStats: {
         totalBids: stats.totalBids,
         totalBidsThisMonth: bidsThisMonth,
