@@ -263,6 +263,16 @@ const put = <T = any>(endpoint: string, data?: any): Promise<ApiResponse<T>> =>
       data instanceof FormData ? data : data ? JSON.stringify(data) : undefined,
   });
 
+const patch = <T = any>(
+  endpoint: string,
+  data?: any
+): Promise<ApiResponse<T>> =>
+  makeRequest<T>(endpoint, {
+    method: "PATCH",
+    body:
+      data instanceof FormData ? data : data ? JSON.stringify(data) : undefined,
+  });
+
 const del = <T = any>(endpoint: string): Promise<ApiResponse<T>> =>
   makeRequest<T>(endpoint, { method: "DELETE" });
 
@@ -489,6 +499,7 @@ export const api = {
   get,
   post,
   put,
+  patch,
   delete: del,
   // Cache management utilities
   invalidateCaches,

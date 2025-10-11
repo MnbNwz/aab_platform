@@ -1,18 +1,13 @@
 import express from "express";
 import { authenticate } from "@middlewares/auth";
 import { requireRole } from "@middlewares/authorization";
-import { validateJobPayment, validateOffMarketPayment } from "@middlewares/validation";
+import { validateJobPayment } from "@middlewares/validation";
 import {
   createJobPayment,
   processJobDeposit,
   processJobPreStart,
   processJobCompletion,
   processJobRefund,
-  createOffMarketPayment,
-  processOffMarketDeposit,
-  requestFinancing,
-  processFinancingPayment,
-  processOffMarketRefund,
   setupContractorConnect,
   getContractorDashboard,
   getConnectStatus,
@@ -37,40 +32,6 @@ router.post("/job/deposit", authenticate, requireRole(["customer"]), processJobD
 router.post("/job/prestart", authenticate, requireRole(["customer"]), processJobPreStart);
 router.post("/job/completion", authenticate, requireRole(["customer"]), processJobCompletion);
 router.post("/job/refund", authenticate, requireRole(["customer", "admin"]), processJobRefund);
-
-// ==================== OFF-MARKET PAYMENTS ====================
-router.post(
-  "/offmarket/create",
-  authenticate,
-  requireRole(["contractor"]),
-  validateOffMarketPayment,
-  createOffMarketPayment,
-);
-
-router.post(
-  "/offmarket/deposit",
-  authenticate,
-  requireRole(["contractor"]),
-  processOffMarketDeposit,
-);
-router.post(
-  "/offmarket/financing/request",
-  authenticate,
-  requireRole(["contractor"]),
-  requestFinancing,
-);
-router.post(
-  "/offmarket/financing/pay",
-  authenticate,
-  requireRole(["contractor"]),
-  processFinancingPayment,
-);
-router.post(
-  "/offmarket/refund",
-  authenticate,
-  requireRole(["contractor", "admin"]),
-  processOffMarketRefund,
-);
 
 // ==================== STRIPE CONNECT ====================
 router.post("/connect/setup", authenticate, requireRole(["contractor"]), setupContractorConnect);

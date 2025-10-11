@@ -153,6 +153,7 @@ const membershipPlans = [
       "Domestic properties only",
       "Publicity & references shown",
       "Eligible for featured listing",
+      "Off-Market Opportunities access",
     ],
     monthlyPrice: 20000, // $200.00
     yearlyPrice: 240000, // $2,040.00 after 15% (full $2,400.00)
@@ -163,7 +164,7 @@ const membershipPlans = [
     accessDelayHours: 12,
     radiusKm: 30,
     featuredListing: true,
-    offMarketAccess: false,
+    offMarketAccess: true,
     publicityReferences: true,
     verifiedBadge: false,
     financingSupport: false,
@@ -186,7 +187,8 @@ const membershipPlans = [
       "Domestic + Commercial properties",
       "Publicity, references + verified badge",
       "Featured listing top priority",
-      "Exclusive: Off-Market Opportunities + Financing support",
+      "Off-Market Opportunities access",
+      "Exclusive: Financing support",
     ],
     monthlyPrice: 30000, // $300.00
     yearlyPrice: 360000, // $3,060.00 after 15% (full $3,600.00)

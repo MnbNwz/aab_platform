@@ -29,15 +29,6 @@ export const MILESTONE_STATUSES = ["pending", "completed"] as const;
 export const PAYMENT_STATUSES = ["pending", "succeeded", "failed"] as const;
 export const PAYMENT_STAGE_STATUSES = ["pending", "paid", "failed", "refunded"] as const;
 export const BILLING_PERIODS = ["monthly", "yearly"] as const;
-export const OFF_MARKET_PAYMENT_STATUSES = [
-  "pending",
-  "deposit_paid",
-  "financing_approved",
-  "completed",
-  "cancelled",
-  "refunded",
-] as const;
-export const UNDERWRITING_STATUSES = ["pending", "approved", "rejected"] as const;
 
 // Membership-related enums
 export const MEMBERSHIP_TIERS = ["basic", "standard", "premium"] as const;

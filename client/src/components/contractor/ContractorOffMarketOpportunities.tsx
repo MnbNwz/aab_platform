@@ -5,8 +5,6 @@ import {
   fetchInvestmentOpportunitiesThunk,
   setFilters,
   clearFilters,
-  expressInterestThunk,
-  withdrawInterestThunk,
 } from "../../store/slices/investmentOpportunitySlice";
 import type {
   InvestmentOpportunity,
@@ -23,7 +21,6 @@ import {
   Lock,
   CheckCircle,
   MapPin,
-  Heart,
 } from "lucide-react";
 import {
   formatInvestmentPrice,
@@ -32,8 +29,6 @@ import {
   CANADIAN_PROVINCES,
 } from "../../utils/investmentOpportunity";
 import InvestmentOpportunityDetailsModal from "../dashboard/InvestmentOpportunityDetailsModal";
-import { membershipService } from "../../services/membershipService";
-import { showToast } from "../../utils/toast";
 
 const ContractorOffMarketOpportunities: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -43,7 +38,6 @@ const ContractorOffMarketOpportunities: React.FC = () => {
   const currentMembership = useSelector(
     (state: RootState) => state.membership.current
   );
-  const { plans } = useSelector((state: RootState) => state.membership);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
@@ -58,21 +52,20 @@ const ContractorOffMarketOpportunities: React.FC = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedOpportunity, setSelectedOpportunity] =
     useState<InvestmentOpportunity | null>(null);
-  const [upgradeLoading, setUpgradeLoading] = useState(false);
-  const [togglingInterest, setTogglingInterest] = useState<string | null>(null);
 
-  // Check if user has premium access
-  const hasPremiumAccess =
+  // Check if user has standard or premium access (basic tier shows teaser)
+  const hasAccess =
     currentMembership &&
     currentMembership.status === "active" &&
-    currentMembership.planId.tier === "premium";
+    (currentMembership.planId.tier === "standard" ||
+      currentMembership.planId.tier === "premium");
 
   useEffect(() => {
-    // Only fetch data if user has premium access
-    if (!hasPremiumAccess) return;
+    // Only fetch data if user has access (standard or premium)
+    if (!hasAccess) return;
 
     dispatch(fetchInvestmentOpportunitiesThunk(filters));
-  }, [dispatch, filters, hasPremiumAccess]);
+  }, [dispatch, filters, hasAccess]);
 
   const handleSearch = useCallback(() => {
     dispatch(
@@ -127,43 +120,6 @@ const ContractorOffMarketOpportunities: React.FC = () => {
     []
   );
 
-  const handleUpgradeClick = useCallback(async () => {
-    setUpgradeLoading(true);
-
-    try {
-      // Find the premium plan for contractors
-      const premiumPlan = plans.find(
-        (plan: any) => plan.tier === "premium" && plan.userType === "contractor"
-      );
-
-      if (!premiumPlan) {
-        showToast.error("Premium plan not found. Please contact support.");
-        return;
-      }
-
-      // Create checkout session - default to monthly billing
-      const checkoutPayload = {
-        planId: premiumPlan._id,
-        billingPeriod: "monthly" as const,
-        url: `${window.location.origin}/membership/success`,
-      };
-
-      const response = await membershipService.checkout(checkoutPayload);
-
-      if (response.success && response.data?.url) {
-        // Redirect to Stripe checkout
-        window.location.href = response.data.url;
-      } else {
-        throw new Error("No checkout URL received");
-      }
-    } catch (error) {
-      console.error("Checkout error:", error);
-      // Error is already handled by the service with toast
-    } finally {
-      setUpgradeLoading(false);
-    }
-  }, [plans]);
-
   const renderStatusBadge = useCallback((status: InvestmentStatus) => {
     const { className, label } = getInvestmentStatusBadge(status);
     return (
@@ -180,42 +136,11 @@ const ContractorOffMarketOpportunities: React.FC = () => {
     return <IconComponent className="h-4 w-4" />;
   }, []);
 
-  const handleToggleInterest = useCallback(
-    async (e: React.MouseEvent, opportunity: InvestmentOpportunity) => {
-      e.stopPropagation(); // Prevent opening details modal
-
-      if (togglingInterest === opportunity._id) return; // Prevent double-click
-
-      setTogglingInterest(opportunity._id);
-
-      try {
-        // Check if user has already expressed interest
-        const hasInterest = opportunity.hasExpressedInterest;
-
-        if (hasInterest) {
-          // Withdraw interest
-          await dispatch(withdrawInterestThunk(opportunity._id));
-        } else {
-          // Express interest
-          await dispatch(expressInterestThunk({ id: opportunity._id }));
-        }
-
-        // Refresh the list to get updated data
-        dispatch(fetchInvestmentOpportunitiesThunk(filters));
-      } catch (error) {
-        console.error("Error toggling interest:", error);
-      } finally {
-        setTogglingInterest(null);
-      }
-    },
-    [dispatch, togglingInterest, filters]
-  );
-
-  // Premium Gate
-  if (!hasPremiumAccess) {
+  // Access Gate - Only show teaser for basic tier
+  if (!hasAccess) {
     return (
       <div className="space-y-6">
-        {/* Premium Feature Banner */}
+        {/* Upgrade Feature Banner */}
         <div className="bg-gradient-to-r from-primary-800 to-primary-900 rounded-lg shadow-lg p-6 text-white border border-accent-500/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -224,7 +149,7 @@ const ContractorOffMarketOpportunities: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-2xl font-bold mb-1 text-white">
-                  Premium Feature
+                  Upgrade Required
                 </h3>
                 <p className="text-white/90">
                   Unlock exclusive off-market investment opportunities
@@ -251,51 +176,11 @@ const ContractorOffMarketOpportunities: React.FC = () => {
         </div>
 
         {/* Blurred Preview Cards */}
-        <div>
-          <h3 className="text-xl font-bold text-primary-900 mb-4">
-            What You're Missing Out On
-          </h3>
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {[1, 2, 3].map((index) => (
-              <div
-                key={index}
-                className="bg-white rounded-lg shadow-md overflow-hidden relative"
-              >
-                {/* Blur Overlay */}
-                <div className="absolute inset-0 backdrop-blur-sm bg-white/30 z-10 flex items-center justify-center">
-                  <div className="bg-primary-900/90 text-white px-6 py-3 rounded-lg text-center">
-                    <Lock className="h-6 w-6 mx-auto mb-2" />
-                    <p className="font-semibold">Premium Only</p>
-                  </div>
-                </div>
-
-                {/* Blurred Content */}
-                <div className="h-48 bg-gray-200 flex items-center justify-center">
-                  <Building2 className="h-16 w-16 text-gray-400" />
-                </div>
-                <div className="p-4">
-                  <div className="h-6 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-3"></div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-400">Price</span>
-                      <span className="font-bold text-gray-400">$XXX,XXX</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-400">ROI</span>
-                      <span className="font-semibold text-gray-400">XX%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
 
         {/* Benefits Section */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-xl font-bold text-primary-900 mb-4">
-            Premium Benefits for Off-Market Access
+            Benefits of Off-Market Access
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex items-start gap-3">
@@ -348,19 +233,17 @@ const ContractorOffMarketOpportunities: React.FC = () => {
         {/* CTA */}
         <div className="bg-gradient-to-r from-accent-500 to-accent-600 rounded-lg shadow-lg p-8 text-white text-center">
           <h3 className="text-2xl font-bold mb-3">
-            Ready to Unlock Premium Features?
+            Want to Access Off-Market Properties?
           </h3>
-          <p className="text-white/90 mb-6 max-w-2xl mx-auto">
-            Upgrade to premium membership and get access to exclusive off-market
-            properties, priority job access, featured listing, and much more!
+          <p className="text-white/90 mb-4 max-w-2xl mx-auto">
+            To unlock exclusive off-market investment opportunities, priority
+            job access, featured listings, and more, you'll need to upgrade your
+            membership to Standard or Premium tier.
           </p>
-          <button
-            onClick={handleUpgradeClick}
-            disabled={upgradeLoading}
-            className="bg-white text-accent-500 px-8 py-3 rounded-lg font-bold hover:bg-primary-50 hover:text-accent-600 transition text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {upgradeLoading ? "Loading..." : "Upgrade to Premium Now"}
-          </button>
+          <p className="text-white/90 max-w-2xl mx-auto text-sm font-medium">
+            Visit the Membership section in the sidebar to view available plans
+            and upgrade your account.
+          </p>
         </div>
       </div>
     );
@@ -388,7 +271,7 @@ const ContractorOffMarketOpportunities: React.FC = () => {
             <div className="relative flex-1">
               <input
                 type="text"
-                placeholder="Search by title, location, description..."
+                placeholder="Search by title, description..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -542,9 +425,6 @@ const ContractorOffMarketOpportunities: React.FC = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Interested?
-                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Interests
                     </th>
@@ -592,34 +472,6 @@ const ContractorOffMarketOpportunities: React.FC = () => {
                           {renderStatusBadge(opportunity.status)}
                         </td>
 
-                        {/* Interested? - Heart Icon */}
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <button
-                            onClick={(e) =>
-                              handleToggleInterest(e, opportunity)
-                            }
-                            disabled={togglingInterest === opportunity._id}
-                            className="group relative inline-flex items-center justify-center transition-transform hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                            title={
-                              opportunity.hasExpressedInterest
-                                ? "Withdraw Interest"
-                                : "Express Interest"
-                            }
-                          >
-                            <Heart
-                              className={`h-6 w-6 transition-all duration-300 ${
-                                opportunity.hasExpressedInterest
-                                  ? "fill-red-500 text-red-500 animate-pulse"
-                                  : "text-gray-400 hover:text-red-400 hover:fill-red-100"
-                              } ${
-                                togglingInterest === opportunity._id
-                                  ? "animate-ping"
-                                  : ""
-                              }`}
-                            />
-                          </button>
-                        </td>
-
                         {/* Interests */}
                         <td className="px-6 py-4 whitespace-nowrap text-center">
                           <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -642,32 +494,8 @@ const ContractorOffMarketOpportunities: React.FC = () => {
                 <div
                   key={opportunity._id}
                   onClick={() => handleViewDetails(opportunity)}
-                  className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow relative"
+                  className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
                 >
-                  {/* Heart Button - Floating on top right */}
-                  <button
-                    onClick={(e) => handleToggleInterest(e, opportunity)}
-                    disabled={togglingInterest === opportunity._id}
-                    className="absolute top-3 right-3 z-10 bg-white rounded-full p-2 shadow-lg transition-transform hover:scale-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title={
-                      opportunity.hasExpressedInterest
-                        ? "Withdraw Interest"
-                        : "Express Interest"
-                    }
-                  >
-                    <Heart
-                      className={`h-6 w-6 transition-all duration-300 ${
-                        opportunity.hasExpressedInterest
-                          ? "fill-red-500 text-red-500 animate-pulse"
-                          : "text-gray-600 hover:text-red-400 hover:fill-red-100"
-                      } ${
-                        togglingInterest === opportunity._id
-                          ? "animate-ping"
-                          : ""
-                      }`}
-                    />
-                  </button>
-
                   {/* Property Image */}
                   {opportunity.photos && opportunity.photos.length > 0 ? (
                     <div className="h-48 overflow-hidden">
@@ -786,6 +614,7 @@ const ContractorOffMarketOpportunities: React.FC = () => {
             setSelectedOpportunity(null);
           }}
           opportunityId={selectedOpportunity._id}
+          isContractor={true}
           // Don't pass onEdit and onStatusChange for contractors (view-only)
         />
       )}

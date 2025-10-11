@@ -203,7 +203,7 @@ const InvestmentOpportunitiesManagement: React.FC = () => {
             <div className="relative flex-1">
               <input
                 type="text"
-                placeholder="Search by title, location, description..."
+                placeholder="Search by title, description..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}

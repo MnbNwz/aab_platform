@@ -4,7 +4,6 @@ import { SERVICE_ERROR_MESSAGES, SERVICE_CONSTANTS } from "@services/constants";
 import { User } from "@models/user";
 import { UserMembership } from "@models/user";
 import { JobPayment } from "@models/payment";
-import { OffMarketPayment } from "@models/payment";
 import { getCurrentMembership } from "@services/membership/membership";
 import {
   calculateDepositAmount,
@@ -270,7 +269,6 @@ export async function processRefund(
   amount: number,
   reason: string,
   jobPaymentId?: string,
-  offMarketPaymentId?: string,
 ): Promise<{ refund: Stripe.Refund; paymentRecord: any }> {
   try {
     // Create refund
@@ -281,7 +279,6 @@ export async function processRefund(
       metadata: {
         reason,
         jobPaymentId: jobPaymentId || "",
-        offMarketPaymentId: offMarketPaymentId || "",
       },
     });
 
@@ -309,68 +306,11 @@ export async function processRefund(
         });
         await paymentRecord.save();
       }
-    } else if (offMarketPaymentId) {
-      paymentRecord = await OffMarketPayment.findById(offMarketPaymentId);
-      if (paymentRecord) {
-        paymentRecord.refunds.push({
-          amount: netRefundAmount,
-          reason,
-          stripeRefundId: refund.id,
-          processedAt: new Date(),
-          adminFee,
-          stripeFee,
-        });
-        await paymentRecord.save();
-      }
     }
 
     return { refund, paymentRecord };
   } catch (error) {
     console.error(SERVICE_ERROR_MESSAGES.REFUND_PROCESSING_ERROR, error);
-    throw error;
-  }
-}
-
-// Create off-market payment
-export async function createOffMarketPayment(
-  listingId: string,
-  contractorId: string,
-  listingPrice: number,
-  depositPercentage: number = 0.1,
-): Promise<{ paymentIntent: Stripe.PaymentIntent; offMarketPayment: any }> {
-  try {
-    const depositAmount = roundToCents(listingPrice * depositPercentage);
-
-    const offMarketPayment = new OffMarketPayment({
-      listingId,
-      contractorId,
-      listingPrice,
-      depositAmount,
-      status: SERVICE_CONSTANTS.DEFAULT_PAYMENT_STATUS,
-    });
-
-    await offMarketPayment.save();
-
-    const stripeCustomerId = await getOrCreateCustomer(contractorId, "");
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: depositAmount,
-      currency: SERVICE_CONSTANTS.CURRENCY,
-      customer: stripeCustomerId,
-      metadata: {
-        listingId,
-        paymentType: SERVICE_CONSTANTS.OFF_MARKET_DEPOSIT,
-      },
-      automatic_payment_methods: {
-        enabled: true,
-      },
-    });
-
-    offMarketPayment.depositPaymentIntentId = paymentIntent.id;
-    await offMarketPayment.save();
-
-    return { paymentIntent, offMarketPayment };
-  } catch (error) {
-    console.error(SERVICE_ERROR_MESSAGES.OFF_MARKET_PAYMENT_ERROR, error);
     throw error;
   }
 }

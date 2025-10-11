@@ -3,9 +3,12 @@ import { useDispatch, useSelector } from "react-redux";
 import type { RootState, AppDispatch } from "../../store";
 import {
   fetchInvestmentOpportunityByIdThunk,
-  updateInterestStatusThunk,
   clearSelectedOpportunity,
+  updateOpportunityStatus,
+  expressInterestThunk,
+  withdrawInterestThunk,
 } from "../../store/slices/investmentOpportunitySlice";
+import { investmentOpportunityApi } from "../../services/investmentOpportunityService";
 import type { ContactStatus, User } from "../../types";
 import Loader from "../ui/Loader";
 import ProfileViewModal from "../ProfileViewModal";
@@ -27,8 +30,10 @@ import {
   Copy,
   ChevronLeft,
   ChevronRight,
-  Eye,
   AlertCircle,
+  CheckCircle,
+  Heart,
+  Send,
 } from "lucide-react";
 import {
   formatInvestmentPrice,
@@ -43,11 +48,19 @@ interface InvestmentOpportunityDetailsModalProps {
   opportunityId: string;
   onEdit?: () => void;
   onStatusChange?: (newStatus: "available" | "under_offer" | "sold") => void;
+  isContractor?: boolean;
 }
 
 const InvestmentOpportunityDetailsModal: React.FC<
   InvestmentOpportunityDetailsModalProps
-> = ({ isOpen, onClose, opportunityId, onEdit, onStatusChange }) => {
+> = ({
+  isOpen,
+  onClose,
+  opportunityId,
+  onEdit,
+  onStatusChange,
+  isContractor = false,
+}) => {
   const dispatch = useDispatch<AppDispatch>();
   const { selectedOpportunity, detailsLoading } = useSelector(
     (state: RootState) => state.investmentOpportunity
@@ -55,6 +68,7 @@ const InvestmentOpportunityDetailsModal: React.FC<
   const user = useSelector((state: RootState) => state.auth.user);
   const isAdmin = user?.role === "admin";
   const modalRef = useRef<HTMLDivElement>(null);
+  const interestModalRef = useRef<HTMLDivElement>(null);
 
   const [activeTab, setActiveTab] = useState<"details" | "interests">(
     "details"
@@ -66,6 +80,10 @@ const InvestmentOpportunityDetailsModal: React.FC<
   const [selectedContractor, setSelectedContractor] = useState<User | null>(
     null
   );
+  const [showInterestModal, setShowInterestModal] = useState(false);
+  const [interestMessage, setInterestMessage] = useState("");
+  const [submittingInterest, setSubmittingInterest] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Get readable address from coordinates
   const { address: locationAddress, loading: addressLoading } = useGeocoding(
@@ -129,16 +147,96 @@ const InvestmentOpportunityDetailsModal: React.FC<
 
   const handleUpdateInterestStatus = useCallback(
     async (contractorId: string, status: ContactStatus, notes?: string) => {
-      await dispatch(
-        updateInterestStatusThunk({
+      if (!selectedOpportunity) return;
+
+      try {
+        // Directly call the API to update interest status
+        await investmentOpportunityApi.updateInterestStatus(
           opportunityId,
           contractorId,
-          data: { contactStatus: status, adminNotes: notes || "" },
-        })
-      );
+          { contactStatus: status, adminNotes: notes || "" }
+        );
+
+        // Optimistically update the Redux state
+        const updatedInterests = selectedOpportunity.interests.map((interest) =>
+          interest.contractorId._id === contractorId
+            ? { ...interest, contactStatus: status, adminNotes: notes || "" }
+            : interest
+        );
+
+        // If accepting, also update property status to "under_offer"
+        const updatedOpportunity = {
+          ...selectedOpportunity,
+          status:
+            status === "accepted"
+              ? ("under_offer" as const)
+              : selectedOpportunity.status,
+          interests: updatedInterests,
+        };
+
+        // Dispatch action to update Redux state immediately (no API re-fetch)
+        dispatch(updateOpportunityStatus(updatedOpportunity));
+
+        showToast.success("Interest status updated successfully");
+      } catch (error: any) {
+        showToast.error(error.message || "Failed to update interest status");
+        // On error, refresh to get correct state
+        dispatch(fetchInvestmentOpportunityByIdThunk(opportunityId));
+      }
     },
-    [dispatch, opportunityId]
+    [dispatch, opportunityId, selectedOpportunity]
   );
+
+  const handleExpressInterest = useCallback(async () => {
+    if (!selectedOpportunity) return;
+
+    setSubmittingInterest(true);
+
+    try {
+      await dispatch(
+        expressInterestThunk({
+          id: selectedOpportunity._id,
+          message: interestMessage.trim() || undefined,
+        })
+      ).unwrap();
+
+      // Close interest input modal
+      setShowInterestModal(false);
+      setInterestMessage("");
+
+      // Show success modal
+      setShowSuccessModal(true);
+
+      // Auto-close success modal and details modal after 2 seconds
+      setTimeout(() => {
+        setShowSuccessModal(false);
+        onClose(); // Close the details modal
+        dispatch(clearSelectedOpportunity());
+      }, 2000);
+    } catch (error) {
+      // Error already handled by toast in thunk
+      setShowInterestModal(false);
+    } finally {
+      setSubmittingInterest(false);
+    }
+  }, [dispatch, selectedOpportunity, interestMessage, onClose]);
+
+  const handleWithdrawInterest = useCallback(async () => {
+    if (!selectedOpportunity) return;
+
+    setSubmittingInterest(true);
+
+    try {
+      await dispatch(withdrawInterestThunk(selectedOpportunity._id)).unwrap();
+
+      // Refresh opportunity details
+      dispatch(fetchInvestmentOpportunityByIdThunk(selectedOpportunity._id));
+    } catch (error) {
+      // Error already handled by toast in thunk
+    } finally {
+      setSubmittingInterest(false);
+    }
+  }, [dispatch, selectedOpportunity]);
 
   const handleViewContractorProfile = useCallback((interest: any) => {
     // Convert interest data to User format for ProfileViewModal
@@ -182,11 +280,17 @@ const InvestmentOpportunityDetailsModal: React.FC<
     dispatch(clearSelectedOpportunity());
   }, [onClose, dispatch]);
 
-  // Click outside to close (only when image viewer is not open)
+  // Click outside to close (only when sub-modals are not open)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      // Don't close main modal if image viewer is open
-      if (imageViewerOpen) return;
+      // Don't close main modal if any sub-modal is open
+      if (
+        imageViewerOpen ||
+        showInterestModal ||
+        showSuccessModal ||
+        profileViewOpen
+      )
+        return;
 
       if (
         modalRef.current &&
@@ -203,7 +307,14 @@ const InvestmentOpportunityDetailsModal: React.FC<
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isOpen, imageViewerOpen, handleClose]);
+  }, [
+    isOpen,
+    imageViewerOpen,
+    showInterestModal,
+    showSuccessModal,
+    profileViewOpen,
+    handleClose,
+  ]);
 
   if (!isOpen) return null;
 
@@ -247,31 +358,38 @@ const InvestmentOpportunityDetailsModal: React.FC<
 
         {/* Admin Actions Bar */}
         {isAdmin && onStatusChange && opportunity.status !== "sold" && (
-          <div className="border-b border-gray-200 bg-gray-50 px-6 py-3">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-medium text-gray-700">Status:</span>
-              {opportunity.status !== "available" && (
+          <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <span className="text-sm font-semibold text-gray-700">
+                Change Status:
+              </span>
+              <div className="flex items-center gap-2 flex-wrap">
+                {opportunity.status !== "available" && (
+                  <button
+                    onClick={() => onStatusChange("available")}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600 active:bg-green-700 transition-all font-semibold shadow-sm hover:shadow"
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    Set Available
+                  </button>
+                )}
+                {opportunity.status !== "under_offer" && (
+                  <button
+                    onClick={() => onStatusChange("under_offer")}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 text-sm bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 active:bg-yellow-700 transition-all font-semibold shadow-sm hover:shadow"
+                  >
+                    <AlertCircle className="h-4 w-4" />
+                    Set Under Offer
+                  </button>
+                )}
                 <button
-                  onClick={() => onStatusChange("available")}
-                  className="px-3 py-1.5 text-xs bg-green-500 text-white rounded-md hover:bg-green-600 transition-all font-medium"
+                  onClick={() => onStatusChange("sold")}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 active:bg-gray-800 transition-all font-semibold shadow-sm hover:shadow"
                 >
-                  Available
+                  <CheckCircle className="h-4 w-4" />
+                  Mark as Sold
                 </button>
-              )}
-              {opportunity.status !== "under_offer" && (
-                <button
-                  onClick={() => onStatusChange("under_offer")}
-                  className="px-3 py-1.5 text-xs bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-all font-medium"
-                >
-                  Under Offer
-                </button>
-              )}
-              <button
-                onClick={() => onStatusChange("sold")}
-                className="px-3 py-1.5 text-xs bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-all font-medium"
-              >
-                Sold
-              </button>
+              </div>
             </div>
           </div>
         )}
@@ -632,25 +750,56 @@ const InvestmentOpportunityDetailsModal: React.FC<
             </div>
           ) : isAdmin ? (
             <div className="space-y-4 h-full">
-              {/* Sold Property Notice */}
-              {opportunity.status === "sold" &&
-                opportunity.interests.length > 0 && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <h4 className="text-sm font-semibold text-yellow-800 mb-1">
-                          Property Sold
-                        </h4>
-                        <p className="text-sm text-yellow-700">
-                          This property has been marked as sold. Accept and
-                          reject actions for contractor interests have been
-                          disabled.
-                        </p>
+              {/* Check if any interest is already accepted */}
+              {(() => {
+                const hasAcceptedInterest = opportunity.interests.some(
+                  (interest) => interest.contactStatus === "accepted"
+                );
+
+                return (
+                  <>
+                    {/* Sold Property Notice */}
+                    {opportunity.status === "sold" &&
+                      opportunity.interests.length > 0 && (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                          <div className="flex items-start gap-3">
+                            <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <h4 className="text-sm font-semibold text-yellow-800 mb-1">
+                                Property Sold
+                              </h4>
+                              <p className="text-sm text-yellow-700">
+                                This property has been marked as sold. Accept
+                                and reject actions for contractor interests have
+                                been disabled.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                    {/* Accepted Offer Notice */}
+                    {hasAcceptedInterest && opportunity.status !== "sold" && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                          <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <h4 className="text-sm font-semibold text-green-800 mb-1">
+                              Offer Accepted
+                            </h4>
+                            <p className="text-sm text-green-700">
+                              An offer has been accepted for this property. The
+                              property status has been updated to "Under Offer".
+                              Accept and reject actions for other contractors
+                              have been disabled.
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                )}
+                    )}
+                  </>
+                );
+              })()}
 
               {opportunity.interests.length === 0 ? (
                 <div className="text-center py-12">
@@ -669,8 +818,12 @@ const InvestmentOpportunityDetailsModal: React.FC<
                     className="bg-gray-50 rounded-lg p-4 border border-gray-200 hover:shadow-md transition-shadow"
                   >
                     <div className="flex items-start gap-4 mb-3">
-                      {/* Profile Image */}
-                      <div className="flex-shrink-0">
+                      {/* Profile Image - Clickable */}
+                      <button
+                        onClick={() => handleViewContractorProfile(interest)}
+                        className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-accent-500 rounded-full"
+                        title="View Profile"
+                      >
                         {interest.contractorId.profileImage ? (
                           <img
                             src={interest.contractorId.profileImage}
@@ -683,16 +836,24 @@ const InvestmentOpportunityDetailsModal: React.FC<
                             {interest.contractorId.lastName[0]}
                           </div>
                         )}
-                      </div>
+                      </button>
 
                       {/* Contractor Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <h4 className="text-lg font-semibold text-primary-900">
-                              {interest.contractorId.firstName}{" "}
-                              {interest.contractorId.lastName}
-                            </h4>
+                            <button
+                              onClick={() =>
+                                handleViewContractorProfile(interest)
+                              }
+                              className="text-left hover:text-accent-600 transition-colors focus:outline-none focus:text-accent-600"
+                              title="View Profile"
+                            >
+                              <h4 className="text-lg font-semibold text-primary-900">
+                                {interest.contractorId.firstName}{" "}
+                                {interest.contractorId.lastName}
+                              </h4>
+                            </button>
                             {interest.contractorId.contractor?.companyName && (
                               <p className="text-sm text-gray-600">
                                 {interest.contractorId.contractor.companyName}
@@ -772,54 +933,55 @@ const InvestmentOpportunityDetailsModal: React.FC<
 
                     {/* Action Buttons */}
                     <div className="flex gap-2 mt-3">
-                      <button
-                        onClick={() => handleViewContractorProfile(interest)}
-                        className="flex items-center gap-1.5 px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition text-sm"
-                      >
-                        <Eye className="h-4 w-4" />
-                        View Profile
-                      </button>
+                      {interest.contactStatus === "pending" &&
+                        (() => {
+                          const hasAcceptedInterest =
+                            opportunity.interests.some(
+                              (int) => int.contactStatus === "accepted"
+                            );
+                          const isDisabled =
+                            opportunity.status === "sold" ||
+                            hasAcceptedInterest;
+                          const disabledReason =
+                            opportunity.status === "sold"
+                              ? "Cannot accept/reject interests for sold properties"
+                              : hasAcceptedInterest
+                              ? "Another offer has already been accepted"
+                              : undefined;
 
-                      {interest.contactStatus === "pending" && (
-                        <>
-                          <button
-                            onClick={() =>
-                              handleUpdateInterestStatus(
-                                interest.contractorId._id,
-                                "accepted",
-                                "Contractor accepted"
-                              )
-                            }
-                            disabled={opportunity.status === "sold"}
-                            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-600"
-                            title={
-                              opportunity.status === "sold"
-                                ? "Cannot accept interests for sold properties"
-                                : undefined
-                            }
-                          >
-                            Accept
-                          </button>
-                          <button
-                            onClick={() =>
-                              handleUpdateInterestStatus(
-                                interest.contractorId._id,
-                                "rejected",
-                                "Contractor rejected"
-                              )
-                            }
-                            disabled={opportunity.status === "sold"}
-                            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-600"
-                            title={
-                              opportunity.status === "sold"
-                                ? "Cannot reject interests for sold properties"
-                                : undefined
-                            }
-                          >
-                            Reject
-                          </button>
-                        </>
-                      )}
+                          return (
+                            <>
+                              <button
+                                onClick={() =>
+                                  handleUpdateInterestStatus(
+                                    interest.contractorId._id,
+                                    "accepted",
+                                    "Contractor accepted"
+                                  )
+                                }
+                                disabled={isDisabled}
+                                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-600"
+                                title={disabledReason}
+                              >
+                                Accept
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleUpdateInterestStatus(
+                                    interest.contractorId._id,
+                                    "rejected",
+                                    "Contractor rejected"
+                                  )
+                                }
+                                disabled={isDisabled}
+                                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-600"
+                                title={disabledReason}
+                              >
+                                Reject
+                              </button>
+                            </>
+                          );
+                        })()}
                     </div>
                   </div>
                 ))
@@ -846,15 +1008,58 @@ const InvestmentOpportunityDetailsModal: React.FC<
           >
             Close
           </button>
-          {isAdmin && onEdit && (
-            <button
-              onClick={onEdit}
-              className="flex items-center justify-center gap-1.5 px-4 sm:px-6 py-2 bg-accent-500 text-white rounded-lg text-sm sm:text-base font-semibold hover:bg-accent-600 transition shadow-sm"
-            >
-              <Edit className="h-4 w-4" />
-              Edit Property
-            </button>
+
+          {/* Interest Button for Contractors */}
+          {isContractor && (
+            <>
+              {opportunity.hasExpressedInterest ? (
+                <button
+                  onClick={handleWithdrawInterest}
+                  disabled={submittingInterest}
+                  className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 bg-red-50 text-red-600 border border-red-300 rounded-lg text-sm sm:text-base font-semibold hover:bg-red-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Withdraw Interest"
+                >
+                  <Heart className="h-4 w-4 sm:h-5 sm:w-5 fill-red-500" />
+                  {submittingInterest ? "Processing..." : "Interested"}
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowInterestModal(true)}
+                  disabled={submittingInterest}
+                  className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 bg-accent-500 text-white rounded-lg text-sm sm:text-base font-semibold hover:bg-accent-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Express Interest"
+                >
+                  <Heart className="h-4 w-4 sm:h-5 sm:w-5" />
+                  Express Interest
+                </button>
+              )}
+            </>
           )}
+
+          {isAdmin &&
+            onEdit &&
+            (() => {
+              // Check if any interest has been accepted
+              const hasAcceptedInterest = opportunity.interests.some(
+                (int) => int.contactStatus === "accepted"
+              );
+
+              return (
+                <button
+                  onClick={onEdit}
+                  disabled={hasAcceptedInterest}
+                  className="flex items-center justify-center gap-1.5 px-4 sm:px-6 py-2 bg-accent-500 text-white rounded-lg text-sm sm:text-base font-semibold hover:bg-accent-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-accent-500"
+                  title={
+                    hasAcceptedInterest
+                      ? "Cannot edit property after accepting an offer"
+                      : undefined
+                  }
+                >
+                  <Edit className="h-4 w-4" />
+                  Edit Property
+                </button>
+              );
+            })()}
         </div>
       </div>
 
@@ -934,6 +1139,89 @@ const InvestmentOpportunityDetailsModal: React.FC<
           onClose={handleCloseProfile}
           user={selectedContractor}
         />
+      )}
+
+      {/* Express Interest Modal - For Contractors */}
+      {showInterestModal && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4"
+          onClick={() => {
+            setShowInterestModal(false);
+            setInterestMessage("");
+          }}
+        >
+          <div
+            ref={interestModalRef}
+            className="bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900">
+                Express Interest
+              </h3>
+              <button
+                onClick={() => {
+                  setShowInterestModal(false);
+                  setInterestMessage("");
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Message (Optional)
+                </label>
+                <textarea
+                  value={interestMessage}
+                  onChange={(e) => setInterestMessage(e.target.value)}
+                  placeholder="Add a message to stand out from other contractors..."
+                  rows={4}
+                  className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 resize-none"
+                  maxLength={500}
+                  disabled={submittingInterest}
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  {interestMessage.length}/500 characters
+                </p>
+              </div>
+
+              <button
+                onClick={handleExpressInterest}
+                disabled={submittingInterest}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+              >
+                <Send className="h-5 w-5" />
+                {submittingInterest ? "Submitting..." : "Submit Interest"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal - For Contractors */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-[70] flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-8 text-center animate-fade-in">
+            <div className="mb-4">
+              <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                <CheckCircle className="h-10 w-10 text-green-600" />
+              </div>
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+              Interest Submitted!
+            </h3>
+            <p className="text-gray-600 mb-1">
+              Your interest has been successfully submitted.
+            </p>
+            <p className="text-sm text-gray-500">
+              The property has been moved to your Interested Properties list.
+            </p>
+          </div>
+        </div>
       )}
     </div>
   );

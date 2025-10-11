@@ -63,7 +63,6 @@ export interface PaymentRequest {
   params: {
     paymentId?: string;
     jobPaymentId?: string;
-    offMarketPaymentId?: string;
     contractorId?: string;
   };
   body: {

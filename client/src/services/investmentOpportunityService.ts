@@ -55,7 +55,7 @@ export const investmentOpportunityApi = {
     contractorId: string,
     data: { contactStatus: ContactStatus; adminNotes?: string }
   ) => {
-    return api.put(
+    return api.patch(
       `/api/investment/opportunities/${opportunityId}/interests/${contractorId}`,
       data
     );
@@ -64,8 +64,6 @@ export const investmentOpportunityApi = {
   // Get Investment Statistics (Admin only)
   getStatistics: async (): Promise<InvestmentStatistics> => {
     const response = await api.get("/api/investment/opportunities/statistics");
-    console.log("Raw API Response:", response);
-    console.log("Response data:", response.data);
     // The API returns { success, data: {...} } and api.get already extracts response.data
     // So response.data is already the data object with statusBreakdown, etc.
     return response.data;

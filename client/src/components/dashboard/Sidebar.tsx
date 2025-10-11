@@ -37,13 +37,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     (state: RootState) => state.membership.current
   );
 
-  // Check if user has premium access (for contractors)
-  const hasPremiumAccess =
-    userRole === "contractor" &&
-    currentMembership &&
-    currentMembership.status === "active" &&
-    currentMembership.planId.tier === "premium";
-
   const handleLogout = () => {
     dispatch(logoutThunk());
   };
@@ -186,12 +179,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   let menuItems = menuItemsByRole[userRole] || [];
 
-  // Filter premium-only items for contractors
-  if (userRole === "contractor" && !hasPremiumAccess) {
-    menuItems = menuItems.filter((item: any) => {
-      // Hide premium-only tabs if not premium
-      return item.id !== "interestedProperties" && item.id !== "offMarket";
-    });
+  // Hide "Interested Properties" for basic tier contractors
+  // "Off Market Properties" remains visible (shows teaser for basic tier)
+  if (userRole === "contractor") {
+    const hasAccess =
+      currentMembership &&
+      currentMembership.status === "active" &&
+      (currentMembership.planId.tier === "standard" ||
+        currentMembership.planId.tier === "premium");
+
+    if (!hasAccess) {
+      menuItems = menuItems.filter((item: any) => {
+        // Hide "Interested Properties" for basic tier
+        return item.id !== "interestedProperties";
+      });
+    }
   }
 
   return (

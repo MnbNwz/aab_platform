@@ -8,7 +8,6 @@ import {
   Building2,
   Heart,
   MapPin,
-  Lock,
   CheckCircle,
   AlertCircle,
   X,
@@ -18,8 +17,6 @@ import {
   Calendar,
   Filter,
 } from "lucide-react";
-import { membershipService } from "../../services/membershipService";
-import { showToast } from "../../utils/toast";
 import {
   formatInvestmentPrice,
   getContactStatusBadge,
@@ -34,9 +31,7 @@ const InterestedProperties: React.FC = () => {
   const currentMembership = useSelector(
     (state: RootState) => state.membership.current
   );
-  const { plans } = useSelector((state: RootState) => state.membership);
 
-  const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [limit] = useState(10);
 
@@ -59,15 +54,16 @@ const InterestedProperties: React.FC = () => {
     "desc"
   );
 
-  // Check if user has premium access
-  const hasPremiumAccess =
+  // Check if user has standard or premium access (basic tier shows teaser)
+  const hasAccess =
     currentMembership &&
     currentMembership.status === "active" &&
-    currentMembership.planId.tier === "premium";
+    (currentMembership.planId.tier === "standard" ||
+      currentMembership.planId.tier === "premium");
 
   useEffect(() => {
-    // Only fetch data if user has premium access
-    if (!hasPremiumAccess) {
+    // Only fetch data if user has access (standard or premium)
+    if (!hasAccess) {
       return;
     }
 
@@ -79,50 +75,13 @@ const InterestedProperties: React.FC = () => {
     dispatch(fetchMyInterestsThunk(params));
   }, [
     dispatch,
-    hasPremiumAccess,
+    hasAccess,
     currentPage,
     limit,
     appliedStatus,
     appliedContactStatus,
     appliedSortOrder,
   ]);
-
-  const handleUpgradeClick = useCallback(async () => {
-    setUpgradeLoading(true);
-
-    try {
-      // Find the premium plan for contractors
-      const premiumPlan = plans.find(
-        (plan: any) => plan.tier === "premium" && plan.userType === "contractor"
-      );
-
-      if (!premiumPlan) {
-        showToast.error("Premium plan not found. Please contact support.");
-        return;
-      }
-
-      // Create checkout session - default to monthly billing
-      const checkoutPayload = {
-        planId: premiumPlan._id,
-        billingPeriod: "monthly" as const,
-        url: `${window.location.origin}/membership/success`,
-      };
-
-      const response = await membershipService.checkout(checkoutPayload);
-
-      if (response.success && response.data?.url) {
-        // Redirect to Stripe checkout
-        window.location.href = response.data.url;
-      } else {
-        throw new Error("No checkout URL received");
-      }
-    } catch (error) {
-      console.error("Checkout error:", error);
-      // Error is already handled by the service with toast
-    } finally {
-      setUpgradeLoading(false);
-    }
-  }, [plans]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -179,63 +138,9 @@ const InterestedProperties: React.FC = () => {
     return badges[type] || "bg-gray-100 text-gray-800";
   };
 
-  if (!hasPremiumAccess) {
-    return (
-      <div className="space-y-6">
-        {/* Premium Feature Banner */}
-        <div className="bg-gradient-to-r from-primary-800 to-primary-900 rounded-lg shadow-lg p-6 text-white border border-accent-500/20">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="bg-accent-500/20 p-3 rounded-full">
-                <Lock className="h-8 w-8 text-accent-500" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold mb-1 text-white">
-                  Premium Feature
-                </h3>
-                <p className="text-white/90">
-                  Unlock exclusive off-market investment opportunities
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Teaser Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-lg shadow-md p-6 text-center border border-primary-200">
-            <div className="text-4xl font-bold text-accent-500 mb-2">15+</div>
-            <p className="text-primary-800">Available Properties</p>
-          </div>
-          <div className="bg-white rounded-lg shadow-md p-6 text-center border border-primary-200">
-            <div className="text-4xl font-bold text-accent-500 mb-2">12%</div>
-            <p className="text-primary-800">Average ROI</p>
-          </div>
-          <div className="bg-white rounded-lg shadow-md p-6 text-center border border-primary-200">
-            <div className="text-4xl font-bold text-accent-500 mb-2">$450K</div>
-            <p className="text-primary-800">Average Price</p>
-          </div>
-        </div>
-
-        {/* CTA */}
-        <div className="bg-gradient-to-r from-accent-500 to-accent-600 rounded-lg shadow-lg p-8 text-white text-center">
-          <h3 className="text-2xl font-bold mb-3">
-            Ready to Unlock Premium Features?
-          </h3>
-          <p className="text-white/90 mb-6 max-w-2xl mx-auto">
-            Upgrade to premium membership and get access to exclusive off-market
-            properties, priority job access, featured listing, and much more!
-          </p>
-          <button
-            onClick={handleUpgradeClick}
-            disabled={upgradeLoading}
-            className="bg-white text-accent-500 px-8 py-3 rounded-lg font-bold hover:bg-primary-50 hover:text-accent-600 transition text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {upgradeLoading ? "Loading..." : "Upgrade to Premium Now"}
-          </button>
-        </div>
-      </div>
-    );
+  // If no access, don't render anything (menu item is hidden in sidebar for basic tier)
+  if (!hasAccess) {
+    return null;
   }
 
   return (

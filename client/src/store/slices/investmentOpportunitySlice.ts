@@ -123,10 +123,8 @@ export const fetchInvestmentStatisticsThunk = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await investmentOpportunityApi.getStatistics();
-      console.log("Investment Statistics Response:", response);
       return response;
     } catch (error: any) {
-      console.error("Failed to fetch investment statistics:", error);
       showToast.error(error.message || "Failed to fetch statistics");
       return rejectWithValue(error.message);
     }
@@ -137,7 +135,7 @@ export const expressInterestThunk = createAsyncThunk(
   "investmentOpportunity/expressInterest",
   async (
     { id, message }: { id: string; message?: string },
-    { rejectWithValue, dispatch }
+    { rejectWithValue }
   ) => {
     try {
       const response = await investmentOpportunityApi.manageInterest(
@@ -146,10 +144,7 @@ export const expressInterestThunk = createAsyncThunk(
         message
       );
       showToast.success("Interest expressed successfully");
-      // Refresh the opportunity details and interests list
-      dispatch(fetchInvestmentOpportunityByIdThunk(id));
-      dispatch(fetchMyInterestsThunk({ page: 1, limit: 10 }));
-      return response.data;
+      return { id, message, data: response.data };
     } catch (error: any) {
       showToast.error(error.message || "Failed to express interest");
       return rejectWithValue(error.message);
@@ -159,17 +154,14 @@ export const expressInterestThunk = createAsyncThunk(
 
 export const withdrawInterestThunk = createAsyncThunk(
   "investmentOpportunity/withdrawInterest",
-  async (id: string, { rejectWithValue, dispatch }) => {
+  async (id: string, { rejectWithValue }) => {
     try {
       const response = await investmentOpportunityApi.manageInterest(
         id,
         "withdraw"
       );
       showToast.success("Interest withdrawn successfully");
-      // Refresh the opportunity details and interests list
-      dispatch(fetchInvestmentOpportunityByIdThunk(id));
-      dispatch(fetchMyInterestsThunk({ page: 1, limit: 10 }));
-      return response.data;
+      return { id, data: response.data };
     } catch (error: any) {
       showToast.error(error.message || "Failed to withdraw interest");
       return rejectWithValue(error.message);
@@ -272,6 +264,21 @@ const investmentOpportunitySlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    updateOpportunityStatus: (
+      state,
+      action: PayloadAction<InvestmentOpportunity>
+    ) => {
+      // Update selectedOpportunity
+      state.selectedOpportunity = action.payload;
+
+      // Also update in opportunities list if present
+      const index = state.opportunities.findIndex(
+        (opp) => opp._id === action.payload._id
+      );
+      if (index !== -1) {
+        state.opportunities[index] = action.payload;
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -352,16 +359,8 @@ const investmentOpportunitySlice = createSlice({
         state.error = action.payload as string;
       })
       // Fetch Statistics (Admin only)
-      .addCase(fetchInvestmentStatisticsThunk.pending, () => {
-        console.log("Fetching investment statistics...");
-      })
       .addCase(fetchInvestmentStatisticsThunk.fulfilled, (state, action) => {
-        console.log("Storing statistics in Redux state:", action.payload);
         state.statistics = action.payload;
-        console.log("State after update:", state.statistics);
-      })
-      .addCase(fetchInvestmentStatisticsThunk.rejected, (_state, action) => {
-        console.error("Failed to fetch statistics:", action.payload);
       })
       // Fetch My Interests (Contractor only)
       .addCase(fetchMyInterestsThunk.pending, (state) => {
@@ -376,6 +375,99 @@ const investmentOpportunitySlice = createSlice({
       .addCase(fetchMyInterestsThunk.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+      })
+      // Express Interest (Contractor only)
+      .addCase(expressInterestThunk.fulfilled, (state, action) => {
+        const opportunityId = action.payload.id;
+
+        // Find and remove the opportunity from the opportunities list
+        const opportunityIndex = state.opportunities.findIndex(
+          (opp) => opp._id === opportunityId
+        );
+
+        if (opportunityIndex !== -1) {
+          const opportunity = state.opportunities[opportunityIndex];
+
+          // Remove from opportunities list
+          state.opportunities.splice(opportunityIndex, 1);
+          state.pagination.total = Math.max(0, state.pagination.total - 1);
+
+          // Add to myInterests list
+          const newInterest = {
+            opportunityId: opportunity._id,
+            title: opportunity.title,
+            propertyType: opportunity.propertyType,
+            location: opportunity.location,
+            askingPrice: opportunity.askingPrice,
+            projectedROI: opportunity.projectedROI,
+            totalInvestment: opportunity.totalInvestment,
+            status: opportunity.status,
+            photos: opportunity.photos,
+            interest: {
+              expressedAt: new Date().toISOString(),
+              message: action.payload.message,
+              contactStatus: "pending" as const,
+            },
+          };
+
+          // Add to beginning of myInterests
+          state.myInterests.unshift(newInterest);
+          state.interestsPagination.total += 1;
+        }
+
+        // Update selectedOpportunity if it matches
+        if (state.selectedOpportunity?._id === opportunityId) {
+          state.selectedOpportunity.hasExpressedInterest = true;
+        }
+      })
+      // Withdraw Interest (Contractor only)
+      .addCase(withdrawInterestThunk.fulfilled, (state, action) => {
+        const opportunityId = action.payload.id;
+
+        // Find and remove from myInterests list
+        const interestIndex = state.myInterests.findIndex(
+          (interest) => interest.opportunityId === opportunityId
+        );
+
+        if (interestIndex !== -1) {
+          const interest = state.myInterests[interestIndex];
+
+          // Remove from myInterests
+          state.myInterests.splice(interestIndex, 1);
+          state.interestsPagination.total = Math.max(
+            0,
+            state.interestsPagination.total - 1
+          );
+
+          // Add back to opportunities list (reconstruct the opportunity)
+          const opportunity = {
+            _id: interest.opportunityId,
+            title: interest.title,
+            propertyType: interest.propertyType,
+            location: interest.location,
+            askingPrice: interest.askingPrice,
+            projectedROI: interest.projectedROI,
+            totalInvestment: interest.totalInvestment,
+            status: interest.status,
+            photos: interest.photos,
+            hasExpressedInterest: false,
+            description: "",
+            interests: [],
+            interestCount: 0,
+            createdBy: { _id: "", firstName: "", lastName: "", email: "" },
+            createdAt: "",
+            updatedAt: "",
+          };
+
+          // Add to beginning of opportunities list
+          state.opportunities.unshift(opportunity as any);
+          state.pagination.total += 1;
+        }
+
+        // Update selectedOpportunity if it matches
+        if (state.selectedOpportunity?._id === opportunityId) {
+          state.selectedOpportunity.hasExpressedInterest = false;
+        }
       });
   },
 });
@@ -385,6 +477,7 @@ export const {
   clearFilters,
   clearSelectedOpportunity,
   clearError,
+  updateOpportunityStatus,
 } = investmentOpportunitySlice.actions;
 
 export default investmentOpportunitySlice.reducer;
