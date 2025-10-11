@@ -33,13 +33,13 @@ export const signupController = async (req: Request & { files?: any[] }, res: Re
     // Set tokens in HTTP-only cookies
     res.cookie(AUTHORIZATION_CONSTANTS.ACCESS_TOKEN_COOKIE, result.accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === ENVIRONMENT_CONSTANTS.PRODUCTION, // HTTPS in production
+      secure: process.env.SECURE_COOKIES === "true", // Use SECURE_COOKIES flag
       sameSite: ENVIRONMENT_CONSTANTS.STRICT_SAMESITE,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
     res.cookie(AUTHORIZATION_CONSTANTS.REFRESH_TOKEN_COOKIE, result.refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === ENVIRONMENT_CONSTANTS.PRODUCTION,
+      secure: process.env.SECURE_COOKIES === "true", // Use SECURE_COOKIES flag
       sameSite: ENVIRONMENT_CONSTANTS.STRICT_SAMESITE,
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
@@ -63,14 +63,14 @@ export const signinController = async (req: Request, res: Response) => {
     // Set tokens in HTTP-only cookies
     res.cookie(AUTHORIZATION_CONSTANTS.ACCESS_TOKEN_COOKIE, result.accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === ENVIRONMENT_CONSTANTS.PRODUCTION, // HTTPS in production
+      secure: process.env.SECURE_COOKIES === "true", // Use SECURE_COOKIES flag
       sameSite: ENVIRONMENT_CONSTANTS.STRICT_SAMESITE,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
     res.cookie(AUTHORIZATION_CONSTANTS.REFRESH_TOKEN_COOKIE, result.refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === ENVIRONMENT_CONSTANTS.PRODUCTION,
+      secure: process.env.SECURE_COOKIES === "true", // Use SECURE_COOKIES flag
       sameSite: ENVIRONMENT_CONSTANTS.STRICT_SAMESITE,
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
@@ -91,13 +91,13 @@ export const logout = async (req: Request, res: Response) => {
   // Clear the authentication cookies
   res.clearCookie(AUTHORIZATION_CONSTANTS.ACCESS_TOKEN_COOKIE, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === ENVIRONMENT_CONSTANTS.PRODUCTION,
+    secure: process.env.SECURE_COOKIES === "true", // Use SECURE_COOKIES flag
     sameSite: ENVIRONMENT_CONSTANTS.STRICT_SAMESITE,
   });
 
   res.clearCookie(AUTHORIZATION_CONSTANTS.REFRESH_TOKEN_COOKIE, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === ENVIRONMENT_CONSTANTS.PRODUCTION,
+    secure: process.env.SECURE_COOKIES === "true", // Use SECURE_COOKIES flag
     sameSite: ENVIRONMENT_CONSTANTS.STRICT_SAMESITE,
   });
 

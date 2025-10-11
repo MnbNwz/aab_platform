@@ -63,7 +63,7 @@ export const autoRefreshToken = async (req: any, res: Response, next: NextFuncti
       // Set new access token in cookie
       res.cookie(AUTHORIZATION_CONSTANTS.ACCESS_TOKEN_COOKIE, newAccessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === ENVIRONMENT_CONSTANTS.PRODUCTION,
+        secure: process.env.SECURE_COOKIES === "true", // Use SECURE_COOKIES flag
         sameSite: ENVIRONMENT_CONSTANTS.STRICT_SAMESITE,
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
