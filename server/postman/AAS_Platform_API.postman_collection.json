@@ -1,8 +1,8 @@
 {
   "info": {
     "name": "AAS Platform API",
-    "description": "Complete API collection for AAS Platform with authentication, user management, services management, and intelligent caching system.\n\n🆕 **Updated Features (v2.3.0):**\n• Simplified membership system - always starts as one-time payment\n• Auto-renewal toggle feature for existing memberships\n• Removed billing type complexity (no more one-time vs recurring distinction)\n• Enhanced webhook handling for membership payments\n• Graceful server shutdown with proper cleanup\n• Fixed EventEmitter memory leaks\n• Complete OTP verification system (verify, resend, state check)\n• Password reset flow with OTP verification\n• Lead management system for contractors\n• firstName & lastName required for all user registrations\n• User-level approval system (moved from role-specific)\n• Redis caching with memory fallback for production reliability\n\n⚡ **Performance Features:**\n• Authentication middleware caching (50-80% performance boost)\n• Membership plans caching (1-hour TTL)\n• User profile caching with intelligent invalidation\n• Cache fallback system ensures zero downtime\n• Optimized webhook processing\n\n🔐 **Authentication & Security:**\n• Complete OTP verification workflow\n• Password reset with email verification\n• JWT-based authentication with HttpOnly cookies\n• Role-based access control (RBAC)\n• Rate limiting and security headers\n• Enhanced payment security middleware\n\n💼 **Lead Management:**\n• Contractor lead access system\n• Lead usage tracking and statistics\n• Job request access with credit deduction\n• Filtering by service type, property type, and budget\n\n📋 **API Highlights:**\n• Comprehensive admin user management with filtering\n• Simplified membership plan management\n• Advanced payment processing with Stripe\n• Property management with image uploads\n• Job request and bidding system\n• Services management with versioning",
-    "version": "2.3.0",
+    "description": "Complete API collection for AAS Platform with authentication, user management, services management, investment opportunities, and intelligent caching system.\n\n🆕 **Updated Features (v2.4.0):**\n• Investment opportunities with contractor interest management\n• Complete CRUD for investment opportunities (admin only)\n• Contractor interest tracking and status updates\n• Simplified membership system - always starts as one-time payment\n• Auto-renewal toggle feature for existing memberships\n• Membership upgrade functionality\n• Enhanced webhook handling for membership payments\n• Graceful server shutdown with proper cleanup\n• Fixed EventEmitter memory leaks\n• Complete OTP verification system (verify, resend, state check)\n• Password reset flow with OTP verification\n• Lead management system for contractors\n• firstName & lastName required for all user registrations\n• User-level approval system (moved from role-specific)\n• Redis caching with memory fallback for production reliability\n\n⚡ **Performance Features:**\n• Authentication middleware caching (50-80% performance boost)\n• Membership plans caching (1-hour TTL)\n• User profile caching with intelligent invalidation\n• Cache fallback system ensures zero downtime\n• Optimized webhook processing\n\n🔐 **Authentication & Security:**\n• Complete OTP verification workflow\n• Password reset with email verification\n• JWT-based authentication with HttpOnly cookies\n• Role-based access control (RBAC)\n• Rate limiting and security headers\n• Enhanced payment security middleware\n\n💼 **Lead Management:**\n• Contractor lead access system\n• Lead usage tracking and statistics\n• Job request access with credit deduction\n• Filtering by service type, property type, and budget\n\n💰 **Investment Opportunities:**\n• Admin-managed investment opportunities\n• Contractor interest expression\n• Interest status tracking (pending/accepted/rejected)\n• Multi-file uploads for photos and documents\n• Investment statistics and analytics\n\n📋 **API Highlights:**\n• Comprehensive admin user management with filtering\n• Simplified membership plan management\n• Advanced payment processing with Stripe\n• Property management with image uploads\n• Job request and bidding system\n• Services management with versioning\n• Role-based dashboard analytics",
+    "version": "2.4.0",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -98,50 +98,6 @@
           }
         },
         {
-          "name": "Customer Signup (Commercial)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Alice\",\n  \"lastName\": \"Johnson\",\n  \"email\": \"alice.johnson@business.com\",\n  \"password\": \"Customer@456\",\n  \"phone\": \"+1987654321\",\n  \"role\": \"customer\",\n  \"geoHome\": {\n    \"type\": \"Point\",\n    \"coordinates\": [-74.006, 40.7128]\n  },\n  \"customer\": {\n    \"defaultPropertyType\": \"commercial\"\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/signup",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "signup"]
-            },
-            "description": "Customer registration with commercial property type - demonstrates defaultPropertyType options"
-          }
-        },
-        {
-          "name": "Contractor Signup (Multiple Services)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Bob\",\n  \"lastName\": \"Wilson\",\n  \"email\": \"bob.wilson@multiservice.com\",\n  \"password\": \"Contractor@789\",\n  \"phone\": \"+1555123456\",\n  \"role\": \"contractor\",\n  \"geoHome\": {\n    \"type\": \"Point\",\n    \"coordinates\": [-73.935242, 40.730610]\n  },\n  \"contractor\": {\n    \"companyName\": \"Wilson Multi-Service Co\",\n    \"services\": [\"roofing\", \"painting\", \"carpentry\"],\n    \"license\": \"EL67890\",\n    \"taxId\": \"98-7654321\",\n    \"docs\": [{\"type\": \"license\", \"url\": \"https://example.com/electrical-license.pdf\"}, {\"type\": \"certification\", \"url\": \"https://example.com/hvac-cert.pdf\"}]\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/signup",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "signup"]
-            },
-            "description": "Contractor registration with multiple services - Services are validated against the current available services list from GET /api/services. Update the services array based on the latest available options."
-          }
-        },
-        {
           "name": "Get User Profile",
           "request": {
             "method": "GET",
@@ -152,41 +108,6 @@
               "path": ["api", "auth", "profile"]
             },
             "description": "Get current authenticated user's profile - returns user object with firstName, lastName, role-specific data, approval status, and Stripe fields (stripeCustomerId, stripeConnectAccountId, stripeConnectStatus). Uses cached data for improved performance."
-          }
-        },
-        {
-          "name": "Get User Profile with Stripe Fields",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/profile",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "profile"]
-            },
-            "description": "Get user profile including new Stripe integration fields:\n- stripeCustomerId: Stripe customer ID (null if not created)\n- stripeConnectAccountId: Stripe Connect account ID (null if not created)\n- stripeConnectStatus: Status of Stripe Connect account (pending/active/rejected/disabled)"
-          }
-        },
-        {
-          "name": "Edit Profile",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"phone\": \"+1234567890\",\n  \"geoHome\": {\n    \"type\": \"Point\",\n    \"coordinates\": [-74.006, 40.7128]\n  },\n  \"customer\": {\n    \"defaultPropertyType\": \"domestic\"\n  },\n  \"contractor\": {\n    \"companyName\": \"TestCorp Contracting LLC\",\n    \"services\": [\"plumbing\", \"electrical\"],\n    \"license\": \"LIC123456\",\n    \"taxId\": \"TAX123456\"\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/user/{{userId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "user", "{{userId}}"]
-            },
-            "description": "Edit the profile of the current user. Only the fields provided in the body will be updated. Requires authentication."
           }
         },
         {
@@ -313,6 +234,377 @@
       ]
     },
     {
+      "name": "User Management",
+      "item": [
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"phone\": \"+1234567890\",\n  \"role\": \"customer\",\n  \"geoHome\": {\n    \"type\": \"Point\",\n    \"coordinates\": [-74.006, 40.7128]\n  },\n  \"customer\": {\n    \"defaultPropertyType\": \"domestic\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/user",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user"]
+            },
+            "description": "Create a new user account"
+          }
+        },
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/user?page=1&limit=10&role=customer",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page"
+                },
+                {
+                  "key": "role",
+                  "value": "customer",
+                  "description": "Filter by role: customer, contractor, admin"
+                }
+              ]
+            },
+            "description": "List users with pagination and filtering"
+          }
+        },
+        {
+          "name": "Get Admin Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/get-admins",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user", "get-admins"]
+            },
+            "description": "Get all admin users"
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user", "{{userId}}"]
+            },
+            "description": "Get user details by ID"
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "multipart/form-data"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "firstName",
+                  "value": "John",
+                  "type": "text"
+                },
+                {
+                  "key": "lastName",
+                  "value": "Doe",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "john.doe@example.com",
+                  "type": "text"
+                },
+                {
+                  "key": "phone",
+                  "value": "+1234567890",
+                  "type": "text"
+                },
+                {
+                  "key": "profileImage",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/user/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user", "{{userId}}"]
+            },
+            "description": "Update user profile with optional profile image"
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"OldPassword123!\",\n  \"newPassword\": \"NewPassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/user/change-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user", "change-password"]
+            },
+            "description": "Change user password"
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user", "{{userId}}"]
+            },
+            "description": "Delete user account"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Management",
+      "item": [
+        {
+          "name": "Get User Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users", "stats"]
+            },
+            "description": "Get user statistics overview"
+          }
+        },
+        {
+          "name": "Get Users with Advanced Filtering",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users?page=1&limit=10&role=customer&status=pending&approval=pending&email=&phone=&companyName=&services=&sortBy=createdAt&sortOrder=desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number for pagination"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page (5, 10, 20, 50)"
+                },
+                {
+                  "key": "role",
+                  "value": "customer",
+                  "description": "Filter by role: customer, contractor, admin",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "description": "Filter by status: pending, active, revoke",
+                  "disabled": true
+                },
+                {
+                  "key": "approval",
+                  "value": "pending",
+                  "description": "Filter by approval: pending, approved, rejected",
+                  "disabled": true
+                },
+                {
+                  "key": "email",
+                  "value": "",
+                  "description": "Search by email pattern (e.g., 'customer', '@test.com')",
+                  "disabled": true
+                },
+                {
+                  "key": "phone",
+                  "value": "",
+                  "description": "Search by phone pattern (e.g., '+1234', '567')",
+                  "disabled": true
+                },
+                {
+                  "key": "companyName",
+                  "value": "",
+                  "description": "Search contractor company names (e.g., 'TestCorp')",
+                  "disabled": true
+                },
+                {
+                  "key": "services",
+                  "value": "",
+                  "description": "Filter by services: plumbing,electrical,hvac (comma-separated)",
+                  "disabled": true
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt",
+                  "description": "Sort field: createdAt, updatedAt, email"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc",
+                  "description": "Sort order: asc, desc"
+                }
+              ]
+            },
+            "description": "Primary filtering endpoint with comprehensive parameter options"
+          }
+        },
+        {
+          "name": "Get Single User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users", "{{userId}}"]
+            },
+            "description": "Get single user by ID (set userId variable)"
+          }
+        },
+        {
+          "name": "Approve User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\",\n  \"approval\": \"approved\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users", "{{userId}}"]
+            },
+            "description": "Approve a user - sets status to active and approval to approved"
+          }
+        },
+        {
+          "name": "Reject User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approval\": \"rejected\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users", "{{userId}}"]
+            },
+            "description": "Reject a user - sets approval to rejected"
+          }
+        },
+        {
+          "name": "Revoke User",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users", "{{userId}}"]
+            },
+            "description": "Revoke (soft delete) a user"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Services Management",
+      "item": [
+        {
+          "name": "Get Services (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/services",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "services"]
+            },
+            "description": "Get current available contractor services - Public endpoint, returns latest version of services array with version number and last updated timestamp. Use this endpoint to get valid service options for contractor registration."
+          }
+        },
+        {
+          "name": "Create Services Version",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"services\": [\n    \"plumbing\",\n    \"electrical\",\n    \"hvac\",\n    \"general\",\n    \"roofing\",\n    \"carpentry\",\n    \"painting\",\n    \"landscaping\",\n    \"cleaning\",\n    \"pest control\",\n    \"flooring\",\n    \"windows\",\n    \"doors\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/services",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "services"]
+            },
+            "description": "Create new services version - Admin only. Creates a new document with incremented version number. All service names are normalized to lowercase and deduplicated."
+          }
+        }
+      ]
+    },
+    {
       "name": "Membership Management",
       "item": [
         {
@@ -325,37 +617,11 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "membership", "plans"]
             },
-            "description": "Get all available membership plans (public endpoint)"
+            "description": "Get all available membership plans (authenticated endpoint)"
           }
         },
         {
-          "name": "Get Customer Plans",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/membership/plans/customer",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "membership", "plans", "customer"]
-            },
-            "description": "Get membership plans for customers only"
-          }
-        },
-        {
-          "name": "Get Contractor Plans",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/membership/plans/contractor",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "membership", "plans", "contractor"]
-            },
-            "description": "Get membership plans for contractors only"
-          }
-        },
-        {
-          "name": "Get Plans by User Type (Dynamic)",
+          "name": "Get Plans by User Type",
           "request": {
             "method": "GET",
             "header": [],
@@ -400,6 +666,28 @@
               "path": ["api", "membership", "checkout"]
             },
             "description": "Create Stripe checkout session for membership purchase (simplified - always one-time initially)"
+          }
+        },
+        {
+          "name": "Create Membership Upgrade Checkout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newPlanId\": \"NEW_PLAN_ID_HERE\",\n  \"newBillingPeriod\": \"monthly\"\n}\n\n// newBillingPeriod: \"monthly\" or \"yearly\"\n// Upgrades existing membership with prorated charges"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/membership/upgrade/checkout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "membership", "upgrade", "checkout"]
+            },
+            "description": "Create Stripe checkout session for membership upgrade with prorated charges"
           }
         },
         {
@@ -451,622 +739,16 @@
           }
         },
         {
-          "name": "Get Current Membership",
+          "name": "Get User Memberships (Public)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/membership/current",
+              "raw": "{{baseUrl}}/api/user-memberships",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "membership", "current"]
+              "path": ["api", "user-memberships"]
             },
-            "description": "Get user's current active membership"
-          }
-        },
-        {
-          "name": "Get Membership History",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/membership/history",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "membership", "history"]
-            },
-            "description": "Get user's membership history"
-          }
-        }
-      ]
-    },
-    {
-      "name": "Services Management",
-      "item": [
-        {
-          "name": "Get Services (Public)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/services",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "services"]
-            },
-            "description": "Get current available contractor services - Public endpoint, returns latest version of services array with version number and last updated timestamp. Use this endpoint to get valid service options for contractor registration."
-          }
-        },
-        {
-          "name": "Create Services Version",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"services\": [\n    \"plumbing\",\n    \"electrical\",\n    \"hvac\",\n    \"general\",\n    \"roofing\",\n    \"carpentry\",\n    \"painting\",\n    \"landscaping\",\n    \"cleaning\",\n    \"pest control\",\n    \"flooring\",\n    \"windows\",\n    \"doors\"\n  ]\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/services",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "services"]
-            },
-            "description": "Create new services version - Admin only. Creates a new document with incremented version number. All service names are normalized to lowercase and deduplicated."
-          }
-        },
-        {
-          "name": "Create Services - Example 1",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"services\": [\n    \"plumbing\",\n    \"electrical\",\n    \"hvac\",\n    \"general\"\n  ]\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/services",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "services"]
-            },
-            "description": "Example: Create initial services with basic categories"
-          }
-        },
-        {
-          "name": "Create Services - Example 2",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"services\": [\n    \"plumbing\",\n    \"electrical\",\n    \"hvac\",\n    \"general\",\n    \"roofing\",\n    \"carpentry\",\n    \"painting\",\n    \"landscaping\",\n    \"cleaning\",\n    \"pest control\",\n    \"flooring\",\n    \"windows\",\n    \"doors\",\n    \"insulation\",\n    \"solar panels\"\n  ]\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/services",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "services"]
-            },
-            "description": "Example: Expanded services list with more specialized categories"
-          }
-        }
-      ]
-    },
-    {
-      "name": "Payment Management",
-      "item": [
-        {
-          "name": "Create Membership Checkout",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"planId\": \"PLAN_ID_HERE\",\n  \"billingPeriod\": \"monthly\"\n}\n\n// billingPeriod: \"monthly\" or \"yearly\"\n// All memberships start as one-time payments\n// Auto-renewal can be toggled later via /api/membership/toggle-auto-renewal"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/membership/checkout",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "membership", "checkout"]
-            },
-            "description": "Create Stripe checkout session for membership purchase (simplified - always one-time initially)"
-          }
-        },
-        {
-          "name": "Create Job Payment",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"jobRequestId\": \"JOB_REQUEST_ID\",\n  \"contractorId\": \"CONTRACTOR_ID\",\n  \"totalAmount\": 1500.00,\n  \"description\": \"Kitchen renovation project\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/payment/job/create",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "job", "create"]
-            },
-            "description": "Create a new job payment with deposit, pre-start, and completion phases"
-          }
-        },
-        {
-          "name": "Process Job Deposit",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"paymentId\": \"PAYMENT_ID\",\n  \"paymentMethodId\": \"pm_card_visa\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/payment/job/deposit",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "job", "deposit"]
-            },
-            "description": "Process the initial 15% deposit payment for a job"
-          }
-        },
-        {
-          "name": "Process Job Pre-Start Payment",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"paymentId\": \"PAYMENT_ID\",\n  \"paymentMethodId\": \"pm_card_visa\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/payment/job/prestart",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "job", "prestart"]
-            },
-            "description": "Process the 25% pre-start payment before work begins"
-          }
-        },
-        {
-          "name": "Process Job Completion Payment",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"paymentId\": \"PAYMENT_ID\",\n  \"paymentMethodId\": \"pm_card_visa\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/payment/job/completion",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "job", "completion"]
-            },
-            "description": "Process the final 60% completion payment after work is finished"
-          }
-        },
-        {
-          "name": "Process Job Refund",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"paymentId\": \"PAYMENT_ID\",\n  \"reason\": \"Work not completed as specified\",\n  \"refundAmount\": 500.00\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/payment/job/refund",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "job", "refund"]
-            },
-            "description": "Process a refund for a job payment"
-          }
-        },
-        {
-          "name": "Create Off-Market Payment",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"amount\": 2000.00,\n  \"description\": \"Custom renovation project\",\n  \"contractorId\": \"CONTRACTOR_ID\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/payment/offmarket/create",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "offmarket", "create"]
-            },
-            "description": "Create an off-market payment for custom projects"
-          }
-        },
-        {
-          "name": "Process Off-Market Deposit",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"paymentId\": \"PAYMENT_ID\",\n  \"paymentMethodId\": \"pm_card_visa\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/payment/offmarket/deposit",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "offmarket", "deposit"]
-            },
-            "description": "Process deposit payment for off-market project"
-          }
-        },
-        {
-          "name": "Request Financing",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"paymentId\": \"PAYMENT_ID\",\n  \"financingAmount\": 1500.00,\n  \"termMonths\": 12\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/payment/offmarket/financing/request",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "offmarket", "financing", "request"]
-            },
-            "description": "Request financing for an off-market payment"
-          }
-        },
-        {
-          "name": "Process Financing Payment",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"paymentId\": \"PAYMENT_ID\",\n  \"paymentMethodId\": \"pm_card_visa\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/payment/offmarket/financing/pay",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "offmarket", "financing", "pay"]
-            },
-            "description": "Process financing payment for off-market project"
-          }
-        },
-        {
-          "name": "Process Off-Market Refund",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"paymentId\": \"PAYMENT_ID\",\n  \"reason\": \"Project cancelled\",\n  \"refundAmount\": 1000.00\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/payment/offmarket/refund",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "offmarket", "refund"]
-            },
-            "description": "Process refund for off-market payment"
-          }
-        },
-        {
-          "name": "Setup Contractor Connect",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"country\": \"US\",\n  \"type\": \"express\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/payment/connect/setup",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "connect", "setup"]
-            },
-            "description": "Setup Stripe Connect account for contractor"
-          }
-        },
-        {
-          "name": "Get Contractor Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/payment/connect/dashboard",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "connect", "dashboard"]
-            },
-            "description": "Get contractor's Stripe Connect dashboard data"
-          }
-        },
-        {
-          "name": "Get Connect Status",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/payment/connect/status",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "connect", "status"]
-            },
-            "description": "Get contractor's Stripe Connect account status"
-          }
-        },
-        {
-          "name": "Get Payment History",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/payment/history?page=1&limit=10&type=all",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "history"],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1",
-                  "description": "Page number"
-                },
-                {
-                  "key": "limit",
-                  "value": "10",
-                  "description": "Items per page"
-                },
-                {
-                  "key": "type",
-                  "value": "all",
-                  "description": "Payment type: all, membership, job, offmarket"
-                }
-              ]
-            },
-            "description": "Get user's payment history with filtering"
-          }
-        },
-        {
-          "name": "Get Payment Details",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/payment/{{paymentId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "{{paymentId}}"]
-            },
-            "description": "Get detailed information about a specific payment"
-          }
-        },
-        {
-          "name": "Get Payment Stats",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/payment/stats/overview",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "stats", "overview"]
-            },
-            "description": "Get payment statistics and analytics (admin only)"
-          }
-        },
-        {
-          "name": "Stripe Webhook",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Stripe-Signature",
-                "value": "t=1234567890,v1=signature_here"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"id\": \"evt_1234567890\",\n  \"object\": \"event\",\n  \"type\": \"payment_intent.succeeded\",\n  \"data\": {\n    \"object\": {\n      \"id\": \"pi_1234567890\",\n      \"amount\": 150000,\n      \"currency\": \"usd\",\n      \"status\": \"succeeded\"\n    }\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/payment/webhook/stripe",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "webhook", "stripe"]
-            },
-            "description": "Stripe webhook endpoint for payment events"
-          }
-        }
-      ]
-    },
-    {
-      "name": "Job Request Management",
-      "item": [
-        {
-          "name": "Create Job Request",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Kitchen Renovation\",\n  \"description\": \"Complete kitchen renovation including cabinets, countertops, and appliances\",\n  \"property\": \"PROPERTY_ID\",\n  \"service\": \"solar\",\n  \"estimate\": 15000,\n  \"type\": \"regular\",\n  \"timeline\": 30\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/job/requests",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "job", "requests"]
-            },
-            "description": "Create a new job request for contractors to bid on. Use valid services from /api/services endpoint. Timeline is in days."
-          }
-        },
-        {
-          "name": "Get Job Requests",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/job/requests?page=1&limit=10&status=open&serviceType=general",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "job", "requests"],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1",
-                  "description": "Page number"
-                },
-                {
-                  "key": "limit",
-                  "value": "10",
-                  "description": "Items per page"
-                },
-                {
-                  "key": "status",
-                  "value": "open",
-                  "description": "Filter by status: open, in_progress, completed, cancelled"
-                },
-                {
-                  "key": "serviceType",
-                  "value": "general",
-                  "description": "Filter by service type"
-                }
-              ]
-            },
-            "description": "Get job requests with filtering and pagination"
-          }
-        },
-        {
-          "name": "Get Job Request by ID",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/job/requests/{{jobRequestId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "job", "requests", "{{jobRequestId}}"]
-            },
-            "description": "Get specific job request details by ID. Returns timelineHistory array for status tracking."
-          }
-        },
-        {
-          "name": "Get Job Request with Timeline History",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/job/requests/{{jobRequestId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "job", "requests", "{{jobRequestId}}"]
-            },
-            "description": "Get job request with complete timeline history showing all status changes, dates, and who made the changes. Includes timelineHistory array with status, date, and by fields."
-          }
-        },
-        {
-          "name": "Update Job Request",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Updated Kitchen Renovation\",\n  \"description\": \"Updated description with additional requirements\",\n  \"budget\": 18000,\n  \"preferredEndDate\": \"2024-03-15\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/job/requests/{{jobRequestId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "job", "requests", "{{jobRequestId}}"]
-            },
-            "description": "Update an existing job request"
-          }
-        },
-        {
-          "name": "Cancel Job Request",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"reason\": \"Project cancelled by customer\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/job/requests/{{jobRequestId}}/cancel",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "job", "requests", "{{jobRequestId}}", "cancel"]
-            },
-            "description": "Cancel an existing job request"
+            "description": "Public endpoint to fetch all user memberships for internal use"
           }
         }
       ]
@@ -1231,8 +913,179 @@
       ]
     },
     {
+      "name": "Job Request Management",
+      "item": [
+        {
+          "name": "Create Job Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Kitchen Renovation\",\n  \"description\": \"Complete kitchen renovation including cabinets, countertops, and appliances\",\n  \"property\": \"PROPERTY_ID\",\n  \"service\": \"general\",\n  \"estimate\": 15000,\n  \"type\": \"regular\",\n  \"timeline\": 30\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/job/requests",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "job", "requests"]
+            },
+            "description": "Create a new job request for contractors to bid on. Use valid services from /api/services endpoint. Timeline is in days."
+          }
+        },
+        {
+          "name": "Get Job Requests",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/job/requests?page=1&limit=10&status=open&serviceType=general",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "job", "requests"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page"
+                },
+                {
+                  "key": "status",
+                  "value": "open",
+                  "description": "Filter by status: open, in_progress, completed, cancelled"
+                },
+                {
+                  "key": "serviceType",
+                  "value": "general",
+                  "description": "Filter by service type"
+                }
+              ]
+            },
+            "description": "Get job requests with filtering and pagination"
+          }
+        },
+        {
+          "name": "Get Job Request by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/job/requests/{{jobRequestId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "job", "requests", "{{jobRequestId}}"]
+            },
+            "description": "Get specific job request details by ID. Returns timelineHistory array for status tracking."
+          }
+        },
+        {
+          "name": "Update Job Request",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Kitchen Renovation\",\n  \"description\": \"Updated description with additional requirements\",\n  \"budget\": 18000,\n  \"preferredEndDate\": \"2024-03-15\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/job/requests/{{jobRequestId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "job", "requests", "{{jobRequestId}}"]
+            },
+            "description": "Update an existing job request"
+          }
+        },
+        {
+          "name": "Cancel Job Request",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Project cancelled by customer\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/job/requests/{{jobRequestId}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "job", "requests", "{{jobRequestId}}", "cancel"]
+            },
+            "description": "Cancel an existing job request"
+          }
+        }
+      ]
+    },
+    {
       "name": "Bid Management",
       "item": [
+        {
+          "name": "Create Bid",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jobRequestId\": \"JOB_REQUEST_ID\",\n  \"bidAmount\": 12000,\n  \"message\": \"Professional kitchen renovation with high-quality materials\",\n  \"timeline\": {\n    \"startDate\": \"2024-02-01\",\n    \"endDate\": \"2024-03-15\"\n  },\n  \"materials\": [\n    \"High-quality materials\",\n    \"Professional tools\",\n    \"Safety equipment\"\n  ],\n  \"warranty\": \"5 years\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/job/bids",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "job", "bids"]
+            },
+            "description": "Create a bid for a job request (contractor only). Timeline must be an object with startDate and endDate."
+          }
+        },
+        {
+          "name": "Get Contractor's Own Bids",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/job/bids/contractor?page=1&limit=10&status=all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "job", "bids", "contractor"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page"
+                },
+                {
+                  "key": "status",
+                  "value": "all",
+                  "description": "Filter by status: all, pending, accepted, rejected"
+                }
+              ]
+            },
+            "description": "Get all bids created by the contractor"
+          }
+        },
         {
           "name": "Get Job Bids",
           "request": {
@@ -1241,7 +1094,7 @@
             "url": {
               "raw": "{{baseUrl}}/api/job/bids/job/{{jobRequestId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "bid", "job", "{{jobRequestId}}"]
+              "path": ["api", "job", "bids", "job", "{{jobRequestId}}"]
             },
             "description": "Get all bids for a specific job request"
           }
@@ -1267,36 +1120,69 @@
             },
             "description": "Accept a bid for a job request. This will:\n1. Mark the selected bid as 'accepted'\n2. Reject all other bids for the same job\n3. Update job status to 'inprogress'\n4. Add entry to timelineHistory array\n5. Set acceptedBid field on job request"
           }
+        }
+      ]
+    },
+    {
+      "name": "Contractor Job Management",
+      "item": [
+        {
+          "name": "Get Jobs for Contractor",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/job/contractor/jobs?page=1&limit=10&service=plumbing&search=renovation",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "job", "contractor", "jobs"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number for pagination"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of jobs per page (max 100)"
+                },
+                {
+                  "key": "service",
+                  "value": "plumbing",
+                  "description": "Filter by service type (e.g., plumbing, electrical, solar)",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "renovation",
+                  "description": "Search in job title and description",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get jobs available to contractor based on membership plan. Returns jobs with access control, time delays, lead limits, and geospatial filtering applied."
+          }
         },
         {
-          "name": "Accept Bid - Complete Workflow",
+          "name": "Get Job Details (Free View)",
           "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"acceptedAt\": \"2024-01-15T10:00:00Z\"\n}"
-            },
+            "method": "GET",
+            "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/job/bids/{{bidId}}/accept",
+              "raw": "{{baseUrl}}/api/job/contractor/jobs/{{jobId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "job", "bids", "{{bidId}}", "accept"]
+              "path": ["api", "job", "contractor", "jobs", "{{jobId}}"]
             },
-            "description": "Complete bid acceptance workflow. After accepting:\n- Check job request status (should be 'inprogress')\n- Check acceptedBid field (should contain bid ID)\n- Check timelineHistory (should have new 'accepted' entry)\n- Check other bids status (should be 'rejected')"
+            "description": "Get specific job details for contractor. Free to view, shows bid status. Does not consume leads."
           }
         }
       ]
     },
     {
-      "name": "Contractor Management",
+      "name": "Payment Management",
       "item": [
         {
-          "name": "Create Bid",
+          "name": "Create Job Payment",
           "request": {
             "method": "POST",
             "header": [
@@ -1307,25 +1193,161 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"jobRequestId\": \"JOB_REQUEST_ID\",\n  \"bidAmount\": 12000,\n  \"message\": \"Professional kitchen renovation with high-quality materials\",\n  \"timeline\": {\n    \"startDate\": \"2024-02-01\",\n    \"endDate\": \"2024-03-15\"\n  },\n  \"materials\": [\n    \"High-quality materials\",\n    \"Professional tools\",\n    \"Safety equipment\"\n  ],\n  \"warranty\": \"5 years\"\n}"
+              "raw": "{\n  \"jobRequestId\": \"JOB_REQUEST_ID\",\n  \"contractorId\": \"CONTRACTOR_ID\",\n  \"totalAmount\": 1500.00,\n  \"description\": \"Kitchen renovation project\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/job/contractor/bid",
+              "raw": "{{baseUrl}}/api/payment/job/create",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "contractor", "bid"]
+              "path": ["api", "payment", "job", "create"]
             },
-            "description": "Create a bid for a job request (contractor only). Timeline must be an object with startDate and endDate."
+            "description": "Create a new job payment with deposit, pre-start, and completion phases"
           }
         },
         {
-          "name": "Get Contractor Bids",
+          "name": "Process Job Deposit",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"PAYMENT_ID\",\n  \"paymentMethodId\": \"pm_card_visa\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/job/deposit",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "job", "deposit"]
+            },
+            "description": "Process the initial 15% deposit payment for a job"
+          }
+        },
+        {
+          "name": "Process Job Pre-Start Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"PAYMENT_ID\",\n  \"paymentMethodId\": \"pm_card_visa\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/job/prestart",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "job", "prestart"]
+            },
+            "description": "Process the 25% pre-start payment before work begins"
+          }
+        },
+        {
+          "name": "Process Job Completion Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"PAYMENT_ID\",\n  \"paymentMethodId\": \"pm_card_visa\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/job/completion",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "job", "completion"]
+            },
+            "description": "Process the final 60% completion payment after work is finished"
+          }
+        },
+        {
+          "name": "Process Job Refund",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"PAYMENT_ID\",\n  \"reason\": \"Work not completed as specified\",\n  \"refundAmount\": 500.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/job/refund",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "job", "refund"]
+            },
+            "description": "Process a refund for a job payment"
+          }
+        },
+        {
+          "name": "Setup Contractor Connect",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"country\": \"US\",\n  \"type\": \"express\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/connect/setup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "connect", "setup"]
+            },
+            "description": "Setup Stripe Connect account for contractor"
+          }
+        },
+        {
+          "name": "Get Contractor Dashboard",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/job/contractor/bids?page=1&limit=10&status=all",
+              "raw": "{{baseUrl}}/api/payment/connect/dashboard",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "contractor", "bids"],
+              "path": ["api", "payment", "connect", "dashboard"]
+            },
+            "description": "Get contractor's Stripe Connect dashboard data"
+          }
+        },
+        {
+          "name": "Get Connect Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/connect/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "connect", "status"]
+            },
+            "description": "Get contractor's Stripe Connect account status"
+          }
+        },
+        {
+          "name": "Get Payment History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/history?page=1&limit=10&type=all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "history"],
               "query": [
                 {
                   "key": "page",
@@ -1338,105 +1360,205 @@
                   "description": "Items per page"
                 },
                 {
-                  "key": "status",
+                  "key": "type",
                   "value": "all",
-                  "description": "Filter by status: all, pending, accepted, rejected"
+                  "description": "Payment type: all, membership, job, offmarket"
                 }
               ]
             },
-            "description": "Get all bids created by the contractor"
+            "description": "Get user's payment history with filtering"
           }
         },
         {
-          "name": "Get Job Bids (Contractor)",
+          "name": "Get Payment Details",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/job/contractor/bids/job/{{jobRequestId}}",
+              "raw": "{{baseUrl}}/api/payment/{{paymentId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "contractor", "bids", "job", "{{jobRequestId}}"]
+              "path": ["api", "payment", "{{paymentId}}"]
             },
-            "description": "Get bids for a specific job request (contractor view)"
+            "description": "Get detailed information about a specific payment"
           }
-        }
-      ]
-    },
-    {
-      "name": "User Management",
-      "item": [
+        },
         {
-          "name": "Create User",
+          "name": "Get Payment Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/stats/overview",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "stats", "overview"]
+            },
+            "description": "Get payment statistics and analytics (admin only)"
+          }
+        },
+        {
+          "name": "Stripe Webhook",
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "Stripe-Signature",
+                "value": "t=1234567890,v1=signature_here"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"phone\": \"+1234567890\",\n  \"role\": \"customer\",\n  \"geoHome\": {\n    \"type\": \"Point\",\n    \"coordinates\": [-74.006, 40.7128]\n  },\n  \"customer\": {\n    \"defaultPropertyType\": \"domestic\"\n  }\n}"
+              "raw": "{\n  \"id\": \"evt_1234567890\",\n  \"object\": \"event\",\n  \"type\": \"payment_intent.succeeded\",\n  \"data\": {\n    \"object\": {\n      \"id\": \"pi_1234567890\",\n      \"amount\": 150000,\n      \"currency\": \"usd\",\n      \"status\": \"succeeded\"\n    }\n  }\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/user",
+              "raw": "{{baseUrl}}/api/payment/webhook/stripe",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "user"]
+              "path": ["api", "payment", "webhook", "stripe"]
             },
-            "description": "Create a new user account"
+            "description": "Stripe webhook endpoint for payment events"
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "Dashboard Analytics",
+      "item": [
         {
-          "name": "Get Admin Users",
+          "name": "Smart Dashboard (Role-Based)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/user/get-admins",
+              "raw": "{{baseUrl}}/api/dashboard",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "user", "get-admins"]
+              "path": ["api", "dashboard"]
             },
-            "description": "Get all admin users"
+            "description": "Single smart dashboard endpoint that returns different analytics based on user role:\n\n🔴 **Admin**: Complete platform analytics, health score, business intelligence\n🟡 **Contractor**: Bidding performance, earnings, win rate, lead usage\n🔵 **Customer**: Personal job statistics, payment history, property analytics\n\nThe response structure changes based on the authenticated user's role, providing tailored dashboard data automatically."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Investment Opportunities",
+      "item": [
+        {
+          "name": "Get All Investment Opportunities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/investment?page=1&limit=10&status=active",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "investment"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "active",
+                  "description": "Filter by status: active, completed, cancelled",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get all investment opportunities (authenticated). Returns list of opportunities with pagination and filtering."
           }
         },
         {
-          "name": "Change Password",
+          "name": "Get Investment Opportunity by ID",
           "request": {
-            "method": "PUT",
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/investment/{{opportunityId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "investment", "{{opportunityId}}"]
+            },
+            "description": "Get specific investment opportunity details by ID"
+          }
+        },
+        {
+          "name": "Create Investment Opportunity (Admin)",
+          "request": {
+            "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
-                "value": "application/json"
+                "value": "multipart/form-data"
               }
             ],
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"currentPassword\": \"OldPassword123!\",\n  \"newPassword\": \"NewPassword123!\"\n}"
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "title",
+                  "value": "Luxury Condo Development",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Premium condominium development in downtown area",
+                  "type": "text"
+                },
+                {
+                  "key": "location",
+                  "value": "Downtown, NY",
+                  "type": "text"
+                },
+                {
+                  "key": "estimatedBudget",
+                  "value": "5000000",
+                  "type": "text"
+                },
+                {
+                  "key": "timeline",
+                  "value": "24",
+                  "type": "text",
+                  "description": "Timeline in months"
+                },
+                {
+                  "key": "expectedROI",
+                  "value": "25",
+                  "type": "text",
+                  "description": "Expected ROI percentage"
+                },
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": [],
+                  "description": "Upload up to 10 photos"
+                },
+                {
+                  "key": "documents",
+                  "type": "file",
+                  "src": [],
+                  "description": "Upload up to 5 documents"
+                }
+              ]
             },
             "url": {
-              "raw": "{{baseUrl}}/api/user/change-password",
+              "raw": "{{baseUrl}}/api/investment",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "user", "change-password"]
+              "path": ["api", "investment"]
             },
-            "description": "Change user password"
+            "description": "Create a new investment opportunity (admin only). Supports up to 10 photos and 5 documents."
           }
         },
         {
-          "name": "Get User by ID",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/user/{{userId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "user", "{{userId}}"]
-            },
-            "description": "Get user details by ID"
-          }
-        },
-        {
-          "name": "Update User",
+          "name": "Update Investment Opportunity (Admin)",
           "request": {
             "method": "PUT",
             "header": [
@@ -1449,81 +1571,110 @@
               "mode": "formdata",
               "formdata": [
                 {
-                  "key": "firstName",
-                  "value": "John",
+                  "key": "title",
+                  "value": "Updated Luxury Condo Development",
                   "type": "text"
                 },
                 {
-                  "key": "lastName",
-                  "value": "Doe",
+                  "key": "description",
+                  "value": "Updated description with new details",
                   "type": "text"
                 },
                 {
-                  "key": "email",
-                  "value": "john.doe@example.com",
+                  "key": "estimatedBudget",
+                  "value": "5500000",
                   "type": "text"
                 },
                 {
-                  "key": "phone",
-                  "value": "+1234567890",
-                  "type": "text"
-                },
-                {
-                  "key": "profileImage",
+                  "key": "photos",
                   "type": "file",
-                  "src": []
+                  "src": [],
+                  "description": "Upload new photos (up to 10)"
+                },
+                {
+                  "key": "documents",
+                  "type": "file",
+                  "src": [],
+                  "description": "Upload new documents (up to 5)"
                 }
               ]
             },
             "url": {
-              "raw": "{{baseUrl}}/api/user/{{userId}}",
+              "raw": "{{baseUrl}}/api/investment/{{opportunityId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "user", "{{userId}}"]
+              "path": ["api", "investment", "{{opportunityId}}"]
             },
-            "description": "Update user profile with optional profile image"
+            "description": "Update an existing investment opportunity (admin only)"
           }
         },
         {
-          "name": "Delete User",
+          "name": "Express Interest (Contractor)",
           "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/user/{{userId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "user", "{{userId}}"]
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"I am interested in this investment opportunity and would like to discuss further.\"\n}"
             },
-            "description": "Delete user account"
+            "url": {
+              "raw": "{{baseUrl}}/api/investment/{{opportunityId}}/interest",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "investment", "{{opportunityId}}", "interest"]
+            },
+            "description": "Express interest in an investment opportunity (contractor only)"
           }
         },
         {
-          "name": "List Users",
+          "name": "Get My Interests (Contractor)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/user?page=1&limit=10&role=customer",
+              "raw": "{{baseUrl}}/api/investment/my-interests",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "user"],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1",
-                  "description": "Page number"
-                },
-                {
-                  "key": "limit",
-                  "value": "10",
-                  "description": "Items per page"
-                },
-                {
-                  "key": "role",
-                  "value": "customer",
-                  "description": "Filter by role: customer, contractor, admin"
-                }
-              ]
+              "path": ["api", "investment", "my-interests"]
             },
-            "description": "List users with pagination and filtering"
+            "description": "Get all investment opportunities the contractor has expressed interest in (contractor only)"
+          }
+        },
+        {
+          "name": "Update Interest Status (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"accepted\",\n  \"adminNote\": \"Contractor profile matches our requirements\"\n}\n\n// status: \"pending\", \"accepted\", \"rejected\""
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/investment/{{opportunityId}}/interests/{{contractorId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "investment", "{{opportunityId}}", "interests", "{{contractorId}}"]
+            },
+            "description": "Update the status of a contractor's interest in an opportunity (admin only)"
+          }
+        },
+        {
+          "name": "Get Investment Statistics (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/investment/statistics",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "investment", "statistics"]
+            },
+            "description": "Get investment opportunity statistics and analytics (admin only)"
           }
         }
       ]
@@ -1577,626 +1728,6 @@
               "path": ["api", "favorites", "{{contractorId}}"]
             },
             "description": "Remove a contractor from favorites (customers only)"
-          }
-        }
-      ]
-    },
-    {
-      "name": "Complete Workflow Testing",
-      "item": [
-        {
-          "name": "1. Create Property",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Test Property\",\n  \"propertyType\": \"house\",\n  \"location\": {\n    \"type\": \"Point\",\n    \"coordinates\": [-74.006, 40.7128]\n  },\n  \"area\": 1500,\n  \"areaUnit\": \"sqft\",\n  \"totalRooms\": 6,\n  \"bedrooms\": 3,\n  \"bathrooms\": 2,\n  \"kitchens\": 1,\n  \"description\": \"Test property for workflow testing\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/property",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "property"]
-            },
-            "description": "Step 1: Create a property for the workflow. Save the property ID for next steps."
-          }
-        },
-        {
-          "name": "2. Create Job Request",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Complete Workflow Test\",\n  \"description\": \"Testing complete job request and bid workflow\",\n  \"property\": \"PROPERTY_ID_FROM_STEP_1\",\n  \"service\": \"solar\",\n  \"estimate\": 10000,\n  \"type\": \"regular\",\n  \"timeline\": 30\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/job/requests",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "job", "requests"]
-            },
-            "description": "Step 2: Create a job request using the property from step 1. Save the job request ID for next steps."
-          }
-        },
-        {
-          "name": "3. Create Bid (Contractor)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"jobRequestId\": \"JOB_REQUEST_ID_FROM_STEP_2\",\n  \"bidAmount\": 9500,\n  \"message\": \"Professional service with warranty\",\n  \"timeline\": {\n    \"startDate\": \"2024-02-01\",\n    \"endDate\": \"2024-03-02\"\n  },\n  \"materials\": [\"Professional materials\", \"Safety equipment\"],\n  \"warranty\": \"10 years\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/job/contractor/bid",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "contractor", "bid"]
-            },
-            "description": "Step 3: Create a bid as contractor. Save the bid ID for next steps."
-          }
-        },
-        {
-          "name": "4. Accept Bid (Customer)",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"acceptedAt\": \"2024-01-15T10:00:00Z\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/job/bids/BID_ID_FROM_STEP_3/accept",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "job", "bids", "BID_ID_FROM_STEP_3", "accept"]
-            },
-            "description": "Step 4: Accept the bid as customer. This triggers the complete workflow with status updates and timeline history."
-          }
-        },
-        {
-          "name": "5. Verify Complete Workflow",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/job/requests/JOB_REQUEST_ID_FROM_STEP_2",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "job", "requests", "JOB_REQUEST_ID_FROM_STEP_2"]
-            },
-            "description": "Step 5: Verify the complete workflow worked correctly. Check:\n- status: should be 'inprogress'\n- acceptedBid: should contain the bid ID\n- timelineHistory: should have 'accepted' entry with date and user"
-          }
-        }
-      ]
-    },
-    {
-      "name": "Contractor Job Management",
-      "item": [
-        {
-          "name": "Get Jobs for Contractor",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/job/contractor/jobs?page=1&limit=10&service=plumbing&search=solar",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "job", "contractor", "jobs"],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1",
-                  "description": "Page number for pagination"
-                },
-                {
-                  "key": "limit",
-                  "value": "10",
-                  "description": "Number of jobs per page (max 100)"
-                },
-                {
-                  "key": "service",
-                  "value": "plumbing",
-                  "description": "Filter by service type (e.g., plumbing, electrical, solar)",
-                  "disabled": true
-                },
-                {
-                  "key": "search",
-                  "value": "solar",
-                  "description": "Search in job title and description",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "Get jobs available to contractor based on membership plan. Returns jobs with access control, time delays, lead limits, and geospatial filtering applied. Only shows jobs that are currently accessible (canAccessNow: true)."
-          }
-        },
-        {
-          "name": "Get Job Details (Consumes Lead)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/job/contractor/jobs/{{jobId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "job", "contractor", "jobs", "{{jobId}}"]
-            },
-            "description": "Get specific job details and consume a lead if accessible. Returns job information with customer and property details. Will return error if job is not accessible or lead limit is reached."
-          }
-        },
-        {
-          "name": "Check Job Access (No Lead Consumption)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/job/contractor/jobs/{{jobId}}/access",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "job", "contractor", "jobs", "{{jobId}}", "access"]
-            },
-            "description": "Check if contractor can access a specific job without consuming a lead. Returns access status, lead availability, and job preview information."
-          }
-        }
-      ]
-    },
-    {
-      "name": "Dashboard Analytics",
-      "item": [
-        {
-          "name": "Smart Dashboard (Role-Based)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/dashboard/platform",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "dashboard", "platform"]
-            },
-            "description": "Single smart dashboard endpoint that returns different analytics based on user role:\n\n🔴 **Admin**: Complete platform analytics, health score, business intelligence\n🟡 **Contractor**: Bidding performance, earnings, win rate, lead usage\n🔵 **Customer**: Personal job statistics, payment history, property analytics\n\nThe response structure changes based on the authenticated user's role, providing tailored dashboard data automatically."
-          }
-        },
-        {
-          "name": "Platform Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/dashboard/",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "dashboard", ""]
-            },
-            "description": "Alternative dashboard endpoint - returns role-based analytics automatically"
-          }
-        }
-      ]
-    },
-    {
-      "name": "Admin Management",
-      "item": [
-        {
-          "name": "Get User Statistics",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/admin/users/stats",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "admin", "users", "stats"]
-            },
-            "description": "Get user statistics overview"
-          }
-        },
-        {
-          "name": "Get Users with Advanced Filtering",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/admin/users?page=1&limit=10&role=customer&status=pending&approval=pending&email=&phone=&companyName=&services=&sortBy=createdAt&sortOrder=desc",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "admin", "users"],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1",
-                  "description": "Page number for pagination"
-                },
-                {
-                  "key": "limit",
-                  "value": "10",
-                  "description": "Items per page (5, 10, 20, 50)"
-                },
-                {
-                  "key": "role",
-                  "value": "customer",
-                  "description": "Filter by role: customer, contractor, admin",
-                  "disabled": true
-                },
-                {
-                  "key": "status",
-                  "value": "pending",
-                  "description": "Filter by status: pending, active, revoke",
-                  "disabled": true
-                },
-                {
-                  "key": "approval",
-                  "value": "pending",
-                  "description": "Filter by approval: pending, approved, rejected",
-                  "disabled": true
-                },
-                {
-                  "key": "email",
-                  "value": "",
-                  "description": "Search by email pattern (e.g., 'customer', '@test.com')",
-                  "disabled": true
-                },
-                {
-                  "key": "phone",
-                  "value": "",
-                  "description": "Search by phone pattern (e.g., '+1234', '567')",
-                  "disabled": true
-                },
-                {
-                  "key": "companyName",
-                  "value": "",
-                  "description": "Search contractor company names (e.g., 'TestCorp')",
-                  "disabled": true
-                },
-                {
-                  "key": "services",
-                  "value": "",
-                  "description": "Filter by services: plumbing,electrical,hvac (comma-separated)",
-                  "disabled": true
-                },
-                {
-                  "key": "sortBy",
-                  "value": "createdAt",
-                  "description": "Sort field: createdAt, updatedAt, email"
-                },
-                {
-                  "key": "sortOrder",
-                  "value": "desc",
-                  "description": "Sort order: asc, desc"
-                }
-              ]
-            },
-            "description": "**Primary filtering endpoint with comprehensive parameter options**\n\nThis request provides all available filtering, sorting, and pagination parameters for user management. Enable/disable parameters as needed by checking/unchecking them in the Params tab.\n\n**Available Filters:**\n• Role-based filtering (customer, contractor, admin)\n• Status filtering (pending, active, revoke)\n• Approval status filtering (pending, approved, rejected)\n• Text search (email, phone, company name)\n• Service-based filtering for contractors\n• Sorting and pagination controls\n\n**Usage Examples:**\n• Pending customer approvals: Enable 'role'='customer' + 'status'='pending'\n• Email search: Enable 'email'='@company.com'\n• Active contractors: Enable 'role'='contractor' + 'status'='active'\n\n**Default:** Returns latest 10 users with standard pagination."
-          }
-        },
-        {
-          "name": "Get Pending Approvals",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/admin/users?status=pending&approval=pending&sortBy=createdAt&sortOrder=asc&page=1&limit=20",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "admin", "users"],
-              "query": [
-                {
-                  "key": "status",
-                  "value": "pending",
-                  "description": "Users with pending status"
-                },
-                {
-                  "key": "approval",
-                  "value": "pending",
-                  "description": "Users with pending approval"
-                },
-                {
-                  "key": "sortBy",
-                  "value": "createdAt"
-                },
-                {
-                  "key": "sortOrder",
-                  "value": "asc",
-                  "description": "Oldest first (FIFO processing)"
-                },
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "20"
-                },
-                {
-                  "key": "role",
-                  "value": "customer",
-                  "description": "🔧 Enable this to filter only customers",
-                  "disabled": true
-                },
-                {
-                  "key": "role",
-                  "value": "contractor",
-                  "description": "🔧 Or enable this to filter only contractors",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "Retrieve all users with pending approval status. Optimized for administrator approval workflows with FIFO processing order."
-          }
-        },
-        {
-          "name": "Get Active Users Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/admin/users?status=active&approval=approved&sortBy=updatedAt&sortOrder=desc&page=1&limit=15",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "admin", "users"],
-              "query": [
-                {
-                  "key": "status",
-                  "value": "active"
-                },
-                {
-                  "key": "approval",
-                  "value": "approved"
-                },
-                {
-                  "key": "sortBy",
-                  "value": "updatedAt",
-                  "description": "Recently active users first"
-                },
-                {
-                  "key": "sortOrder",
-                  "value": "desc"
-                },
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "15"
-                },
-                {
-                  "key": "role",
-                  "value": "customer",
-                  "description": "🔧 Enable to see only active customers",
-                  "disabled": true
-                },
-                {
-                  "key": "role",
-                  "value": "contractor",
-                  "description": "🔧 Enable to see only active contractors",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "Retrieve active users with approved status for dashboard and reporting purposes. Sorted by most recent activity."
-          }
-        },
-        {
-          "name": "Search Users by Text",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/admin/users?page=1&limit=10&email=&phone=&companyName=&services=&sortBy=createdAt&sortOrder=desc",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "admin", "users"],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                },
-                {
-                  "key": "email",
-                  "value": "",
-                  "description": "🔍 Type email pattern here (e.g., 'customer', '@test.com')"
-                },
-                {
-                  "key": "phone",
-                  "value": "",
-                  "description": "🔍 Type phone pattern here (e.g., '+1234', '567')"
-                },
-                {
-                  "key": "companyName",
-                  "value": "",
-                  "description": "🔍 Type company name here (e.g., 'TestCorp')"
-                },
-                {
-                  "key": "services",
-                  "value": "",
-                  "description": "🔍 Type services here (e.g., 'plumbing,electrical')"
-                },
-                {
-                  "key": "sortBy",
-                  "value": "createdAt"
-                },
-                {
-                  "key": "sortOrder",
-                  "value": "desc"
-                },
-                {
-                  "key": "role",
-                  "value": "customer",
-                  "description": "🔧 Enable to search only customers",
-                  "disabled": true
-                },
-                {
-                  "key": "role",
-                  "value": "contractor",
-                  "description": "🔧 Enable to search only contractors",
-                  "disabled": true
-                },
-                {
-                  "key": "status",
-                  "value": "active",
-                  "description": "🔧 Enable to search only active users",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "Search users by email, phone, or company name. Configure search parameters by enabling relevant filters in the Params tab."
-          }
-        },
-        {
-          "name": "Get Users with Pagination",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/admin/users?page=1&limit=5&sortBy=createdAt&sortOrder=desc",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "admin", "users"],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "5"
-                },
-                {
-                  "key": "sortBy",
-                  "value": "createdAt"
-                },
-                {
-                  "key": "sortOrder",
-                  "value": "desc"
-                }
-              ]
-            },
-            "description": "Get users with pagination and sorting"
-          }
-        },
-        {
-          "name": "Get Single User",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/admin/users/{{userId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "admin", "users", "{{userId}}"]
-            },
-            "description": "Get single user by ID (set userId variable)"
-          }
-        },
-        {
-          "name": "Approve User",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"active\",\n  \"approval\": \"approved\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/admin/users/{{userId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "admin", "users", "{{userId}}"]
-            },
-            "description": "Approve a user - sets status to active and approval to approved"
-          }
-        },
-        {
-          "name": "Approve User (Alternative)",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"active\",\n  \"approval\": \"approved\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/admin/users/{{userId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "admin", "users", "{{userId}}"]
-            },
-            "description": "Approve a user - sets status to active and approval to approved"
-          }
-        },
-        {
-          "name": "Reject User",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"approval\": \"rejected\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/admin/users/{{userId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "admin", "users", "{{userId}}"]
-            },
-            "description": "Reject a user - sets approval to rejected"
-          }
-        },
-        {
-          "name": "Reject User (Alternative)",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"approval\": \"rejected\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/admin/users/{{userId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "admin", "users", "{{userId}}"]
-            },
-            "description": "Reject a user - sets approval to rejected"
-          }
-        },
-        {
-          "name": "Revoke User",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/admin/users/{{userId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "admin", "users", "{{userId}}"]
-            },
-            "description": "Revoke (soft delete) a user"
           }
         }
       ]
