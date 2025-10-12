@@ -61,6 +61,7 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [imageError, setImageError] = useState<string>("");
   const [formError, setFormError] = useState<string>("");
+  const [locationAutoSet, setLocationAutoSet] = useState(false);
 
   // Get current location automatically from IP
   const { location: currentLocation, loading: currentLocationLoading } =
@@ -71,8 +72,15 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
     if (isOpen) {
       if (initialData) {
         setForm({ ...initialState, ...initialData });
+        // Check if initialData has valid location (not [0,0])
+        const hasValidLocation =
+          initialData.location?.coordinates?.[0] !== 0 ||
+          initialData.location?.coordinates?.[1] !== 0;
+        setLocationAutoSet(hasValidLocation); // Only skip auto-set if location exists
       } else {
+        // For new property, start with initial state
         setForm(initialState);
+        setLocationAutoSet(false); // Allow auto-set for new
       }
       // Reset all other states
       setImageFiles([]);
@@ -80,17 +88,16 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
       setImageError("");
       setFormError("");
     }
-  }, [initialData, isOpen]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   // Auto-populate location when creating new property (not editing)
   useEffect(() => {
     if (
       isOpen &&
-      !initialData &&
+      !locationAutoSet &&
       currentLocation &&
-      !currentLocationLoading &&
-      form.location.coordinates[0] === 0 &&
-      form.location.coordinates[1] === 0
+      !currentLocationLoading
     ) {
       setForm((prev: PropertyFormState) => ({
         ...prev,
@@ -100,8 +107,9 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
           address: currentLocation.address || "",
         },
       }));
+      setLocationAutoSet(true);
     }
-  }, [isOpen, initialData, currentLocation, currentLocationLoading]);
+  }, [isOpen, locationAutoSet, currentLocation, currentLocationLoading]);
 
   // Get readable address from coordinates
   const { address: locationAddress, loading: addressLoading } = useGeocoding(

@@ -28,7 +28,6 @@ export const loginThunk = createAsyncThunk<
 
     return response;
   } catch (error) {
-    console.error("❌ Login failed:", error);
     const errorMessage = handleApiError(error);
     showToast.error(errorMessage);
     return rejectWithValue(errorMessage);
@@ -68,7 +67,6 @@ export const registerThunk = createAsyncThunk<
 
     return response;
   } catch (error) {
-    console.error("❌ Registration failed:", error);
     const errorMessage = handleApiError(error);
     showToast.error(errorMessage);
     return rejectWithValue(errorMessage);

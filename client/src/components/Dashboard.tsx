@@ -492,7 +492,6 @@ const Dashboard: React.FC = () => {
 
       // Fetch investment statistics in parallel for admin users (independent of unifiedData)
       if (user.role === "admin") {
-        console.log("Fetching investment statistics for admin user");
         dispatch(fetchInvestmentStatisticsThunk());
       }
     }

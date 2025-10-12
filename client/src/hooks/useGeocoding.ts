@@ -420,7 +420,6 @@ export function useCurrentLocation() {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to get current location";
       setError(errorMessage);
-      console.error("Current location error:", err);
     } finally {
       setLoading(false);
     }

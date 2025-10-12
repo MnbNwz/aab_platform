@@ -69,7 +69,6 @@ const UserDropdown: React.FC<UserDropdownProps> = ({
               className="h-3.5 w-3.5 xs:h-4 xs:w-4 sm:h-5 sm:w-5 rounded-full object-cover flex-shrink-0"
               loading="eager"
               onError={(e) => {
-                console.log("Image error, URL:", user.profileImage);
                 e.currentTarget.style.display = "none";
                 e.currentTarget.nextElementSibling?.classList.remove("hidden");
               }}
@@ -120,7 +119,6 @@ const UserDropdown: React.FC<UserDropdownProps> = ({
                     setImageViewerOpen(true);
                   }}
                   onError={(e) => {
-                    console.log("Large image error, URL:", user.profileImage);
                     e.currentTarget.style.display = "none";
                     e.currentTarget.nextElementSibling?.classList.remove(
                       "hidden"

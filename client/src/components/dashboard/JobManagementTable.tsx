@@ -154,8 +154,10 @@ const JobManagementTable: React.FC = () => {
 
   // Handle create job button click
   const handleCreateJobClick = () => {
-    // Check if user has any properties
-    if (properties.length === 0) {
+    // Check if user has any properties or any active properties
+    const hasActiveProperties = properties.some((p) => p.isActive);
+
+    if (properties.length === 0 || !hasActiveProperties) {
       setNoPropertyConfirmOpen(true);
     } else {
       setShowCreateModal(true);
@@ -672,8 +674,8 @@ const JobManagementTable: React.FC = () => {
         isOpen={noPropertyConfirmOpen}
         onCancel={handleNoPropertyCancel}
         onConfirm={handleNoPropertyConfirm}
-        title="No Properties Found"
-        message="You need to create at least one property before creating a job request. Please create a property first and then try creating a job."
+        title="No Active Property"
+        message="You need at least one active property to create a job request."
         default={true}
       />
     </div>

@@ -12,7 +12,6 @@ export const getServicesThunk = createAsyncThunk<
     const response = await api.services.getServices();
     return response;
   } catch (error) {
-    console.error("❌ Failed to fetch services:", error);
     const errorMessage = handleApiError(error);
     showToast.error("Failed to load services. Please try again.");
     return rejectWithValue(errorMessage);

@@ -103,14 +103,6 @@ export const PlatformDashboardCards = React.memo<PlatformDashboardCardsProps>(
   ({ data, onRefresh }) => {
     const dashboardState = useSelector(selectDashboardData);
 
-    // Debug logging
-    React.useEffect(() => {
-      console.log(
-        "Investment Statistics in Component:",
-        dashboardState.investmentStatistics
-      );
-    }, [dashboardState.investmentStatistics]);
-
     const dashboardData =
       data || dashboardState.data || dashboardState.platformData;
     const shouldShowLoading = dashboardState.platformLoading || !dashboardData;
@@ -450,10 +442,6 @@ export const PlatformDashboardCards = React.memo<PlatformDashboardCardsProps>(
         )}
 
         {/* Investment Opportunities Overview */}
-        {console.log(
-          "Checking investmentStatistics:",
-          dashboardState.investmentStatistics
-        )}
         {dashboardState.investmentStatistics && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
             <div className="flex items-center mb-4">
@@ -464,7 +452,6 @@ export const PlatformDashboardCards = React.memo<PlatformDashboardCardsProps>(
                 Investment Opportunities
               </h3>
             </div>
-            {console.log("Rendering Investment Opportunities section")}
 
             {/* Overall Stats */}
             {dashboardState.investmentStatistics.overallStats &&

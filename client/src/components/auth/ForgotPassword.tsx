@@ -39,7 +39,6 @@ const ForgotPassword: React.FC = () => {
     } catch (error: any) {
       console.error("Forgot password error:", error);
 
-      // Handle specific error cases based on backend response
       if (error.message?.includes("verify your email")) {
         setError("email", {
           type: "manual",

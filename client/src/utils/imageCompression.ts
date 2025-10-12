@@ -45,7 +45,6 @@ export const smartCompress = async (
 
   // Check if file is already small enough
   if (originalSize < options.maxSizeMB * 1024 * 1024) {
-    console.log("File already small, skipping compression");
     return {
       originalFile: file,
       compressedFile: file,
@@ -67,12 +66,6 @@ export const smartCompress = async (
     const compressionRatio =
       ((originalSize - compressedSize) / originalSize) * 100;
 
-    console.log(
-      `Image compressed: ${formatFileSize(originalSize)} → ${formatFileSize(
-        compressedSize
-      )} (${compressionRatio.toFixed(1)}% reduction)`
-    );
-
     return {
       originalFile: file,
       compressedFile,
@@ -82,7 +75,6 @@ export const smartCompress = async (
       wasCompressed: true,
     };
   } catch (error) {
-    console.error("Image compression failed:", error);
     // Return original file if compression fails
     return {
       originalFile: file,

@@ -299,8 +299,6 @@ export async function reverseGeocode(
 
     return result;
   } catch (error) {
-    console.error("Reverse geocoding failed:", error);
-
     // Return fallback coordinates format
     return {
       address: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
@@ -440,7 +438,6 @@ export async function batchReverseGeocode(
       const address = await getAddressFromCoordinates(item.coordinates);
       results.set(item.id, address);
     } catch (error) {
-      console.error(`Failed to geocode for ${item.id}:`, error);
       const [lng, lat] = item.coordinates;
       results.set(item.id, `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
     }
@@ -510,7 +507,6 @@ export async function forwardGeocode(
 
     return results;
   } catch (error) {
-    console.error("Forward geocoding failed:", error);
     throw error;
   }
 }
@@ -537,7 +533,6 @@ export async function searchLocations(
       address: result.address || result.display_name,
     }));
   } catch (error) {
-    console.error("Location search failed:", error);
     return [];
   }
 }
@@ -562,7 +557,6 @@ export async function getLocationFromClick(
       address: result.address,
     };
   } catch (error) {
-    console.error("Click geocoding failed:", error);
     return {
       lat: Number(lat.toFixed(6)),
       lng: Number(lng.toFixed(6)),
@@ -622,57 +616,85 @@ export async function getCurrentLocation(): Promise<{
   lng: number;
   address?: string;
 }> {
-  try {
-    // Use ipapi.co for IP-based geolocation (HTTPS, CORS-friendly)
-    const response = await fetch("https://ipapi.co/json/");
+  // Try multiple IP geolocation services with fallbacks
+  const services = [
+    {
+      name: "ipapi.co",
+      url: "https://ipapi.co/json/",
+      parser: (data: any) => ({
+        lat: data.latitude,
+        lng: data.longitude,
+        city: data.city,
+        region: data.region,
+        country: data.country_name,
+      }),
+    },
+    {
+      name: "ipwhois",
+      url: "https://ipwho.is/",
+      parser: (data: any) => ({
+        lat: data.latitude,
+        lng: data.longitude,
+        city: data.city,
+        region: data.region,
+        country: data.country,
+      }),
+    },
+  ];
 
-    if (!response.ok) {
-      throw new Error(`IP geolocation failed: ${response.status}`);
-    }
+  for (const service of services) {
+    try {
+      const response = await fetch(service.url, {
+        signal: AbortSignal.timeout(5000), // 5 second timeout
+      });
 
-    const data = await response.json();
-
-    if (data.latitude && data.longitude) {
-      const lat = Number(data.latitude.toFixed(6));
-      const lng = Number(data.longitude.toFixed(6));
-
-      // Try to get a readable address
-      try {
-        const addressResult = await reverseGeocode(lat, lng);
-        return {
-          lat,
-          lng,
-          address: addressResult.address,
-        };
-      } catch (error) {
-        // If reverse geocoding fails, use city/region info from IP
-        const city = data.city || "";
-        const region = data.region || "";
-        const country = data.country_name || "";
-
-        const addressParts = [city, region, country].filter(Boolean);
-        const address =
-          addressParts.length > 0
-            ? addressParts.join(", ")
-            : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-
-        return {
-          lat,
-          lng,
-          address,
-        };
+      if (!response.ok) {
+        continue; // Try next service
       }
-    } else {
-      throw new Error("Invalid location data from IP service");
-    }
-  } catch (error) {
-    console.warn("IP geolocation failed:", error);
 
-    // Fallback to default location
-    return {
-      lat: 40.73061,
-      lng: -73.935242,
-      address: "New York, NY",
-    };
+      const data = await response.json();
+      const parsed = service.parser(data);
+
+      if (parsed.lat && parsed.lng) {
+        const lat = Number(parsed.lat.toFixed(6));
+        const lng = Number(parsed.lng.toFixed(6));
+
+        // Try to get a readable address
+        try {
+          const addressResult = await reverseGeocode(lat, lng);
+          return {
+            lat,
+            lng,
+            address: addressResult.address,
+          };
+        } catch (error) {
+          // If reverse geocoding fails, use city/region info from IP
+          const addressParts = [
+            parsed.city,
+            parsed.region,
+            parsed.country,
+          ].filter(Boolean);
+          const address =
+            addressParts.length > 0
+              ? addressParts.join(", ")
+              : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+
+          return {
+            lat,
+            lng,
+            address,
+          };
+        }
+      }
+    } catch (error) {
+      // Continue to next service
+    }
   }
+
+  // All services failed - use default fallback location
+  return {
+    lat: 40.73061,
+    lng: -73.935242,
+    address: "New York, NY",
+  };
 }
