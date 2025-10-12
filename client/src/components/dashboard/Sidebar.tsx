@@ -113,12 +113,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         description: "Your trusted contractors",
       },
       {
-        id: "calculators",
-        label: "Calculators",
-        icon: Calculator,
-        description: "Cost estimation tools",
-      },
-      {
         id: "reviews",
         label: "Reviews",
         icon: Star,

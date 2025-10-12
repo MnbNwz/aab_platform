@@ -3,7 +3,7 @@ import type { PropertyFormData } from "../slices/propertySlice";
 import {
   createPropertyApi,
   getMyPropertiesApi,
-  setPropertyInactiveApi,
+  updatePropertyStatusApi,
 } from "../../services/propertyService";
 
 export const getMyPropertiesThunk = createAsyncThunk(
@@ -20,15 +20,18 @@ export const getMyPropertiesThunk = createAsyncThunk(
   }
 );
 
-export const setPropertyInactiveThunk = createAsyncThunk(
-  "property/setInactive",
-  async (id: string, { rejectWithValue }) => {
+export const updatePropertyStatusThunk = createAsyncThunk(
+  "property/updateStatus",
+  async (
+    { id, isActive }: { id: string; isActive: boolean },
+    { rejectWithValue }
+  ) => {
     try {
-      const response = await setPropertyInactiveApi(id);
-      return { id, ...response.property };
+      const response = await updatePropertyStatusApi(id, isActive);
+      return response.property;
     } catch (err: any) {
       return rejectWithValue(
-        err.response?.data?.message || "Failed to set property inactive"
+        err.response?.data?.message || "Failed to update property status"
       );
     }
   }

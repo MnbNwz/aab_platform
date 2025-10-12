@@ -8,7 +8,7 @@ import {
   compressMultipleImages,
   PROPERTY_IMAGE_OPTIONS,
 } from "../../utils/imageCompression";
-import { useGeocoding } from "../../hooks/useGeocoding";
+import { useGeocoding, useCurrentLocation } from "../../hooks/useGeocoding";
 import { showToast } from "../../utils/toast";
 
 interface PropertyFormProps {
@@ -59,6 +59,12 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [carouselIndex, setCarouselIndex] = useState(0);
+  const [imageError, setImageError] = useState<string>("");
+  const [formError, setFormError] = useState<string>("");
+
+  // Get current location automatically from IP
+  const { location: currentLocation, loading: currentLocationLoading } =
+    useCurrentLocation();
 
   // Reset form when modal opens
   useEffect(() => {
@@ -76,14 +82,33 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
     }
   }, [initialData, isOpen]);
 
+  // Auto-populate location when creating new property (not editing)
+  useEffect(() => {
+    if (
+      isOpen &&
+      !initialData &&
+      currentLocation &&
+      !currentLocationLoading &&
+      form.location.coordinates[0] === 0 &&
+      form.location.coordinates[1] === 0
+    ) {
+      setForm((prev: PropertyFormState) => ({
+        ...prev,
+        location: {
+          type: "Point",
+          coordinates: [currentLocation.lng, currentLocation.lat],
+          address: currentLocation.address || "",
+        },
+      }));
+    }
+  }, [isOpen, initialData, currentLocation, currentLocationLoading]);
+
   // Get readable address from coordinates
   const { address: locationAddress, loading: addressLoading } = useGeocoding(
     form.location.coordinates[0] !== 0 || form.location.coordinates[1] !== 0
       ? { lat: form.location.coordinates[1], lng: form.location.coordinates[0] }
       : null
   );
-  const [imageError, setImageError] = useState<string>("");
-  const [formError, setFormError] = useState<string>("");
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -316,6 +341,11 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
               <div className="md:col-span-2">
                 <label className="block text-primary-900 font-medium mb-1">
                   Location
+                  {currentLocationLoading && (
+                    <span className="ml-2 text-xs text-accent-600 font-normal">
+                      (Auto-detecting from IP...)
+                    </span>
+                  )}
                 </label>
                 <div>
                   <button
@@ -324,7 +354,12 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
                     className="w-full flex items-center justify-between rounded-lg px-4 py-3 border border-primary-200 bg-primary-50 text-primary-900 hover:bg-primary-100 transition-colors"
                   >
                     <span className="text-left">
-                      {addressLoading ? (
+                      {currentLocationLoading ? (
+                        <span className="flex items-center space-x-2">
+                          <div className="w-4 h-4 border-2 border-accent-600 border-t-transparent rounded-full animate-spin"></div>
+                          <span>Detecting your location...</span>
+                        </span>
+                      ) : addressLoading ? (
                         <span className="flex items-center space-x-2">
                           <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
                           <span>Loading address...</span>

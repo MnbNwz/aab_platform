@@ -5,8 +5,9 @@ import PropertyViewModal from "./PropertyViewModal";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState, AppDispatch } from "../../store";
 import { getMyPropertiesThunk } from "../../store/thunks/propertyThunks";
-import { setPropertyInactiveThunk } from "../../store/thunks/propertyThunks";
+import { updatePropertyStatusThunk } from "../../store/thunks/propertyThunks";
 import { searchPropertiesApi } from "../../services/propertyService";
+import { showToast } from "../../utils/toast";
 
 interface Property {
   _id: string;
@@ -52,18 +53,34 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
 }) => {
   const dispatch = useDispatch<AppDispatch>();
 
-  const [confirmInactiveId, setConfirmInactiveId] = useState<string | null>(
-    null
-  );
-  const [inactiveLoading, setInactiveLoading] = useState(false);
+  const [confirmStatusChange, setConfirmStatusChange] = useState<{
+    id: string;
+    action: "activate" | "deactivate";
+  } | null>(null);
+  const [statusLoading, setStatusLoading] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [viewProperty, setViewProperty] = useState<Property | null>(null);
 
-  const handleSetInactive = async (id: string) => {
-    setInactiveLoading(true);
-    await dispatch(setPropertyInactiveThunk(id));
-    setInactiveLoading(false);
-    setConfirmInactiveId(null);
+  const handleStatusChange = async () => {
+    if (!confirmStatusChange) return;
+
+    setStatusLoading(true);
+
+    try {
+      await dispatch(
+        updatePropertyStatusThunk({
+          id: confirmStatusChange.id,
+          isActive: false, // Always deactivating
+        })
+      ).unwrap();
+
+      showToast.success("Property has been permanently deactivated");
+    } catch (error) {
+      showToast.error("Failed to deactivate property. Please try again.");
+    } finally {
+      setStatusLoading(false);
+      setConfirmStatusChange(null);
+    }
   };
   const { properties, loading } = useSelector(
     (state: RootState) => state.property
@@ -244,14 +261,17 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
                     disabled={!property.isActive}
                     onClick={() => {
                       if (
-                        property.isActive &&
-                        typeof property._id === "string"
+                        typeof property._id === "string" &&
+                        property.isActive
                       ) {
-                        setConfirmInactiveId(property._id);
+                        setConfirmStatusChange({
+                          id: property._id,
+                          action: "deactivate",
+                        });
                       }
                     }}
                   >
-                    Set Inactive
+                    {property.isActive ? "Deactivate" : "Deactivated"}
                   </button>
                 </div>
               </div>
@@ -363,14 +383,17 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
                         disabled={!property.isActive}
                         onClick={() => {
                           if (
-                            property.isActive &&
-                            typeof property._id === "string"
+                            typeof property._id === "string" &&
+                            property.isActive
                           ) {
-                            setConfirmInactiveId(property._id);
+                            setConfirmStatusChange({
+                              id: property._id,
+                              action: "deactivate",
+                            });
                           }
                         }}
                       >
-                        Inactive
+                        {property.isActive ? "Deactivate" : "Deactivated"}
                       </button>
                     </div>
                   </td>
@@ -381,18 +404,16 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
         </table>
       </div>
 
-      {/* Confirm Modal for Inactive */}
+      {/* Confirm Modal for Status Change */}
       <ConfirmModal
-        isOpen={!!confirmInactiveId}
-        title="Set Property Inactive?"
-        message="Do you want to set this property as inactive?"
-        confirmText="Confirm"
+        isOpen={!!confirmStatusChange}
+        title="⚠️ Deactivate Property?"
+        message="Warning: This action cannot be undone. Once deactivated, you will not be able to reactivate this property. Are you absolutely sure you want to proceed?"
+        confirmText="Yes"
         cancelText="Cancel"
-        loading={inactiveLoading}
-        onCancel={() => setConfirmInactiveId(null)}
-        onConfirm={() => {
-          if (confirmInactiveId) handleSetInactive(confirmInactiveId);
-        }}
+        loading={statusLoading}
+        onCancel={() => setConfirmStatusChange(null)}
+        onConfirm={handleStatusChange}
       />
       {/* Pagination */}
       {total > 0 && (

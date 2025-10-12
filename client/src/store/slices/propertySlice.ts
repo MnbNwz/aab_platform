@@ -37,7 +37,7 @@ const initialState: PropertyState = {
 import {
   createPropertyThunk,
   getMyPropertiesThunk,
-  setPropertyInactiveThunk,
+  updatePropertyStatusThunk,
 } from "../thunks/propertyThunks";
 
 const propertySlice = createSlice({
@@ -80,26 +80,26 @@ const propertySlice = createSlice({
           (action.payload as string) || "Failed to fetch properties";
       })
 
-      // Set property inactive
-      .addCase(setPropertyInactiveThunk.pending, (state) => {
+      // Update property status (activate/deactivate)
+      .addCase(updatePropertyStatusThunk.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(setPropertyInactiveThunk.fulfilled, (state, action) => {
+      .addCase(updatePropertyStatusThunk.fulfilled, (state, action) => {
         state.loading = false;
         state.error = null;
         // Update the property in the list
         const idx = state.properties.findIndex(
-          (p) => p._id === action.payload.id
+          (p) => p._id === action.payload._id
         );
         if (idx !== -1) {
-          state.properties[idx].isActive = false;
+          state.properties[idx] = action.payload;
         }
       })
-      .addCase(setPropertyInactiveThunk.rejected, (state, action) => {
+      .addCase(updatePropertyStatusThunk.rejected, (state, action) => {
         state.loading = false;
         state.error =
-          (action.payload as string) || "Failed to set property inactive";
+          (action.payload as string) || "Failed to update property status";
       });
   },
 });

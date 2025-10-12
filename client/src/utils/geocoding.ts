@@ -623,8 +623,8 @@ export async function getCurrentLocation(): Promise<{
   address?: string;
 }> {
   try {
-    // Use ip-api.com for IP-based geolocation (CORS-friendly)
-    const response = await fetch("http://ip-api.com/json/");
+    // Use ipapi.co for IP-based geolocation (HTTPS, CORS-friendly)
+    const response = await fetch("https://ipapi.co/json/");
 
     if (!response.ok) {
       throw new Error(`IP geolocation failed: ${response.status}`);
@@ -632,9 +632,9 @@ export async function getCurrentLocation(): Promise<{
 
     const data = await response.json();
 
-    if (data.lat && data.lon) {
-      const lat = Number(data.lat.toFixed(6));
-      const lng = Number(data.lon.toFixed(6));
+    if (data.latitude && data.longitude) {
+      const lat = Number(data.latitude.toFixed(6));
+      const lng = Number(data.longitude.toFixed(6));
 
       // Try to get a readable address
       try {
@@ -647,8 +647,8 @@ export async function getCurrentLocation(): Promise<{
       } catch (error) {
         // If reverse geocoding fails, use city/region info from IP
         const city = data.city || "";
-        const region = data.regionName || "";
-        const country = data.country || "";
+        const region = data.region || "";
+        const country = data.country_name || "";
 
         const addressParts = [city, region, country].filter(Boolean);
         const address =

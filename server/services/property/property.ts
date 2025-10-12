@@ -193,3 +193,21 @@ export const updateProperty = async (
   };
   return Property.findOneAndUpdate({ _id: id, userId }, data, { new: true });
 };
+
+// Toggle property active status (soft delete/restore)
+export const togglePropertyStatus = async (
+  userId: Types.ObjectId,
+  id: string,
+  isActive: boolean,
+) => {
+  const property = await Property.findOne({ _id: id, userId });
+
+  if (!property) {
+    throw new Error("Property not found or you don't have permission to modify it");
+  }
+
+  property.isActive = isActive;
+  await property.save();
+
+  return property;
+};

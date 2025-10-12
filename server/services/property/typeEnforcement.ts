@@ -32,6 +32,14 @@ export const canUsePropertyForJobRequest = async (
       return { canUse: false, reason: "Property does not belong to customer" };
     }
 
+    // Check if property is active
+    if (!property.isActive) {
+      return {
+        canUse: false,
+        reason: "Property is inactive. Please activate it before creating a job request.",
+      };
+    }
+
     // For domestic customers - enforce single property rule
     if (defaultPropertyType === "domestic") {
       // Check if customer has any existing job requests

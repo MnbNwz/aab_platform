@@ -4,11 +4,12 @@ export const getMyPropertiesApi = async () => {
   return res.data;
 };
 
-// Set a property as inactive (PUT)
-export const setPropertyInactiveApi = async (id: string) => {
-  const formData = new FormData();
-  formData.append("isActive", "false");
-  const res = await api.put(`/api/property/${id}`, formData);
+// Update property active status (PATCH)
+export const updatePropertyStatusApi = async (
+  id: string,
+  isActive: boolean
+) => {
+  const res = await api.patch(`/api/property/${id}/status`, { isActive });
   return res.data;
 };
 export const searchPropertiesApi = async (search: string) => {

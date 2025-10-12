@@ -76,3 +76,28 @@ export const updateProperty = async (
     res.status(400).json({ success: false, message: err.message });
   }
 };
+
+// Toggle property status (deactivate/activate)
+export const togglePropertyStatus = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = new Types.ObjectId(req.user!._id);
+    const { isActive } = req.body;
+
+    if (typeof isActive !== "boolean") {
+      return res.status(400).json({
+        success: false,
+        message: "isActive field is required and must be a boolean",
+      });
+    }
+
+    const property = await propertyService.togglePropertyStatus(userId, req.params.id, isActive);
+
+    res.json({
+      success: true,
+      message: `Property ${isActive ? "activated" : "deactivated"} successfully`,
+      property,
+    });
+  } catch (err: any) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
