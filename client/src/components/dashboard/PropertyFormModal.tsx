@@ -8,7 +8,8 @@ import {
   compressMultipleImages,
   PROPERTY_IMAGE_OPTIONS,
 } from "../../utils/imageCompression";
-import { useGeocoding, useCurrentLocation } from "../../hooks/useGeocoding";
+import { useGeocoding } from "../../hooks/useGeocoding";
+import { getCurrentLocation } from "../../utils/geocoding";
 import { showToast } from "../../utils/toast";
 
 interface PropertyFormProps {
@@ -61,26 +62,38 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [imageError, setImageError] = useState<string>("");
   const [formError, setFormError] = useState<string>("");
-  const [locationAutoSet, setLocationAutoSet] = useState(false);
+  const [fetchingLocation, setFetchingLocation] = useState(false);
 
-  // Get current location automatically from IP
-  const { location: currentLocation, loading: currentLocationLoading } =
-    useCurrentLocation();
-
-  // Reset form when modal opens
+  // Reset form and fetch location when modal opens
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
         setForm({ ...initialState, ...initialData });
-        // Check if initialData has valid location (not [0,0])
-        const hasValidLocation =
-          initialData.location?.coordinates?.[0] !== 0 ||
-          initialData.location?.coordinates?.[1] !== 0;
-        setLocationAutoSet(hasValidLocation); // Only skip auto-set if location exists
       } else {
         // For new property, start with initial state
         setForm(initialState);
-        setLocationAutoSet(false); // Allow auto-set for new
+
+        // Fetch current location for new properties only
+        const fetchLocation = async () => {
+          setFetchingLocation(true);
+          try {
+            const location = await getCurrentLocation();
+            setForm((prev: PropertyFormState) => ({
+              ...prev,
+              location: {
+                type: "Point",
+                coordinates: [location.lng, location.lat],
+                address: location.address || "",
+              },
+            }));
+          } catch (error) {
+            // Silently fail, user can set location manually
+          } finally {
+            setFetchingLocation(false);
+          }
+        };
+
+        fetchLocation();
       }
       // Reset all other states
       setImageFiles([]);
@@ -91,29 +104,10 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  // Auto-populate location when creating new property (not editing)
-  useEffect(() => {
-    if (
-      isOpen &&
-      !locationAutoSet &&
-      currentLocation &&
-      !currentLocationLoading
-    ) {
-      setForm((prev: PropertyFormState) => ({
-        ...prev,
-        location: {
-          type: "Point",
-          coordinates: [currentLocation.lng, currentLocation.lat],
-          address: currentLocation.address || "",
-        },
-      }));
-      setLocationAutoSet(true);
-    }
-  }, [isOpen, locationAutoSet, currentLocation, currentLocationLoading]);
-
-  // Get readable address from coordinates
+  // Get readable address from coordinates (only when modal is open)
   const { address: locationAddress, loading: addressLoading } = useGeocoding(
-    form.location.coordinates[0] !== 0 || form.location.coordinates[1] !== 0
+    isOpen &&
+      (form.location.coordinates[0] !== 0 || form.location.coordinates[1] !== 0)
       ? { lat: form.location.coordinates[1], lng: form.location.coordinates[0] }
       : null
   );
@@ -349,7 +343,7 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
               <div className="md:col-span-2">
                 <label className="block text-primary-900 font-medium mb-1">
                   Location
-                  {currentLocationLoading && (
+                  {fetchingLocation && (
                     <span className="ml-2 text-xs text-accent-600 font-normal">
                       (Auto-detecting from IP...)
                     </span>
@@ -362,7 +356,7 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
                     className="w-full flex items-center justify-between rounded-lg px-4 py-3 border border-primary-200 bg-primary-50 text-primary-900 hover:bg-primary-100 transition-colors"
                   >
                     <span className="text-left">
-                      {currentLocationLoading ? (
+                      {fetchingLocation ? (
                         <span className="flex items-center space-x-2">
                           <div className="w-4 h-4 border-2 border-accent-600 border-t-transparent rounded-full animate-spin"></div>
                           <span>Detecting your location...</span>

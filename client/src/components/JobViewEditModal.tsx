@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState, AppDispatch } from "../store";
-import { updateJobThunk, cancelJobThunk } from "../store/thunks/jobThunks";
+import { updateJobThunk } from "../store/thunks/jobThunks";
 import { getServicesThunk } from "../store/thunks/servicesThunks";
 import { useForm, Controller } from "react-hook-form";
 import { showToast } from "../utils/toast";
-import { X, Edit2, Save, XCircle, Settings } from "lucide-react";
+import { X, Save, Settings } from "lucide-react";
 import ConfirmModal from "./ui/ConfirmModal";
 
 interface JobViewEditModalProps {
@@ -37,16 +37,15 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
     isInitialized,
   } = useSelector((state: RootState) => state.services);
   const user = useSelector((state: RootState) => state.auth.user);
-  const { updateLoading, cancelLoading, currentJob } = useSelector(
+  const { updateLoading, currentJob } = useSelector(
     (state: RootState) => state.job
   );
 
-  const [isEditing, setIsEditing] = useState(false);
   const [jobType, setJobType] = useState<string>("");
   const [hasChanges, setHasChanges] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
     open: boolean;
-    type: "save" | "cancel" | "edit" | "close" | "cancelJob" | null;
+    type: "save" | "cancel" | "close" | null;
     message: string;
     title: string;
     confirmText: string;
@@ -121,7 +120,10 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
         title: displayJob.title || "",
         description: displayJob.description || "",
         category: categoryValue,
-        estimate: displayJob.estimate?.toString() || "",
+        // Convert cents to dollars for display (divide by 100)
+        estimate: displayJob.estimate
+          ? (displayJob.estimate / 100).toString()
+          : "",
         property: displayJob.property || "",
         timeline: displayJob.timeline?.toString() || "",
       });
@@ -144,13 +146,16 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
 
   // Detect changes in form values
   useEffect(() => {
-    if (!isEditing || !displayJob) return;
+    if (!displayJob) return;
 
     const originalValues = {
       title: displayJob.title || "",
       description: displayJob.description || "",
       category: displayJob.service || "",
-      estimate: displayJob.estimate?.toString() || "",
+      // Convert cents to dollars for comparison
+      estimate: displayJob.estimate
+        ? (displayJob.estimate / 100).toString()
+        : "",
       property: displayJob.property || "",
       timeline: displayJob.timeline?.toString() || "",
     };
@@ -167,7 +172,7 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
       timeline !== originalValues.timeline;
 
     setHasChanges(hasFormChanges);
-  }, [watchedValues, displayJob, isEditing]);
+  }, [watchedValues, displayJob]);
 
   if (!isOpen || !job) return null;
 
@@ -223,7 +228,8 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
       typeof data.estimate === "string" &&
       data.estimate.trim() !== ""
     ) {
-      jobData.estimate = parseFloat(data.estimate);
+      // Convert dollars to cents for backend (multiply by 100)
+      jobData.estimate = Math.round(parseFloat(data.estimate) * 100);
     }
     if (data.property) {
       // Handle both string and object property values
@@ -250,7 +256,6 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
     );
     if (updateJobThunk.fulfilled.match(result)) {
       showToast.success("Job updated successfully!");
-      setIsEditing(false);
 
       // Reset form with updated job data from Redux
       const updatedJob = result.payload;
@@ -258,7 +263,10 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
         title: updatedJob.title || "",
         description: updatedJob.description || "",
         category: updatedJob.service || "", // Use service field as category
-        estimate: updatedJob.estimate?.toString() || "",
+        // Convert cents to dollars for display (divide by 100)
+        estimate: updatedJob.estimate
+          ? (updatedJob.estimate / 100).toString()
+          : "",
         property: updatedJob.property || "",
         timeline: updatedJob.timeline?.toString() || "",
       });
@@ -266,30 +274,6 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
       // Close the modal after successful edit
       onClose();
     }
-  };
-
-  const handleCancelJob = () => {
-    setConfirmModal({
-      open: true,
-      type: "cancelJob",
-      title: "Cancel Job",
-      message:
-        "Are you sure you want to cancel this job? This action cannot be undone.",
-      confirmText: "Yes, Cancel Job",
-    });
-  };
-
-  const handleConfirmCancelJob = async () => {
-    const result = await dispatch(cancelJobThunk(job._id));
-    if (cancelJobThunk.fulfilled.match(result)) {
-      showToast.success("Job cancelled successfully!");
-      onClose();
-    }
-  };
-
-  const handleEdit = () => {
-    setIsEditing(true);
-    setHasChanges(false);
   };
 
   const handleCancelEdit = () => {
@@ -303,15 +287,13 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
       });
       return;
     }
-    setIsEditing(false);
-    setHasChanges(false);
-    reset();
+    onClose();
   };
 
   const handleConfirmCancelEdit = () => {
-    setIsEditing(false);
     setHasChanges(false);
     reset();
+    onClose();
   };
 
   const handleConfirmAction = async () => {
@@ -322,9 +304,6 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
         // Get current form data and call handleConfirmSave
         const formData = watch();
         await handleConfirmSave(formData);
-        break;
-      case "cancelJob":
-        await handleConfirmCancelJob();
         break;
       case "cancel":
         handleConfirmCancelEdit();
@@ -343,30 +322,6 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
     });
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "open":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "in_progress":
-        return "bg-blue-100 text-blue-800 border-blue-200";
-      case "completed":
-        return "bg-gray-100 text-gray-800 border-gray-200";
-      case "cancelled":
-        return "bg-red-100 text-red-800 border-red-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
-
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case "regular":
-        return "bg-accent-100 text-accent-800 border-accent-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
@@ -379,23 +334,21 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
               </div>
               <div>
                 <h2 className="text-xl font-bold text-white">
-                  {isEditing ? "Edit Job" : "Job Details"}
-                  {isEditing && hasChanges && (
+                  Edit Job
+                  {hasChanges && (
                     <span className="ml-2 text-yellow-300 text-sm font-normal">
                       (Unsaved changes)
                     </span>
                   )}
                 </h2>
                 <p className="text-white text-opacity-90 text-sm">
-                  {isEditing
-                    ? "Update job information"
-                    : "View job information"}
+                  Update job information
                 </p>
               </div>
             </div>
             <button
               onClick={() => {
-                if (isEditing && hasChanges) {
+                if (hasChanges) {
                   setConfirmModal({
                     open: true,
                     type: "close",
@@ -417,431 +370,278 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
 
         {/* Content */}
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-          {isEditing ? (
-            /* Edit Form */
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-primary-900 font-medium mb-2">
-                    Title <span className="text-red-500">*</span>
-                  </label>
-                  <Controller
-                    name="title"
-                    control={control}
-                    rules={{
-                      required: "Title is required",
-                      minLength: {
-                        value: 5,
-                        message: "Title must be at least 5 characters",
-                      },
-                      maxLength: {
-                        value: 100,
-                        message: "Title must be less than 100 characters",
-                      },
-                    }}
-                    render={({ field }) => (
-                      <input
-                        {...field}
-                        className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-primary-900 placeholder-gray-500"
-                        type="text"
-                        required
-                        placeholder="e.g., Install new kitchen cabinets"
-                      />
-                    )}
-                  />
-                  {errors.title && (
-                    <span className="text-red-500 text-xs mt-1">
-                      {errors.title.message}
-                    </span>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-primary-900 font-medium mb-2">
-                    Service Category <span className="text-red-500">*</span>
-                  </label>
-                  <Controller
-                    name="category"
-                    control={control}
-                    rules={{ required: "Category is required" }}
-                    render={({ field }) => (
-                      <select
-                        {...field}
-                        className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-primary-900"
-                        required
-                        disabled={servicesLoading}
-                      >
-                        <option value="">
-                          {servicesLoading
-                            ? "Loading services..."
-                            : "Select service category"}
-                        </option>
-                        {services.map((cat) => (
-                          <option key={cat} value={cat}>
-                            {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  />
-                  {errors.category && (
-                    <span className="text-red-500 text-xs mt-1">
-                      {errors.category.message}
-                    </span>
-                  )}
-                </div>
-              </div>
-
+          {/* Edit Form */}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-primary-900 font-medium mb-2">
-                  Description <span className="text-red-500">*</span>
+                  Title <span className="text-red-500">*</span>
                 </label>
                 <Controller
-                  name="description"
+                  name="title"
                   control={control}
                   rules={{
-                    required: "Description is required",
+                    required: "Title is required",
                     minLength: {
-                      value: 10,
-                      message: "Description must be at least 10 characters",
+                      value: 5,
+                      message: "Title must be at least 5 characters",
                     },
                     maxLength: {
-                      value: 2000,
-                      message: "Description must be less than 2000 characters",
+                      value: 100,
+                      message: "Title must be less than 100 characters",
                     },
                   }}
                   render={({ field }) => (
-                    <textarea
+                    <input
                       {...field}
-                      className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white resize-none text-primary-900 placeholder-gray-500"
-                      minLength={10}
-                      maxLength={2000}
+                      className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-primary-900 placeholder-gray-500"
+                      type="text"
                       required
-                      placeholder="Describe the job in detail"
-                      rows={4}
+                      placeholder="e.g., Install new kitchen cabinets"
                     />
                   )}
                 />
-                {errors.description && (
+                {errors.title && (
                   <span className="text-red-500 text-xs mt-1">
-                    {errors.description.message}
+                    {errors.title.message}
                   </span>
                 )}
               </div>
 
-              {/* Property Selection */}
-              {properties.length > 0 && (
-                <div>
-                  <label className="block text-primary-900 font-medium mb-2">
-                    Select Property
-                    <span className="text-sm text-gray-500 font-normal ml-2">
-                      (Cannot be changed after job creation)
-                    </span>
-                  </label>
-                  <Controller
-                    name="property"
-                    control={control}
-                    render={({ field }) => (
-                      <select
-                        {...field}
-                        className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-gray-100 text-gray-500 cursor-not-allowed"
-                        disabled={true}
-                      >
-                        <option value="">
-                          No specific property - General job request
+              <div>
+                <label className="block text-primary-900 font-medium mb-2">
+                  Service Category <span className="text-red-500">*</span>
+                </label>
+                <Controller
+                  name="category"
+                  control={control}
+                  rules={{ required: "Category is required" }}
+                  render={({ field }) => (
+                    <select
+                      {...field}
+                      className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-primary-900"
+                      required
+                      disabled={servicesLoading}
+                    >
+                      <option value="">
+                        {servicesLoading
+                          ? "Loading services..."
+                          : "Select service category"}
+                      </option>
+                      {services.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat.charAt(0).toUpperCase() + cat.slice(1)}
                         </option>
-                        {properties
-                          .filter((property) => property.isActive === true)
-                          .map((property) => (
-                            <option key={property._id} value={property._id}>
-                              {property.title} | {property.propertyType} |{" "}
-                              {property.bedrooms}bed/{property.bathrooms}bath/
-                              {property.kitchens}kitchen
-                              {property.area && property.areaUnit
-                                ? ` | ${property.area}${property.areaUnit}`
-                                : ""}
-                            </option>
-                          ))}
-                      </select>
-                    )}
-                  />
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-primary-900 font-medium mb-2">
-                    Estimated Budget (USD){" "}
-                    <span className="text-red-500">*</span>
-                  </label>
-                  <Controller
-                    name="estimate"
-                    control={control}
-                    rules={{
-                      required: "Estimated budget is required",
-                      validate: (value) => {
-                        if (!value || value.trim() === "") {
-                          return "Estimated budget is required";
-                        }
-                        const num = parseFloat(value);
-                        if (isNaN(num) || num <= 0) {
-                          return "Budget must be a positive number";
-                        }
-                        return true;
-                      },
-                    }}
-                    render={({ field }) => (
-                      <input
-                        {...field}
-                        className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-primary-900 placeholder-gray-500"
-                        type="number"
-                        min={0}
-                        placeholder="e.g., 5000"
-                      />
-                    )}
-                  />
-                  {errors.estimate && (
-                    <span className="text-red-500 text-xs mt-1">
-                      {errors.estimate.message}
-                    </span>
+                      ))}
+                    </select>
                   )}
-                </div>
-
-                <div>
-                  <label className="block text-primary-900 font-medium mb-2">
-                    Timeline (Days) <span className="text-red-500">*</span>
-                  </label>
-                  <Controller
-                    name="timeline"
-                    control={control}
-                    rules={{
-                      required: "Timeline is required",
-                      validate: (value) => {
-                        if (!value || value.trim() === "") {
-                          return "Timeline is required";
-                        }
-                        const num = parseInt(value);
-                        if (isNaN(num) || num < 1) return "Minimum 1 day";
-                        if (num > 365) return "Maximum 365 days";
-                        return true;
-                      },
-                    }}
-                    render={({ field }) => (
-                      <input
-                        {...field}
-                        className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-primary-900 placeholder-gray-500"
-                        type="number"
-                        min={1}
-                        max={365}
-                        placeholder="e.g., 7 days"
-                      />
-                    )}
-                  />
-                  {errors.timeline && (
-                    <span className="text-red-500 text-xs mt-1">
-                      {errors.timeline.message}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-                <button
-                  type="button"
-                  onClick={handleCancelEdit}
-                  className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={updateLoading || !hasChanges}
-                  className={`px-6 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 ${
-                    hasChanges
-                      ? "bg-accent-500 text-white hover:bg-accent-600"
-                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  }`}
-                >
-                  {updateLoading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Saving...</span>
-                    </>
-                  ) : hasChanges ? (
-                    <>
-                      <Save className="w-4 h-4" />
-                      <span>Save Changes</span>
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      <span>No Changes Made</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          ) : (
-            /* View Mode */
-            <div className="space-y-6">
-              {/* Job Info Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-gradient-to-br from-primary-50 to-primary-100 p-6 rounded-xl border border-primary-200">
-                  <h3 className="text-lg font-semibold text-primary-900 mb-4">
-                    Job Information
-                  </h3>
-                  <div className="space-y-3">
-                    <div>
-                      <span className="text-sm font-medium text-primary-700">
-                        Title:
-                      </span>
-                      <p className="text-primary-900 font-medium">
-                        {displayJob.title}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-primary-700">
-                        Service:
-                      </span>
-                      <p className="text-primary-900 font-medium">
-                        {displayJob.service}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-primary-700">
-                        Type:
-                      </span>
-                      <span
-                        className={`inline-block px-2 py-1 rounded-full text-xs font-medium border ${getTypeColor(
-                          displayJob.type
-                        )}`}
-                      >
-                        {displayJob.type === "regular"
-                          ? "Regular Job"
-                          : "Off-Market Job"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-gradient-to-br from-accent-50 to-accent-100 p-6 rounded-xl border border-accent-200">
-                  <h3 className="text-lg font-semibold text-accent-900 mb-4">
-                    Status & Timeline
-                  </h3>
-                  <div className="space-y-3">
-                    <div>
-                      <span className="text-sm font-medium text-accent-700">
-                        Status:
-                      </span>
-                      <span
-                        className={`inline-block px-2 py-1 rounded-full text-xs font-medium border ml-2 ${getStatusColor(
-                          displayJob.status
-                        )}`}
-                      >
-                        {displayJob.status.charAt(0).toUpperCase() +
-                          displayJob.status.slice(1)}
-                      </span>
-                    </div>
-                    {displayJob.timeline && (
-                      <div>
-                        <span className="text-sm font-medium text-accent-700">
-                          Timeline:
-                        </span>
-                        <p className="text-accent-900 font-medium">
-                          {displayJob.timeline} days
-                        </p>
-                      </div>
-                    )}
-                    {displayJob.estimate && (
-                      <div>
-                        <span className="text-sm font-medium text-accent-700">
-                          Estimate:
-                        </span>
-                        <p className="text-accent-900 font-medium">
-                          ${displayJob.estimate.toLocaleString()}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Description */}
-              <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                  Description
-                </h3>
-                <p className="text-gray-700 leading-relaxed">
-                  {displayJob.description}
-                </p>
-              </div>
-
-              {/* Property Info */}
-              {displayJob.property && properties.length > 0 && (
-                <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
-                  <h3 className="text-lg font-semibold text-blue-900 mb-3">
-                    Associated Property
-                  </h3>
-                  {(() => {
-                    const property = properties.find(
-                      (p) => p._id === displayJob.property
-                    );
-                    return property ? (
-                      <div className="space-y-2">
-                        <p className="text-blue-900 font-medium">
-                          {property.title}
-                        </p>
-                        <p className="text-blue-700 text-sm">
-                          {property.propertyType} • {property.bedrooms}bed/
-                          {property.bathrooms}bath/{property.kitchens}kitchen
-                          {property.area &&
-                            property.areaUnit &&
-                            ` • ${property.area}${property.areaUnit}`}
-                        </p>
-                      </div>
-                    ) : (
-                      <p className="text-blue-700">
-                        Property information not available
-                      </p>
-                    );
-                  })()}
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-                {canEdit && (
-                  <button
-                    onClick={handleEdit}
-                    className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors flex items-center space-x-2"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                    <span>Edit Job</span>
-                  </button>
-                )}
-                {canEdit && (
-                  <button
-                    onClick={handleCancelJob}
-                    disabled={cancelLoading}
-                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-                  >
-                    {cancelLoading ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Cancelling...</span>
-                      </>
-                    ) : (
-                      <>
-                        <XCircle className="w-4 h-4" />
-                        <span>Cancel Job</span>
-                      </>
-                    )}
-                  </button>
+                />
+                {errors.category && (
+                  <span className="text-red-500 text-xs mt-1">
+                    {errors.category.message}
+                  </span>
                 )}
               </div>
             </div>
-          )}
+
+            <div>
+              <label className="block text-primary-900 font-medium mb-2">
+                Description <span className="text-red-500">*</span>
+              </label>
+              <Controller
+                name="description"
+                control={control}
+                rules={{
+                  required: "Description is required",
+                  minLength: {
+                    value: 10,
+                    message: "Description must be at least 10 characters",
+                  },
+                  maxLength: {
+                    value: 2000,
+                    message: "Description must be less than 2000 characters",
+                  },
+                }}
+                render={({ field }) => (
+                  <textarea
+                    {...field}
+                    className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white resize-none text-primary-900 placeholder-gray-500"
+                    minLength={10}
+                    maxLength={2000}
+                    required
+                    placeholder="Describe the job in detail"
+                    rows={4}
+                  />
+                )}
+              />
+              {errors.description && (
+                <span className="text-red-500 text-xs mt-1">
+                  {errors.description.message}
+                </span>
+              )}
+            </div>
+
+            {/* Property Selection */}
+            {properties.length > 0 && (
+              <div>
+                <label className="block text-primary-900 font-medium mb-2">
+                  Select Property
+                  <span className="text-sm text-gray-500 font-normal ml-2">
+                    (Cannot be changed after job creation)
+                  </span>
+                </label>
+                <Controller
+                  name="property"
+                  control={control}
+                  render={({ field }) => (
+                    <select
+                      {...field}
+                      className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-gray-100 text-gray-500 cursor-not-allowed"
+                      disabled={true}
+                    >
+                      <option value="">
+                        No specific property - General job request
+                      </option>
+                      {properties
+                        .filter((property) => property.isActive === true)
+                        .map((property) => (
+                          <option key={property._id} value={property._id}>
+                            {property.title} | {property.propertyType} |{" "}
+                            {property.bedrooms}bed/{property.bathrooms}bath/
+                            {property.kitchens}kitchen
+                            {property.area && property.areaUnit
+                              ? ` | ${property.area}${property.areaUnit}`
+                              : ""}
+                          </option>
+                        ))}
+                    </select>
+                  )}
+                />
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-primary-900 font-medium mb-2">
+                  Estimated Budget <span className="text-red-500">*</span>
+                </label>
+                <Controller
+                  name="estimate"
+                  control={control}
+                  rules={{
+                    required: "Estimated budget is required",
+                    validate: (value) => {
+                      if (!value || value.trim() === "") {
+                        return "Estimated budget is required";
+                      }
+                      const num = parseFloat(value);
+                      if (isNaN(num) || num <= 0) {
+                        return "Budget must be a positive number";
+                      }
+                      return true;
+                    },
+                  }}
+                  render={({ field }) => (
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+                        $
+                      </span>
+                      <input
+                        {...field}
+                        className="w-full rounded-lg pl-8 pr-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-primary-900 placeholder-gray-500"
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        placeholder="5000.00"
+                      />
+                    </div>
+                  )}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter amount in dollars (will be stored in cents)
+                </p>
+                {errors.estimate && (
+                  <span className="text-red-500 text-xs mt-1 block">
+                    {errors.estimate.message}
+                  </span>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-primary-900 font-medium mb-2">
+                  Timeline (Days) <span className="text-red-500">*</span>
+                </label>
+                <Controller
+                  name="timeline"
+                  control={control}
+                  rules={{
+                    required: "Timeline is required",
+                    validate: (value) => {
+                      if (!value || value.trim() === "") {
+                        return "Timeline is required";
+                      }
+                      const num = parseInt(value);
+                      if (isNaN(num) || num < 1) return "Minimum 1 day";
+                      if (num > 365) return "Maximum 365 days";
+                      return true;
+                    },
+                  }}
+                  render={({ field }) => (
+                    <input
+                      {...field}
+                      className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-primary-900 placeholder-gray-500"
+                      type="number"
+                      min={1}
+                      max={365}
+                      placeholder="e.g., 7 days"
+                    />
+                  )}
+                />
+                {errors.timeline && (
+                  <span className="text-red-500 text-xs mt-1">
+                    {errors.timeline.message}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={updateLoading || !hasChanges}
+                className={`px-6 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 ${
+                  hasChanges
+                    ? "bg-accent-500 text-white hover:bg-accent-600"
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                }`}
+              >
+                {updateLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Saving...</span>
+                  </>
+                ) : hasChanges ? (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>Save Changes</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>No Changes Made</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
 
@@ -862,7 +662,7 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
             confirmText: "",
           })
         }
-        loading={updateLoading || cancelLoading}
+        loading={updateLoading}
       />
     </div>
   );

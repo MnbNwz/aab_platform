@@ -172,10 +172,12 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">Change Password</h2>
+        <div className="flex items-center justify-between p-6 border-b border-primary-200">
+          <h2 className="text-xl font-bold text-primary-900">
+            Change Password
+          </h2>
           <button
-            className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+            className="text-primary-400 hover:text-primary-600 text-2xl font-bold"
             onClick={onClose}
           >
             <X className="h-5 w-5" />
@@ -187,7 +189,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Current Password Input */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-primary-700 mb-2">
                 Current Password
               </label>
               <div className="relative">
@@ -197,10 +199,10 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   onChange={(e) =>
                     handleInputChange("currentPassword", e.target.value)
                   }
-                  className={`w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors ${
+                  className={`w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-colors ${
                     errors.currentPassword
                       ? "border-red-300 bg-red-50"
-                      : "border-gray-300"
+                      : "border-primary-300"
                   }`}
                   placeholder="Enter your current password"
                   disabled={isUpdating}
@@ -212,9 +214,9 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   disabled={isUpdating}
                 >
                   {showPasswords.current ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
+                    <EyeOff className="h-5 w-5 text-primary-400" />
                   ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
+                    <Eye className="h-5 w-5 text-primary-400" />
                   )}
                 </button>
               </div>
@@ -227,7 +229,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
             {/* New Password Input */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-primary-700 mb-2">
                 New Password
               </label>
               <div className="relative">
@@ -237,10 +239,10 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   onChange={(e) =>
                     handleInputChange("newPassword", e.target.value)
                   }
-                  className={`w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors ${
+                  className={`w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-colors ${
                     errors.newPassword
                       ? "border-red-300 bg-red-50"
-                      : "border-gray-300"
+                      : "border-primary-300"
                   }`}
                   placeholder="Enter your new password"
                   disabled={isUpdating}
@@ -252,9 +254,9 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   disabled={isUpdating}
                 >
                   {showPasswords.new ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
+                    <EyeOff className="h-5 w-5 text-primary-400" />
                   ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
+                    <Eye className="h-5 w-5 text-primary-400" />
                   )}
                 </button>
               </div>
@@ -267,7 +269,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
             {/* Confirm New Password Input */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-primary-700 mb-2">
                 Confirm New Password
               </label>
               <div className="relative">
@@ -277,10 +279,10 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   onChange={(e) =>
                     handleInputChange("confirmNewPassword", e.target.value)
                   }
-                  className={`w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors ${
+                  className={`w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-colors ${
                     errors.confirmNewPassword
                       ? "border-red-300 bg-red-50"
-                      : "border-gray-300"
+                      : "border-primary-300"
                   }`}
                   placeholder="Confirm your new password"
                   disabled={isUpdating}
@@ -292,9 +294,9 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   disabled={isUpdating}
                 >
                   {showPasswords.confirm ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
+                    <EyeOff className="h-5 w-5 text-primary-400" />
                   ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
+                    <Eye className="h-5 w-5 text-primary-400" />
                   )}
                 </button>
               </div>
@@ -323,7 +325,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+                className="px-4 py-2 text-primary-700 bg-primary-100 rounded-lg hover:bg-primary-200 transition-colors duration-200"
                 disabled={isUpdating}
               >
                 Cancel

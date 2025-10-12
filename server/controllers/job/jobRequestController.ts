@@ -126,6 +126,12 @@ export const updateJobRequest = async (req: Request, res: Response) => {
       if (error.message === CONTROLLER_ERROR_MESSAGES.FORBIDDEN) {
         return res.status(HTTP_STATUS.FORBIDDEN).json({ success: false, message: error.message });
       }
+      if (
+        error.message.includes("Cannot edit job") ||
+        error.message.includes("bid has already been accepted")
+      ) {
+        return res.status(HTTP_STATUS.FORBIDDEN).json({ success: false, message: error.message });
+      }
       return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: error.message });
     }
 

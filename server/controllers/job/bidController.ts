@@ -3,6 +3,7 @@ import { Bid } from "@models/job";
 import { JobRequest } from "@models/job";
 import { LeadAccess } from "@models/job/leadAccess";
 import mongoose from "mongoose";
+import { toObjectId } from "@utils/core";
 import {
   CONTROLLER_ERROR_MESSAGES,
   HTTP_STATUS,
@@ -188,16 +189,25 @@ export const getJobBids = async (req: Request, res: Response) => {
   }
 };
 
-// Accept a bid
-export const acceptBid = async (req: Request & { user?: any }, res: Response) => {
+// Update bid status (accept or reject)
+export const updateBidStatus = async (req: Request & { user?: any }, res: Response) => {
   try {
     const { bidId } = req.params;
+    const { action } = req.body;
     const userId = req.user?._id;
 
     if (!userId) {
       return res
         .status(HTTP_STATUS.UNAUTHORIZED)
         .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
+    }
+
+    // Validate action
+    if (!action || !["accept", "reject"].includes(action)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid action. Must be "accept" or "reject"',
+      });
     }
 
     // Find the bid
@@ -226,43 +236,59 @@ export const acceptBid = async (req: Request & { user?: any }, res: Response) =>
       });
     }
 
-    // CRITICAL: Accept bid with error handling
-    // All operations must succeed together for data consistency
-    try {
-      await Promise.all([
-        // Update bid status to accepted
-        Bid.findByIdAndUpdate(bidId, { status: CONTROLLER_CONSTANTS.ACCEPTED_STATUS }),
-        // Reject all other bids for this job
-        Bid.updateMany(
-          {
-            jobRequest: jobRequest._id,
-            _id: { $ne: bidId },
-          },
-          { status: CONTROLLER_CONSTANTS.REJECTED_STATUS },
-        ),
-        // Update job request
-        JobRequest.findByIdAndUpdate(jobRequest._id, {
-          acceptedBid: bidId,
-          status: CONTROLLER_CONSTANTS.INPROGRESS_STATUS,
-          $push: {
-            timelineHistory: {
-              status: CONTROLLER_CONSTANTS.ACCEPTED_STATUS,
-              date: new Date(),
-              by: userId,
+    // Handle action
+    if (action === "accept") {
+      // CRITICAL: Accept bid with error handling
+      // All operations must succeed together for data consistency
+      try {
+        await Promise.all([
+          // Update bid status to accepted
+          Bid.findByIdAndUpdate(bidId, { status: CONTROLLER_CONSTANTS.ACCEPTED_STATUS }),
+          // Reject all other bids for this job
+          Bid.updateMany(
+            {
+              jobRequest: jobRequest._id,
+              _id: { $ne: bidId },
             },
-          },
-        }),
-      ]);
-    } catch (updateError) {
-      // Log error but don't expose details to user
-      console.error("Failed to accept bid:", updateError);
-      return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-        success: false,
-        message: "Failed to accept bid. Please try again.",
-      });
-    }
+            { status: CONTROLLER_CONSTANTS.REJECTED_STATUS },
+          ),
+          // Update job request
+          JobRequest.findByIdAndUpdate(jobRequest._id, {
+            acceptedBid: bidId,
+            status: CONTROLLER_CONSTANTS.INPROGRESS_STATUS,
+            $push: {
+              timelineHistory: {
+                status: CONTROLLER_CONSTANTS.ACCEPTED_STATUS,
+                date: new Date(),
+                by: userId,
+              },
+            },
+          }),
+        ]);
+      } catch (updateError) {
+        // Log error but don't expose details to user
+        console.error("Failed to accept bid:", updateError);
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+          success: false,
+          message: "Failed to accept bid. Please try again.",
+        });
+      }
 
-    res.json({ success: true, message: CONTROLLER_ERROR_MESSAGES.BID_ACCEPTED_SUCCESS });
+      res.json({ success: true, message: CONTROLLER_ERROR_MESSAGES.BID_ACCEPTED_SUCCESS });
+    } else if (action === "reject") {
+      // CRITICAL: Reject bid
+      try {
+        await Bid.findByIdAndUpdate(bidId, { status: CONTROLLER_CONSTANTS.REJECTED_STATUS });
+      } catch (updateError) {
+        console.error("Failed to reject bid:", updateError);
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+          success: false,
+          message: "Failed to reject bid. Please try again.",
+        });
+      }
+
+      res.json({ success: true, message: "Bid rejected successfully" });
+    }
   } catch (error) {
     console.error(CONTROLLER_ERROR_MESSAGES.BID_ACCEPT_ERROR, error);
     res
@@ -283,7 +309,7 @@ export const getContractorBids = async (req: Request & { user?: any }, res: Resp
     }
 
     // Build filter query with proper ObjectId conversion
-    const query: any = { contractor: new mongoose.Types.ObjectId(contractorId.toString()) };
+    const query: any = { contractor: toObjectId(contractorId.toString()) };
 
     // Filter by bid status (pending, accepted, rejected)
     if (req.query.status) {

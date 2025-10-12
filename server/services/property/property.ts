@@ -1,5 +1,7 @@
 import { Property, IProperty } from "@models/property";
+import { JobRequest } from "@models/job";
 import { Types } from "@models/types";
+import mongoose from "mongoose";
 import S3Upload from "@utils/storage";
 import { PropertyInput } from "@services/types/property";
 
@@ -101,6 +103,7 @@ export const getUserProperties = async (
               openJobs: { $sum: { $cond: [{ $eq: ["$status", "open"] }, 1, 0] } },
               completedJobs: { $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] } },
               totalValue: { $sum: "$estimate" },
+              bidCount: { $sum: { $size: "$bids" } },
             },
           },
         ],
@@ -134,7 +137,42 @@ export const getUserProperties = async (
 };
 
 export const getPropertyById = async (userId: Types.ObjectId, id: string) => {
-  return Property.findOne({ _id: id, userId });
+  // Use aggregation to include job stats with bidCount
+  const pipeline = [
+    { $match: { _id: new mongoose.Types.ObjectId(id), userId } },
+
+    // Add job statistics for this property
+    {
+      $lookup: {
+        from: "jobrequests",
+        localField: "_id",
+        foreignField: "property",
+        as: "jobStats",
+        pipeline: [
+          {
+            $group: {
+              _id: null,
+              totalJobs: { $sum: 1 },
+              openJobs: { $sum: { $cond: [{ $eq: ["$status", "open"] }, 1, 0] } },
+              completedJobs: { $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] } },
+              totalValue: { $sum: "$estimate" },
+              bidCount: { $sum: { $size: "$bids" } },
+            },
+          },
+        ],
+      },
+    },
+
+    // Transform job stats
+    {
+      $addFields: {
+        jobStats: { $arrayElemAt: ["$jobStats", 0] },
+      },
+    },
+  ];
+
+  const [result] = await Property.aggregate(pipeline as any);
+  return result;
 };
 
 export const updateProperty = async (
@@ -204,6 +242,21 @@ export const togglePropertyStatus = async (
 
   if (!property) {
     throw new Error("Property not found or you don't have permission to modify it");
+  }
+
+  // CRITICAL: Prevent deactivating property with active jobs
+  if (!isActive) {
+    // Check for active jobs (open, inprogress, hold) on this property
+    const activeJobs = await JobRequest.countDocuments({
+      property: property._id,
+      status: { $in: ["open", "inprogress", "hold"] },
+    });
+
+    if (activeJobs > 0) {
+      throw new Error(
+        `Cannot deactivate property. There ${activeJobs === 1 ? "is" : "are"} ${activeJobs} active job${activeJobs === 1 ? "" : "s"} associated with this property.`,
+      );
+    }
   }
 
   property.isActive = isActive;

@@ -24,6 +24,7 @@ export interface PropertyState {
   properties: PropertyFormData[];
   property: PropertyFormData | null;
   loading: boolean;
+  statusUpdateLoading: boolean;
   error: string | null;
 }
 
@@ -31,6 +32,7 @@ const initialState: PropertyState = {
   properties: [],
   property: null,
   loading: false,
+  statusUpdateLoading: false,
   error: null,
 };
 
@@ -82,11 +84,11 @@ const propertySlice = createSlice({
 
       // Update property status (activate/deactivate)
       .addCase(updatePropertyStatusThunk.pending, (state) => {
-        state.loading = true;
+        state.statusUpdateLoading = true;
         state.error = null;
       })
       .addCase(updatePropertyStatusThunk.fulfilled, (state, action) => {
-        state.loading = false;
+        state.statusUpdateLoading = false;
         state.error = null;
         // Update the property in the list
         const idx = state.properties.findIndex(
@@ -97,7 +99,7 @@ const propertySlice = createSlice({
         }
       })
       .addCase(updatePropertyStatusThunk.rejected, (state, action) => {
-        state.loading = false;
+        state.statusUpdateLoading = false;
         state.error =
           (action.payload as string) || "Failed to update property status";
       });

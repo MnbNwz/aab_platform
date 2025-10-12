@@ -5,7 +5,6 @@ import {
   CreditCard,
   Calendar,
   DollarSign,
-  Eye,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -260,14 +259,15 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
                         <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Date
                         </th>
-                        <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {history.payments.map((payment) => (
-                        <tr key={payment._id} className="hover:bg-gray-50">
+                        <tr
+                          key={payment._id}
+                          onClick={() => handleViewDetails(payment)}
+                          className="hover:bg-gray-50 cursor-pointer"
+                        >
                           <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <div className="flex-shrink-0 h-8 w-8">
@@ -311,15 +311,6 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
                               {formatDate(payment.createdAt)}
                             </div>
                           </td>
-                          <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button
-                              onClick={() => handleViewDetails(payment)}
-                              className="text-accent-600 hover:text-accent-900 flex items-center space-x-1"
-                            >
-                              <Eye className="h-4 w-4" />
-                              <span>View</span>
-                            </button>
-                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -339,14 +330,15 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
                         <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Status
                         </th>
-                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {history.payments.map((payment) => (
-                        <tr key={payment._id} className="hover:bg-gray-50">
+                        <tr
+                          key={payment._id}
+                          onClick={() => handleViewDetails(payment)}
+                          className="hover:bg-gray-50 cursor-pointer"
+                        >
                           <td className="px-3 py-4">
                             <div className="flex items-center">
                               <div className="flex-shrink-0 h-8 w-8">
@@ -382,15 +374,6 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
                               {payment.status}
                             </span>
                           </td>
-                          <td className="px-3 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button
-                              onClick={() => handleViewDetails(payment)}
-                              className="text-accent-600 hover:text-accent-900 flex items-center space-x-1"
-                            >
-                              <Eye className="h-4 w-4" />
-                              <span className="hidden sm:inline">View</span>
-                            </button>
-                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -402,7 +385,8 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
                     {history.payments.map((payment) => (
                       <div
                         key={payment._id}
-                        className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow duration-200"
+                        onClick={() => handleViewDetails(payment)}
+                        className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer"
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1 min-w-0">
@@ -455,16 +439,6 @@ const PaymentHistoryModal: React.FC<PaymentHistoryModalProps> = ({
                                 </div>
                               </div>
                             </div>
-                          </div>
-
-                          <div className="ml-2 flex-shrink-0">
-                            <button
-                              onClick={() => handleViewDetails(payment)}
-                              className="text-accent-600 hover:text-accent-900 p-1.5 rounded-lg hover:bg-accent-50 transition-colors"
-                              title="View Details"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </button>
                           </div>
                         </div>
                       </div>

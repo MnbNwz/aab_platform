@@ -144,7 +144,8 @@ const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
       typeof data.estimate === "string" &&
       data.estimate.trim() !== ""
     ) {
-      jobData.estimate = parseFloat(data.estimate);
+      // Convert dollars to cents for backend (multiply by 100)
+      jobData.estimate = Math.round(parseFloat(data.estimate) * 100);
     }
     if (data.property) {
       // Handle both string and object property values
@@ -344,7 +345,7 @@ const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
           </div>
           <div>
             <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
-              Estimated Budget (USD) <span className="text-red-500">*</span>
+              Estimated Budget <span className="text-red-500">*</span>
             </label>
             <Controller
               name="estimate"
@@ -363,17 +364,26 @@ const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
                 },
               }}
               render={({ field }) => (
-                <input
-                  {...field}
-                  className="w-full rounded-lg px-3 py-2 sm:py-3 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm sm:text-base text-primary-900 placeholder-gray-500"
-                  type="number"
-                  min={0}
-                  placeholder="e.g., 5000"
-                />
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+                    $
+                  </span>
+                  <input
+                    {...field}
+                    className="w-full rounded-lg pl-8 pr-3 py-2 sm:py-3 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm sm:text-base text-primary-900 placeholder-gray-500"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    placeholder="5000.00"
+                  />
+                </div>
               )}
             />
+            <p className="text-xs text-gray-500 mt-1">
+              Enter amount in dollars (will be stored in cents)
+            </p>
             {errors.estimate && (
-              <span className="text-red-500 text-xs mt-1">
+              <span className="text-red-500 text-xs mt-1 block">
                 {errors.estimate.message}
               </span>
             )}

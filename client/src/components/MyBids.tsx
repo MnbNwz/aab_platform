@@ -345,7 +345,10 @@ const BidCard: React.FC<{
   getJobStatusColor: (status: string) => string;
 }> = ({ bid, onViewDetails, getStatusColor, getJobStatusColor }) => {
   return (
-    <div className="bg-white border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+    <div
+      onClick={onViewDetails}
+      className="bg-white border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+    >
       <div className="flex justify-between items-start mb-3">
         <h3 className="font-semibold text-gray-900 text-sm flex-1">
           {bid.jobRequest.title}
@@ -400,13 +403,6 @@ const BidCard: React.FC<{
           </span>
         </div>
       </div>
-
-      <button
-        onClick={onViewDetails}
-        className="w-full mt-4 bg-accent-50 text-accent-600 px-3 py-2 rounded text-sm font-medium hover:bg-accent-100 transition"
-      >
-        View Details
-      </button>
     </div>
   );
 };

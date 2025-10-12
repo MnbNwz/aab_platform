@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { AuthenticatedRequest } from "@middlewares/types";
 import { ALLOWED_USER_TYPES } from "@controllers/constants/validation";
+import { Types } from "@models/types";
+import { toObjectId } from "@utils/core";
 import {
   getAllPlans,
   getPlansByUserType,
@@ -37,7 +39,7 @@ export async function getMembershipHistoryController(req: AuthenticatedRequest, 
     return res.status(401).json({ success: false, message: "Authentication required" });
   }
   try {
-    const history = await UserMembership.find({ userId: req.user._id })
+    const history = await UserMembership.find({ userId: toObjectId(req.user._id) })
       .sort({ startDate: -1 })
       .populate("planId")
       .lean();

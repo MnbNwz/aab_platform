@@ -8,6 +8,7 @@ import { getMyPropertiesThunk } from "../../store/thunks/propertyThunks";
 import { updatePropertyStatusThunk } from "../../store/thunks/propertyThunks";
 import { searchPropertiesApi } from "../../services/propertyService";
 import { showToast } from "../../utils/toast";
+import { isApiError } from "../../services/apiService";
 
 interface Property {
   _id: string;
@@ -60,6 +61,32 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
   const [statusLoading, setStatusLoading] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [viewProperty, setViewProperty] = useState<Property | null>(null);
+  const [hasActiveJobsModal, setHasActiveJobsModal] = useState(false);
+
+  // Get jobs to check if property has active jobs
+  const { jobs } = useSelector((state: RootState) => state.job);
+
+  // Check if property has any active jobs
+  const hasActiveJobs = (propertyId: string): boolean => {
+    return jobs.some(
+      (job) =>
+        job.property === propertyId &&
+        job.status !== "cancelled" &&
+        job.status !== "completed"
+    );
+  };
+
+  // Handle deactivate click
+  const handleDeactivateClick = (propertyId: string) => {
+    if (hasActiveJobs(propertyId)) {
+      setHasActiveJobsModal(true);
+    } else {
+      setConfirmStatusChange({
+        id: propertyId,
+        action: "deactivate",
+      });
+    }
+  };
 
   const handleStatusChange = async () => {
     if (!confirmStatusChange) return;
@@ -75,8 +102,15 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
       ).unwrap();
 
       showToast.success("Property has been permanently deactivated");
-    } catch (error) {
-      showToast.error("Failed to deactivate property. Please try again.");
+    } catch (error: any) {
+      // For 400 errors, show the specific backend message
+      if (isApiError(error) && error.status === 400) {
+        showToast.error(error.message);
+      } else if (typeof error === "string") {
+        showToast.error(error);
+      } else {
+        showToast.error("Failed to deactivate property. Please try again.");
+      }
     } finally {
       setStatusLoading(false);
       setConfirmStatusChange(null);
@@ -193,9 +227,25 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
             {paginated.map((property) => (
               <div
                 key={property._id}
-                className={`bg-white border border-gray-200 rounded-lg p-4 shadow-sm ${
-                  !property.isActive ? "opacity-60" : ""
-                }`}
+                onClick={() => {
+                  const mapped = {
+                    ...property,
+                    dimensions: (property as any).dimensions || {
+                      length: 0,
+                      width: 0,
+                    },
+                    isActive:
+                      typeof property.isActive === "boolean"
+                        ? property.isActive
+                        : true,
+                    images: (property.images || []).filter(
+                      (img: any) => typeof img === "string"
+                    ),
+                  };
+                  setViewProperty(mapped as Property);
+                  setViewModalOpen(true);
+                }}
+                className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
               >
                 <div className="flex justify-between items-start mb-3 gap-2">
                   <h3 className="font-semibold text-gray-900 text-sm flex-1 min-w-0">
@@ -228,46 +278,28 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
                   </span>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex justify-end">
                   <button
-                    className="flex-1 bg-accent-50 text-accent-600 px-3 py-2 rounded text-sm font-medium hover:bg-accent-100 transition"
-                    onClick={() => {
-                      const mapped = {
-                        ...property,
-                        dimensions: (property as any).dimensions || {
-                          length: 0,
-                          width: 0,
-                        },
-                        isActive:
-                          typeof property.isActive === "boolean"
-                            ? property.isActive
-                            : true,
-                        images: (property.images || []).filter(
-                          (img: any) => typeof img === "string"
-                        ),
-                      };
-                      setViewProperty(mapped as Property);
-                      setViewModalOpen(true);
-                    }}
-                  >
-                    View Details
-                  </button>
-                  <button
-                    className={`flex-1 px-3 py-2 rounded text-sm font-medium transition ${
+                    className={`px-3 py-2 rounded text-sm font-medium transition ${
                       property.isActive
                         ? "bg-orange-100 text-orange-800 hover:bg-orange-200"
                         : "bg-gray-100 text-gray-400 cursor-not-allowed"
                     }`}
                     disabled={!property.isActive}
-                    onClick={() => {
+                    title={
+                      !property.isActive
+                        ? "Property is already deactivated"
+                        : ""
+                    }
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent triggering the row click
                       if (
                         typeof property._id === "string" &&
                         property.isActive
                       ) {
-                        setConfirmStatusChange({
-                          id: property._id,
-                          action: "deactivate",
-                        });
+                        handleDeactivateClick(property._id);
+                      } else if (!property.isActive) {
+                        showToast.error("Property is already deactivated");
                       }
                     }}
                   >
@@ -323,9 +355,25 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
               paginated.map((property) => (
                 <tr
                   key={property._id}
-                  className={`hover:bg-gray-50 ${
-                    !property.isActive ? "opacity-60" : ""
-                  }`}
+                  onClick={() => {
+                    const mapped = {
+                      ...property,
+                      dimensions: (property as any).dimensions || {
+                        length: 0,
+                        width: 0,
+                      },
+                      isActive:
+                        typeof property.isActive === "boolean"
+                          ? property.isActive
+                          : true,
+                      images: (property.images || []).filter(
+                        (img: any) => typeof img === "string"
+                      ),
+                    };
+                    setViewProperty(mapped as Property);
+                    setViewModalOpen(true);
+                  }}
+                  className="hover:bg-gray-50 cursor-pointer"
                 >
                   <td className="px-6 py-4 font-semibold text-gray-900 max-w-xs">
                     <span className="block truncate" title={property.title}>
@@ -349,53 +397,32 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
                     </span>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <div className="flex justify-center gap-2">
-                      <button
-                        className="text-accent-600 hover:underline text-sm"
-                        onClick={() => {
-                          const mapped = {
-                            ...property,
-                            dimensions: (property as any).dimensions || {
-                              length: 0,
-                              width: 0,
-                            },
-                            isActive:
-                              typeof property.isActive === "boolean"
-                                ? property.isActive
-                                : true,
-                            images: (property.images || []).filter(
-                              (img: any) => typeof img === "string"
-                            ),
-                          };
-                          setViewProperty(mapped as Property);
-                          setViewModalOpen(true);
-                        }}
-                      >
-                        View
-                      </button>
-                      <span className="text-primary-300">|</span>
-                      <button
-                        className={`text-sm ${
+                    <button
+                      className={`text-sm ${
+                        property.isActive
+                          ? "text-orange-600 hover:underline cursor-pointer"
+                          : "text-gray-400 cursor-not-allowed"
+                      }`}
+                      disabled={!property.isActive}
+                      title={
+                        !property.isActive
+                          ? "Property is already deactivated"
+                          : ""
+                      }
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent triggering the row click
+                        if (
+                          typeof property._id === "string" &&
                           property.isActive
-                            ? "text-orange-600 hover:underline cursor-pointer"
-                            : "text-gray-400 cursor-not-allowed"
-                        }`}
-                        disabled={!property.isActive}
-                        onClick={() => {
-                          if (
-                            typeof property._id === "string" &&
-                            property.isActive
-                          ) {
-                            setConfirmStatusChange({
-                              id: property._id,
-                              action: "deactivate",
-                            });
-                          }
-                        }}
-                      >
-                        {property.isActive ? "Deactivate" : "Deactivated"}
-                      </button>
-                    </div>
+                        ) {
+                          handleDeactivateClick(property._id);
+                        } else if (!property.isActive) {
+                          showToast.error("Property is already deactivated");
+                        }
+                      }}
+                    >
+                      {property.isActive ? "Deactivate" : "Deactivated"}
+                    </button>
                   </td>
                 </tr>
               ))
@@ -415,6 +442,18 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
         onCancel={() => setConfirmStatusChange(null)}
         onConfirm={handleStatusChange}
       />
+
+      {/* Active Jobs Warning Modal */}
+      <ConfirmModal
+        isOpen={hasActiveJobsModal}
+        title="⚠️ Cannot Deactivate Property"
+        message="This property has active job requests. Please cancel or complete all associated jobs before deactivating the property."
+        confirmText="OK"
+        onCancel={() => setHasActiveJobsModal(false)}
+        onConfirm={() => setHasActiveJobsModal(false)}
+        default={true}
+      />
+
       {/* Pagination */}
       {total > 0 && (
         <div className="px-4 sm:px-6 py-4 border-t border-gray-200">

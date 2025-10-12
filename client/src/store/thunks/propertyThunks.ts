@@ -30,9 +30,11 @@ export const updatePropertyStatusThunk = createAsyncThunk(
       const response = await updatePropertyStatusApi(id, isActive);
       return response.property;
     } catch (err: any) {
-      return rejectWithValue(
-        err.response?.data?.message || "Failed to update property status"
-      );
+      // Pass the full error object for 400 errors, otherwise just the message
+      if (err.name === "ApiError" && err.status === 400) {
+        return rejectWithValue(err);
+      }
+      return rejectWithValue(err.message || "Failed to update property status");
     }
   }
 );

@@ -4,6 +4,7 @@ import { ContractorServices } from "@models/system";
 import { FilterQuery } from "mongoose";
 import { validateJobRequestCreation } from "@services/property/typeEnforcement";
 import { VALID_SORT_FIELDS, ALLOWED_JOB_UPDATE_FIELDS } from "@services/constants/validation";
+import { toObjectId } from "@utils/core";
 
 // Helper function to get available services from database
 export const getAvailableServices = async (): Promise<string[]> => {
@@ -77,7 +78,7 @@ export const createJobRequest = async (jobData: any) => {
 
   // Validate property
   if (!jobData.property) {
-    throw new Error("Property ID is required");
+    throw new Error("Property is required");
   }
 
   return await JobRequest.create(jobData);
@@ -102,14 +103,19 @@ export const getJobRequests = async (filters: any, user: any) => {
 
   const query: FilterQuery<any> = {};
 
+  // OPTIMIZATION: Fetch available services once per request
+  const availableServices =
+    search || service || (user.role === "contractor" && user.contractor?.services)
+      ? await getAvailableServices()
+      : [];
+
   // Customer: only their jobs
   if (user.role === "customer") {
-    query.createdBy = user._id;
+    query.createdBy = toObjectId(user._id);
   }
 
   // Contractor: filter by their services (use database services for validation)
   if (user.role === "contractor" && user.contractor && user.contractor.services) {
-    const availableServices = await getAvailableServices();
     const contractorServices = user.contractor.services as string[];
     const validContractorServices = contractorServices.filter((service) =>
       availableServices.includes(service),
@@ -123,7 +129,6 @@ export const getJobRequests = async (filters: any, user: any) => {
 
   // Search functionality - search in title, description, and valid services
   if (search) {
-    const availableServices = await getAvailableServices();
     const searchConditions: any[] = [
       { title: { $regex: search, $options: "i" } },
       { description: { $regex: search, $options: "i" } },
@@ -151,7 +156,6 @@ export const getJobRequests = async (filters: any, user: any) => {
 
   // Service filtering - validate against available services
   if (service) {
-    const availableServices = await getAvailableServices();
     if (Array.isArray(service)) {
       // Filter to only include valid services
       const validServices = service.filter((s) => availableServices.includes(s));
@@ -203,86 +207,100 @@ export const getJobRequests = async (filters: any, user: any) => {
     }
   }
 
-  // Sort options - default to newest first
+  // OPTIMIZATION: Sort options - use single field for better index usage
   const sortOptions: any = {};
   const validSortFields = VALID_SORT_FIELDS;
   const sortField = validSortFields.includes(sortBy) ? sortBy : "createdAt";
-  const sortDirection = sortOrder === "asc" ? 1 : -1; // Default is desc (-1) for newest first
+  const sortDirection = sortOrder === "asc" ? 1 : -1;
 
-  // Always sort by createdAt descending first (newest first), then by the requested field
-  sortOptions.createdAt = -1; // Newest first
-  if (sortField !== "createdAt") {
-    sortOptions[sortField] = sortDirection;
-  }
+  // Single field sort for optimal index usage
+  sortOptions[sortField] = sortDirection;
 
   // Calculate pagination
   const pageNum = Math.max(1, Number(page));
   const limitNum = Math.min(100, Math.max(1, Number(limit))); // Max 100 items per page
   const skip = (pageNum - 1) * limitNum;
 
-  // Execute optimized aggregation pipeline (10-20x faster than populate)
+  // OPTIMIZATION: Optimized aggregation pipeline
+  // Sort and paginate BEFORE expensive lookups
   const pipeline = [
-    // Match stage - filter documents
+    // 1. Match stage - filter documents (uses indexes)
     { $match: query },
 
-    // Lookup stages - join related collections
+    // 2. Sort stage - sort before lookups (can use indexes)
+    { $sort: sortOptions },
+
+    // 3. Facet stage - split into count and data pipelines
     {
-      $lookup: {
-        from: "users",
-        localField: "createdBy",
-        foreignField: "_id",
-        as: "createdBy",
-        pipeline: [{ $project: { name: 1, email: 1, phone: 1 } }],
-      },
-    },
-    {
-      $lookup: {
-        from: "properties",
-        localField: "property",
-        foreignField: "_id",
-        as: "property",
-        pipeline: [
+      $facet: {
+        // Get total count (no lookups needed)
+        count: [{ $count: "total" }],
+
+        // Get paginated data with lookups
+        data: [
+          // Paginate first
+          { $skip: skip },
+          { $limit: limitNum },
+
+          // Add computed fields early
+          {
+            $addFields: {
+              bidCount: { $size: "$bids" },
+            },
+          },
+
+          // Remove heavy fields before lookups
           {
             $project: {
-              title: 1,
-              location: 1,
-              area: 1,
-              areaUnit: 1,
-              totalRooms: 1,
-              bedrooms: 1,
-              bathrooms: 1,
-              kitchens: 1,
-              description: 1,
+              bids: 0,
+              acceptedBid: 0,
+            },
+          },
+
+          // Lookup user info
+          {
+            $lookup: {
+              from: "users",
+              localField: "createdBy",
+              foreignField: "_id",
+              as: "createdBy",
+              pipeline: [{ $project: { name: 1, email: 1, phone: 1 } }],
+            },
+          },
+
+          // Lookup property info
+          {
+            $lookup: {
+              from: "properties",
+              localField: "property",
+              foreignField: "_id",
+              as: "property",
+              pipeline: [
+                {
+                  $project: {
+                    title: 1,
+                    location: 1,
+                    area: 1,
+                    areaUnit: 1,
+                    totalRooms: 1,
+                    bedrooms: 1,
+                    bathrooms: 1,
+                    kitchens: 1,
+                    description: 1,
+                  },
+                },
+              ],
+            },
+          },
+
+          // Transform arrays to objects
+          {
+            $addFields: {
+              createdBy: { $arrayElemAt: ["$createdBy", 0] },
+              property: { $arrayElemAt: ["$property", 0] },
             },
           },
         ],
-      },
-    },
-    // Add computed fields (high-level info only for list view)
-    {
-      $addFields: {
-        createdBy: { $arrayElemAt: ["$createdBy", 0] },
-        property: { $arrayElemAt: ["$property", 0] },
-        bidCount: { $size: "$bids" }, // Just the count, not the full array
-      },
-    },
-
-    // Remove full bids array and acceptedBid from list view
-    {
-      $project: {
-        bids: 0,
-        acceptedBid: 0,
-      },
-    },
-
-    // Sort stage
-    { $sort: sortOptions },
-
-    // Facet stage - get data and count in single query
-    {
-      $facet: {
-        data: [{ $skip: skip }, { $limit: limitNum }],
-        count: [{ $count: "total" }],
       },
     },
   ];
@@ -326,7 +344,7 @@ export const getJobRequests = async (filters: any, user: any) => {
 // Get job request by ID (optimized with aggregation)
 export const getJobRequestById = async (id: string) => {
   const pipeline = [
-    { $match: { _id: new mongoose.Types.ObjectId(id) } },
+    { $match: { _id: toObjectId(id) } },
 
     // Lookup related collections
     {
@@ -393,6 +411,13 @@ export const updateJobRequest = async (id: string, updateData: any, user: any) =
   // Check permissions
   if (user.role !== "admin" && String(job.createdBy) !== String(user._id)) {
     throw new Error("Forbidden");
+  }
+
+  // Prevent editing if bid has been accepted (unless admin)
+  if (user.role !== "admin" && job.acceptedBid) {
+    throw new Error(
+      "Cannot edit job. A bid has already been accepted for this job. Please contact support if you need to make changes.",
+    );
   }
 
   // Validate service if being updated

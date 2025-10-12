@@ -156,8 +156,8 @@ const ServicesManagement: React.FC<ServicesManagementProps> = () => {
   return (
     <div className="space-y-6">
       {/* Add New Service */}
-      <div className="bg-gray-50 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-gray-900 mb-3">
+      <div className="bg-primary-50 rounded-lg p-4">
+        <h4 className="text-sm font-medium text-primary-900 mb-3">
           Add New Service
         </h4>
         <div className="flex space-x-3">
@@ -171,7 +171,7 @@ const ServicesManagement: React.FC<ServicesManagementProps> = () => {
               }}
               onKeyPress={(e) => e.key === "Enter" && handleCreateService()}
               placeholder="Enter service name (e.g., Plumbing, Electrical)"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+              className="w-full px-3 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 text-sm"
             />
           </div>
           <button
@@ -187,30 +187,30 @@ const ServicesManagement: React.FC<ServicesManagementProps> = () => {
       </div>
 
       {/* Services List */}
-      <div className="bg-white border border-gray-200 rounded-lg">
-        <div className="px-4 py-3 border-b border-gray-200">
-          <h4 className="text-sm font-medium text-gray-900">
+      <div className="bg-white border border-primary-200 rounded-lg">
+        <div className="px-4 py-3 border-b border-primary-200">
+          <h4 className="text-sm font-medium text-primary-900">
             Current Services ({localServices.length})
           </h4>
         </div>
 
         {isLoading ? (
           <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto"></div>
-            <p className="text-gray-500 text-sm mt-2">Loading services...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-500 mx-auto"></div>
+            <p className="text-primary-500 text-sm mt-2">Loading services...</p>
           </div>
         ) : localServices.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            <Settings className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+          <div className="p-8 text-center text-primary-500">
+            <Settings className="h-12 w-12 mx-auto mb-4 text-primary-300" />
             <p className="text-lg">No services found</p>
             <p className="text-sm">Add your first service above</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-primary-200">
             {localServices.map((service, index) => (
               <div
                 key={index}
-                className="px-4 py-3 flex items-center justify-between hover:bg-gray-50"
+                className="px-4 py-3 flex items-center justify-between hover:bg-primary-50"
               >
                 {editingService === service ? (
                   <div className="flex-1 flex items-center space-x-3">
@@ -222,7 +222,7 @@ const ServicesManagement: React.FC<ServicesManagementProps> = () => {
                         if (e.key === "Enter") handleUpdateService(service);
                         if (e.key === "Escape") cancelEditing();
                       }}
-                      className="flex-1 px-3 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                      className="flex-1 px-3 py-1 border border-primary-300 rounded focus:ring-2 focus:ring-accent-500 focus:border-accent-500 text-sm"
                       autoFocus
                     />
                     <button
@@ -243,7 +243,7 @@ const ServicesManagement: React.FC<ServicesManagementProps> = () => {
                 ) : (
                   <>
                     <div className="flex-1">
-                      <span className="text-sm font-medium text-gray-900 capitalize">
+                      <span className="text-sm font-medium text-primary-900 capitalize">
                         {service}
                       </span>
                     </div>
@@ -251,7 +251,7 @@ const ServicesManagement: React.FC<ServicesManagementProps> = () => {
                       <button
                         onClick={() => startEditing(service)}
                         disabled={false}
-                        className="p-1 text-gray-400 hover:text-primary-600 disabled:opacity-50 transition-colors duration-200"
+                        className="p-1 text-primary-400 hover:text-accent-600 disabled:opacity-50 transition-colors duration-200"
                         title="Edit service"
                       >
                         <Edit2 className="h-4 w-4" />
@@ -259,7 +259,7 @@ const ServicesManagement: React.FC<ServicesManagementProps> = () => {
                       <button
                         onClick={() => handleDeleteService(service)}
                         disabled={false}
-                        className="p-1 text-gray-400 hover:text-red-600 disabled:opacity-50 transition-colors duration-200"
+                        className="p-1 text-primary-400 hover:text-red-600 disabled:opacity-50 transition-colors duration-200"
                         title="Delete service"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -293,11 +293,11 @@ const ServicesManagement: React.FC<ServicesManagementProps> = () => {
       </div>
 
       {/* Action Buttons - Always visible, Cancel always enabled, Save enabled when changes exist */}
-      <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
+      <div className="flex items-center justify-end space-x-3 pt-4 border-t border-primary-200">
         <button
           onClick={handleCancel}
           disabled={isSubmitting}
-          className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 text-primary-600 hover:text-primary-800 hover:bg-primary-100 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Cancel
         </button>

@@ -234,7 +234,10 @@ const ContractorJobRequestsTable: React.FC = () => {
             {jobs.map((job: ContractorJob) => (
               <div
                 key={job._id}
-                className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow w-full"
+                onClick={() => job.canAccessNow && handleViewJob(job)}
+                className={`bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow w-full ${
+                  job.canAccessNow ? "cursor-pointer" : "cursor-not-allowed"
+                }`}
               >
                 <h3
                   className="font-semibold text-gray-900 text-base mb-3 truncate"
@@ -272,14 +275,6 @@ const ContractorJobRequestsTable: React.FC = () => {
                     </span>
                   </div>
                 </div>
-
-                <button
-                  onClick={() => handleViewJob(job)}
-                  disabled={!job.canAccessNow}
-                  className="w-full bg-accent-50 text-accent-600 px-3 py-2 rounded text-sm font-medium hover:bg-accent-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  View Details
-                </button>
               </div>
             ))}
             {jobs.length === 0 && (
@@ -311,15 +306,12 @@ const ContractorJobRequestsTable: React.FC = () => {
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Posted
               </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {jobsLoading ? (
               <tr>
-                <td colSpan={6} className="py-12">
+                <td colSpan={5} className="py-12">
                   <div className="flex justify-center items-center w-full h-full">
                     <Loader size="large" color="accent" />
                   </div>
@@ -327,13 +319,19 @@ const ContractorJobRequestsTable: React.FC = () => {
               </tr>
             ) : jobs.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center text-gray-500 py-8">
+                <td colSpan={5} className="text-center text-gray-500 py-8">
                   No job requests found.
                 </td>
               </tr>
             ) : (
               jobs.map((job: ContractorJob) => (
-                <tr key={job._id} className="hover:bg-gray-50">
+                <tr
+                  key={job._id}
+                  onClick={() => job.canAccessNow && handleViewJob(job)}
+                  className={`hover:bg-gray-50 ${
+                    job.canAccessNow ? "cursor-pointer" : "cursor-not-allowed"
+                  }`}
+                >
                   <td className="px-6 py-4">
                     <div
                       className="font-medium text-gray-900 truncate max-w-xs"
@@ -353,15 +351,6 @@ const ContractorJobRequestsTable: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 text-center text-sm text-gray-600">
                     {new Date(job.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <button
-                      onClick={() => handleViewJob(job)}
-                      disabled={!job.canAccessNow}
-                      className="text-accent-600 hover:text-accent-700 font-medium text-sm hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      View
-                    </button>
                   </td>
                 </tr>
               ))

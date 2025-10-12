@@ -33,9 +33,20 @@ const JobRequestSchema = new Schema<IJobRequest>({
   ],
 });
 
-// PERFORMANCE INDEXES (minimal, essential only)
-JobRequestSchema.index({ status: 1, service: 1, createdAt: -1 }); // Contractor queries (covers status, service, and sort)
-JobRequestSchema.index({ createdBy: 1, status: 1 }); // Customer queries
+// PERFORMANCE INDEXES (minimal, optimized for actual query patterns)
+// Index 1: Customer queries (covers 90% of customer use cases via leftmost prefix)
+// - { createdBy: X } sorted by createdAt ✅
+// - { createdBy: X, status: Y } sorted by createdAt ✅
+JobRequestSchema.index({ createdBy: 1, status: 1, createdAt: -1 });
+
+// Index 2: Contractor queries (status + service + sort)
+// - { status: "open", service: {$in: [...]} } sorted by createdAt ✅
+JobRequestSchema.index({ status: 1, service: 1, createdAt: -1 });
+
+// Index 3: Property queries (simple single-field index is sufficient)
+// - Used for: property validation, job lookup by property
+// - With typical 1-20 jobs per property, filtering status in memory is negligible
+JobRequestSchema.index({ property: 1 });
 
 const JobRequest = createModel<IJobRequest>({
   schema: JobRequestSchema,

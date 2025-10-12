@@ -27,8 +27,18 @@ export const jobApi = {
     return api.put(`/api/job/requests/${jobId}`, updateData);
   },
 
-  // Cancel Job Request
-  cancelJob: async (jobId: string) => {
-    return api.put(`/api/job/requests/${jobId}/cancel`);
+  // Get all bids for a job
+  getBidsForJob: async (jobRequestId: string) => {
+    return api.get(`/api/job/bids/job/${jobRequestId}`);
+  },
+
+  // Accept bid
+  acceptBid: async (bidId: string) => {
+    return api.put(`/api/job/bids/${bidId}/accept`);
+  },
+
+  // Reject bid
+  rejectBid: async (bidId: string) => {
+    return api.put(`/api/job/bids/${bidId}/reject`);
   },
 };

@@ -3,14 +3,13 @@ import { createPortal } from "react-dom";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState, AppDispatch } from "../../store";
 import type { Job } from "../../store/slices/jobSlice";
-import { getJobsThunk, cancelJobThunk } from "../../store/thunks/jobThunks";
+import { getJobsThunk } from "../../store/thunks/jobThunks";
 import { setJobFilters } from "../../store/slices/jobSlice";
 import { getMyPropertiesThunk } from "../../store/thunks/propertyThunks";
 import Loader from "../ui/Loader";
 import JobCreate from "../JobCreate";
+import JobDetailViewModal from "../JobDetailViewModal";
 import JobViewEditModal from "../JobViewEditModal";
-import JobDetailsModal from "../JobDetailsModal";
-import { showToast } from "../../utils/toast";
 import ConfirmModal from "../ui/ConfirmModal";
 
 const JobManagementTable: React.FC = () => {
@@ -27,14 +26,11 @@ const JobManagementTable: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [viewEditModalOpen, setViewEditModalOpen] = useState(false);
-  const [jobDetailsModalOpen, setJobDetailsModalOpen] = useState(false);
+  const [jobDetailViewOpen, setJobDetailViewOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<any>(null);
-  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
-  const [jobToCancel, setJobToCancel] = useState<any>(null);
   const [noPropertyConfirmOpen, setNoPropertyConfirmOpen] = useState(false);
-  const [acceptingBid, setAcceptingBid] = useState<string | null>(null);
-  const [rejectingBid, setRejectingBid] = useState<string | null>(null);
+  const [editFromDetailView, setEditFromDetailView] = useState(false);
 
   // Fetch jobs on mount and when filters change
   useEffect(() => {
@@ -63,93 +59,41 @@ const JobManagementTable: React.FC = () => {
     dispatch(setJobFilters({ page }));
   };
 
-  // Handle job view/edit
-  const handleViewJob = (job: any) => {
-    setSelectedJob(job);
-    setViewEditModalOpen(true);
-  };
-
-  const handleCloseViewEditModal = () => {
-    setViewEditModalOpen(false);
-    setSelectedJob(null);
-  };
-
   // Handle job details with bids
   const handleViewJobDetails = (job: any) => {
     setSelectedJob(job);
-    setJobDetailsModalOpen(true);
+    setJobDetailViewOpen(true);
   };
 
-  const handleCloseJobDetailsModal = () => {
-    setJobDetailsModalOpen(false);
+  const handleCloseJobDetailView = () => {
+    setJobDetailViewOpen(false);
     setSelectedJob(null);
   };
 
-  // Handle accept bid
-  const handleAcceptBid = async (bidId: string) => {
-    setAcceptingBid(bidId);
-    try {
-      // TODO: Implement accept bid API call
-      // await dispatch(acceptBidThunk({ jobId: selectedJob._id, bidId }));
-      showToast.success("Bid accepted successfully!");
-
-      // Refresh jobs to get updated data
-      dispatch(getJobsThunk(filters));
-
-      // Close modal after short delay
-      setTimeout(() => {
-        setJobDetailsModalOpen(false);
-        setSelectedJob(null);
-      }, 1000);
-    } catch (error) {
-      showToast.error("Failed to accept bid");
-    } finally {
-      setAcceptingBid(null);
+  // Handle edit job from detail modal
+  const handleEditJobFromDetail = () => {
+    if (selectedJob) {
+      setJobDetailViewOpen(false);
+      setEditModalOpen(true);
+      setEditFromDetailView(true);
     }
   };
 
-  // Handle reject bid
-  const handleRejectBid = async (bidId: string) => {
-    setRejectingBid(bidId);
-    try {
-      // TODO: Implement reject bid API call
-      // await dispatch(rejectBidThunk({ jobId: selectedJob._id, bidId }));
-      showToast.success("Bid rejected successfully!");
-
-      // Refresh jobs to get updated data
-      dispatch(getJobsThunk(filters));
-    } catch (error) {
-      showToast.error("Failed to reject bid");
-    } finally {
-      setRejectingBid(null);
+  const handleCloseEditModal = () => {
+    setEditModalOpen(false);
+    // Refresh jobs after edit
+    dispatch(getJobsThunk(filters));
+    // Reopen detail view modal if we came from it
+    if (editFromDetailView && selectedJob) {
+      setJobDetailViewOpen(true);
+      setEditFromDetailView(false);
+    } else {
+      setSelectedJob(null);
     }
   };
 
-  // Handle cancel job
-  const handleCancelJob = (job: Job, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent row click
-    setJobToCancel(job);
-    setCancelConfirmOpen(true);
-  };
-
-  const confirmCancelJob = async () => {
-    if (!jobToCancel) return;
-
-    try {
-      const result = await dispatch(cancelJobThunk(jobToCancel._id));
-      if (cancelJobThunk.fulfilled.match(result)) {
-        showToast.success("Job cancelled successfully!");
-        setCancelConfirmOpen(false);
-        setJobToCancel(null);
-      }
-    } catch (error) {
-      showToast.error("Failed to cancel job");
-    }
-  };
-
-  const cancelCancelJob = () => {
-    setCancelConfirmOpen(false);
-    setJobToCancel(null);
+  const handleRefreshJobs = () => {
+    dispatch(getJobsThunk(filters));
   };
 
   // Handle create job button click
@@ -177,14 +121,6 @@ const JobManagementTable: React.FC = () => {
   // Show filters for admin, minimal for customer
   const isAdmin = user?.role === "admin";
   const isCustomer = user?.role === "customer";
-
-  // Check if user can cancel a job
-  const canCancelJob = (job: Job) => {
-    if (!user) return false;
-    if (isAdmin) return true; // Admin can cancel any job
-    if (isCustomer && user._id === job.createdBy) return true; // Customer can cancel their own jobs
-    return false;
-  };
 
   return (
     <div className="bg-white rounded-lg shadow w-full max-w-full overflow-x-hidden">
@@ -312,20 +248,29 @@ const JobManagementTable: React.FC = () => {
             {jobs.map((job: Job) => (
               <div
                 key={job._id}
-                className={`bg-white border rounded-lg p-4 shadow-sm transition-shadow w-full ${
+                onClick={() => handleViewJobDetails(job)}
+                className={`bg-white border rounded-lg p-4 shadow-sm transition-shadow w-full cursor-pointer ${
                   job.status === "open"
-                    ? "border-gray-200 hover:shadow-md"
-                    : "border-gray-300 hover:shadow-sm"
+                    ? "border-gray-200 hover:shadow-md hover:border-primary-300"
+                    : "border-gray-300 hover:shadow-sm hover:border-gray-400"
                 }`}
               >
                 <div className="flex justify-between items-start mb-3 gap-2">
-                  <h3 className="font-semibold text-gray-900 text-sm flex-1 min-w-0">
-                    <span className="block truncate" title={job.title}>
-                      {job.title.length > 30
-                        ? `${job.title.substring(0, 30)}...`
-                        : job.title}
-                    </span>
-                  </h3>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-gray-900 text-sm">
+                      <span className="block truncate" title={job.title}>
+                        {job.title.length > 30
+                          ? `${job.title.substring(0, 30)}...`
+                          : job.title}
+                      </span>
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-accent-600 font-medium">
+                        {job.bidCount || 0}{" "}
+                        {job.bidCount === 1 ? "Bid" : "Bids"}
+                      </span>
+                    </div>
+                  </div>
                   {job.status !== "open" && (
                     <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
                       Read Only
@@ -363,36 +308,6 @@ const JobManagementTable: React.FC = () => {
                       : job.description}
                   </span>
                 </div>
-
-                <div className="text-sm text-gray-500 mb-3">
-                  <span className="font-medium">Created:</span>{" "}
-                  {new Date(job.createdAt).toLocaleDateString()}
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleViewJob(job)}
-                      className="flex-1 bg-primary-50 text-primary-600 px-3 py-2 rounded text-sm font-medium hover:bg-primary-100 transition"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleViewJobDetails(job)}
-                      className="flex-1 bg-accent-50 text-accent-600 px-3 py-2 rounded text-sm font-medium hover:bg-accent-100 transition"
-                    >
-                      Bids ({job.bids?.length || 0})
-                    </button>
-                  </div>
-                  {job.status === "open" && canCancelJob(job) && (
-                    <button
-                      onClick={(e) => handleCancelJob(job, e)}
-                      className="w-full bg-red-500 text-white px-3 py-2 rounded text-sm font-medium hover:bg-red-600 transition"
-                    >
-                      Cancel Job
-                    </button>
-                  )}
-                </div>
               </div>
             ))}
             {jobs.length === 0 && (
@@ -418,18 +333,15 @@ const JobManagementTable: React.FC = () => {
               <th className="px-3 lg:px-6 py-3 text-center font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">
                 Status
               </th>
-              <th className="px-3 lg:px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">
-                Created
-              </th>
-              <th className="px-3 lg:px-6 py-3 text-center font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
-                Actions
+              <th className="px-3 lg:px-6 py-3 text-center font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">
+                Bids
               </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {jobsLoading ? (
               <tr>
-                <td colSpan={5} className="py-12">
+                <td colSpan={4} className="py-12">
                   <div className="flex justify-center items-center w-full h-full">
                     <Loader size="large" color="accent" />
                   </div>
@@ -437,13 +349,17 @@ const JobManagementTable: React.FC = () => {
               </tr>
             ) : jobs.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center text-gray-500 py-8">
+                <td colSpan={4} className="text-center text-gray-500 py-8">
                   No jobs found.
                 </td>
               </tr>
             ) : (
               jobs.map((job: Job) => (
-                <tr key={job._id} className="hover:bg-gray-50">
+                <tr
+                  key={job._id}
+                  onClick={() => handleViewJobDetails(job)}
+                  className="hover:bg-gray-50 cursor-pointer"
+                >
                   <td className="px-3 lg:px-6 py-4 font-semibold text-gray-900 max-w-xs">
                     <span className="block truncate" title={job.title}>
                       {job.title.length > 40
@@ -475,36 +391,10 @@ const JobManagementTable: React.FC = () => {
                       {job.status}
                     </span>
                   </td>
-                  <td className="px-3 lg:px-6 py-4 text-gray-500">
-                    {new Date(job.createdAt).toLocaleDateString()}
-                  </td>
                   <td className="px-3 lg:px-6 py-4 text-center">
-                    <div className="flex justify-center gap-2 flex-wrap">
-                      <button
-                        onClick={() => handleViewJob(job)}
-                        className="text-primary-600 hover:underline text-sm font-medium"
-                      >
-                        Edit
-                      </button>
-                      <span className="text-gray-300">|</span>
-                      <button
-                        onClick={() => handleViewJobDetails(job)}
-                        className="text-accent-600 hover:underline text-sm font-medium"
-                      >
-                        Bids ({job.bids?.length || 0})
-                      </button>
-                      {job.status === "open" && canCancelJob(job) && (
-                        <>
-                          <span className="text-gray-300">|</span>
-                          <button
-                            onClick={(e) => handleCancelJob(job, e)}
-                            className="text-red-600 hover:underline text-sm font-medium"
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      )}
-                    </div>
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-accent-100 text-accent-800">
+                      {job.bidCount || 0}
+                    </span>
                   </td>
                 </tr>
               ))
@@ -635,39 +525,26 @@ const JobManagementTable: React.FC = () => {
           document.body
         )}
 
-      {/* Job View/Edit Modal */}
-      {viewEditModalOpen && (
+      {/* Job Detail View Modal with Bids Section */}
+      {jobDetailViewOpen && selectedJob && (
+        <JobDetailViewModal
+          isOpen={jobDetailViewOpen}
+          onClose={handleCloseJobDetailView}
+          job={selectedJob}
+          onRefreshJobs={handleRefreshJobs}
+          onEditJob={handleEditJobFromDetail}
+        />
+      )}
+
+      {/* Job Edit Modal */}
+      {editModalOpen && selectedJob && (
         <JobViewEditModal
-          isOpen={viewEditModalOpen}
-          onClose={handleCloseViewEditModal}
+          isOpen={editModalOpen}
+          onClose={handleCloseEditModal}
           job={selectedJob}
           properties={properties}
         />
       )}
-
-      {/* Job Details with Bids Modal */}
-      {jobDetailsModalOpen && selectedJob && (
-        <JobDetailsModal
-          isOpen={jobDetailsModalOpen}
-          onClose={handleCloseJobDetailsModal}
-          job={selectedJob}
-          onAcceptBid={handleAcceptBid}
-          onRejectBid={handleRejectBid}
-          acceptingBid={acceptingBid}
-          rejectingBid={rejectingBid}
-        />
-      )}
-
-      {/* Cancel Job Confirmation Modal */}
-      <ConfirmModal
-        isOpen={cancelConfirmOpen}
-        onCancel={cancelCancelJob}
-        onConfirm={confirmCancelJob}
-        title="Cancel Job"
-        message={`Are you sure you want to cancel the job "${jobToCancel?.title}"? This action cannot be undone.`}
-        confirmText="Cancel Job"
-        cancelText="Keep Job"
-      />
 
       {/* No Property Confirmation Modal */}
       <ConfirmModal
