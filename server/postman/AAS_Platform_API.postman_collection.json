@@ -1,8 +1,8 @@
 {
   "info": {
     "name": "AAS Platform API",
-    "description": "Complete API collection for AAS Platform with authentication, user management, services management, investment opportunities, and intelligent caching system.\n\n🆕 **Updated Features (v2.4.0):**\n• Investment opportunities with contractor interest management\n• Complete CRUD for investment opportunities (admin only)\n• Contractor interest tracking and status updates\n• Simplified membership system - always starts as one-time payment\n• Auto-renewal toggle feature for existing memberships\n• Membership upgrade functionality\n• Enhanced webhook handling for membership payments\n• Graceful server shutdown with proper cleanup\n• Fixed EventEmitter memory leaks\n• Complete OTP verification system (verify, resend, state check)\n• Password reset flow with OTP verification\n• Lead management system for contractors\n• firstName & lastName required for all user registrations\n• User-level approval system (moved from role-specific)\n• Redis caching with memory fallback for production reliability\n\n⚡ **Performance Features:**\n• Authentication middleware caching (50-80% performance boost)\n• Membership plans caching (1-hour TTL)\n• User profile caching with intelligent invalidation\n• Cache fallback system ensures zero downtime\n• Optimized webhook processing\n\n🔐 **Authentication & Security:**\n• Complete OTP verification workflow\n• Password reset with email verification\n• JWT-based authentication with HttpOnly cookies\n• Role-based access control (RBAC)\n• Rate limiting and security headers\n• Enhanced payment security middleware\n\n💼 **Lead Management:**\n• Contractor lead access system\n• Lead usage tracking and statistics\n• Job request access with credit deduction\n• Filtering by service type, property type, and budget\n\n💰 **Investment Opportunities:**\n• Admin-managed investment opportunities\n• Contractor interest expression\n• Interest status tracking (pending/accepted/rejected)\n• Multi-file uploads for photos and documents\n• Investment statistics and analytics\n\n📋 **API Highlights:**\n• Comprehensive admin user management with filtering\n• Simplified membership plan management\n• Advanced payment processing with Stripe\n• Property management with image uploads\n• Job request and bidding system\n• Services management with versioning\n• Role-based dashboard analytics",
-    "version": "2.4.0",
+    "description": "Complete API collection for AAS Platform with authentication, user management, services management, investment opportunities, and intelligent caching system.\n\n🆕 **Updated Features (v2.5.0):**\n• Property soft delete with isActive toggle (PATCH /property/:id/status)\n• Bid accept/reject unified endpoint (PUT /bids/:bidId/status)\n• Job editing locked after bid acceptance (customer security)\n• Premium contractor immediate job access (0 hour delay fixed)\n• Optimized contractor job listings (removed heavy fields)\n• Customer contact info protected until bid acceptance\n• Contractor job detail with self/myBid/selfBidAccepted flags\n• Property bidCount in job statistics\n• Investment opportunities with contractor interest management\n• Simplified membership system - always starts as one-time payment\n• Auto-renewal toggle feature for existing memberships\n• Membership upgrade functionality\n• Enhanced webhook handling for membership payments\n• Complete OTP verification system (verify, resend, state check)\n• Password reset flow with OTP verification\n• Lead management system for contractors\n• firstName & lastName required for all user registrations\n• User-level approval system (moved from role-specific)\n• Redis caching with memory fallback for production reliability\n\n⚡ **Performance Features:**\n• Optimized contractor job pipeline (60-70% less memory)\n• Early time-based filtering reduces query load\n• Conditional property lookup for radius filtering\n• Single-pass radius filtering with property removal\n• Authentication middleware caching (50-80% boost)\n• Membership plans caching (1-hour TTL)\n• User profile caching with intelligent invalidation\n\n🔐 **Security Features:**\n• Customer contact hidden until bid acceptance\n• Property validation prevents inactive property use\n• Job editing locked after bid acceptance\n• Bid status validation (accept/reject)\n• Complete OTP verification workflow\n• JWT-based authentication with HttpOnly cookies\n• Role-based access control (RBAC)\n• Enhanced payment security middleware\n\n💼 **Lead Management:**\n• Contractor lead access system with tier-based limits\n• Lead usage tracking and statistics\n• Job request access with credit deduction\n• Filtering by service type, property type, and budget\n• Monthly/yearly lead reset automation\n\n💰 **Investment Opportunities:**\n• Admin-managed investment opportunities\n• Contractor interest expression\n• Interest status tracking (pending/accepted/rejected)\n• Multi-file uploads for photos and documents\n• Investment statistics and analytics\n\n📋 **API Highlights:**\n• Comprehensive admin user management with filtering\n• Simplified membership plan management\n• Advanced payment processing with Stripe\n• Property management with soft delete\n• Job request and bidding system with security\n• Services management with versioning\n• Role-based dashboard analytics",
+    "version": "2.5.0",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -909,6 +909,28 @@
             },
             "description": "Update an existing property with new images"
           }
+        },
+        {
+          "name": "Toggle Property Status (Soft Delete)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": false\n}\n\n// Set to false to deactivate (soft delete)\n// Set to true to reactivate"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/property/{{propertyId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "property", "{{propertyId}}", "status"]
+            },
+            "description": "Toggle property active status (soft delete/restore). Inactive properties cannot be used for new job requests but existing jobs remain unaffected. Property data is never deleted from database."
+          }
         }
       ]
     },
@@ -997,36 +1019,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Updated Kitchen Renovation\",\n  \"description\": \"Updated description with additional requirements\",\n  \"budget\": 18000,\n  \"preferredEndDate\": \"2024-03-15\"\n}"
+              "raw": "{\n  \"title\": \"Updated Kitchen Renovation\",\n  \"description\": \"Updated description with additional requirements\",\n  \"estimate\": 18000,\n  \"timeline\": 45\n}\n\n// NOTE: Cannot edit job after a bid has been accepted (unless you're an admin)"
             },
             "url": {
               "raw": "{{baseUrl}}/api/job/requests/{{jobRequestId}}",
               "host": ["{{baseUrl}}"],
               "path": ["api", "job", "requests", "{{jobRequestId}}"]
             },
-            "description": "Update an existing job request"
-          }
-        },
-        {
-          "name": "Cancel Job Request",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"reason\": \"Project cancelled by customer\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/job/requests/{{jobRequestId}}/cancel",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "job", "requests", "{{jobRequestId}}", "cancel"]
-            },
-            "description": "Cancel an existing job request"
+            "description": "Update an existing job request. Only updatable fields: title, description, service, estimate, timeline. Cannot edit if a bid has already been accepted (admin can override)."
           }
         }
       ]
@@ -1035,7 +1035,7 @@
       "name": "Bid Management",
       "item": [
         {
-          "name": "Create Bid",
+          "name": "Create Bid (Contractor)",
           "request": {
             "method": "POST",
             "header": [
@@ -1046,14 +1046,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"jobRequestId\": \"JOB_REQUEST_ID\",\n  \"bidAmount\": 12000,\n  \"message\": \"Professional kitchen renovation with high-quality materials\",\n  \"timeline\": {\n    \"startDate\": \"2024-02-01\",\n    \"endDate\": \"2024-03-15\"\n  },\n  \"materials\": [\n    \"High-quality materials\",\n    \"Professional tools\",\n    \"Safety equipment\"\n  ],\n  \"warranty\": \"5 years\"\n}"
+              "raw": "{\n  \"jobRequestId\": \"JOB_REQUEST_ID\",\n  \"bidAmount\": 12000,\n  \"message\": \"Professional kitchen renovation with high-quality materials and experienced team\",\n  \"timeline\": {\n    \"startDate\": \"2025-02-01\",\n    \"endDate\": \"2025-03-15\"\n  },\n  \"materials\": {\n    \"included\": true,\n    \"description\": \"All materials included: premium cabinets, countertops, fixtures\"\n  },\n  \"warranty\": {\n    \"period\": 12,\n    \"description\": \"1 year warranty on all work and materials\"\n  }\n}\n\n// NOTE: Creates bid and consumes 1 lead from contractor's monthly quota"
             },
             "url": {
               "raw": "{{baseUrl}}/api/job/bids",
               "host": ["{{baseUrl}}"],
               "path": ["api", "job", "bids"]
             },
-            "description": "Create a bid for a job request (contractor only). Timeline must be an object with startDate and endDate."
+            "description": "Create a bid for a job request (contractor only). Requires timeline object with startDate/endDate. Materials and warranty must be objects. Consumes 1 lead."
           }
         },
         {
@@ -1100,7 +1100,7 @@
           }
         },
         {
-          "name": "Accept Bid",
+          "name": "Accept Bid (Customer)",
           "request": {
             "method": "PUT",
             "header": [
@@ -1111,14 +1111,36 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"acceptedAt\": \"2024-01-15T10:00:00Z\"\n}"
+              "raw": "{\n  \"action\": \"accept\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/job/bids/{{bidId}}/accept",
+              "raw": "{{baseUrl}}/api/job/bids/{{bidId}}/status",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "job", "bids", "{{bidId}}", "accept"]
+              "path": ["api", "job", "bids", "{{bidId}}", "status"]
             },
-            "description": "Accept a bid for a job request. This will:\n1. Mark the selected bid as 'accepted'\n2. Reject all other bids for the same job\n3. Update job status to 'inprogress'\n4. Add entry to timelineHistory array\n5. Set acceptedBid field on job request"
+            "description": "Accept a bid for a job request (customer only). This will:\n1. Mark the selected bid as 'accepted'\n2. Reject all other bids for the same job automatically\n3. Update job status to 'inprogress'\n4. Add entry to timelineHistory\n5. Set acceptedBid field on job request\n6. Lock job from further editing"
+          }
+        },
+        {
+          "name": "Reject Bid (Customer)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"reject\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/job/bids/{{bidId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "job", "bids", "{{bidId}}", "status"]
+            },
+            "description": "Reject a bid for a job request (customer only). Job remains 'open' and other bids remain unchanged."
           }
         }
       ]
@@ -1173,7 +1195,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "job", "contractor", "jobs", "{{jobId}}"]
             },
-            "description": "Get specific job details for contractor. Free to view, shows bid status. Does not consume leads."
+            "description": "Get specific job details for contractor. Free to view. Returns full property object, self flag (true if contractor bid), myBid object, selfBidAccepted flag, and customer contact ONLY if contractor's bid was accepted."
           }
         }
       ]
@@ -1450,9 +1472,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/investment?page=1&limit=10&status=active",
+              "raw": "{{baseUrl}}/api/investment/opportunities?page=1&limit=10&status=active",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "investment"],
+              "path": ["api", "investment", "opportunities"],
               "query": [
                 {
                   "key": "page",
@@ -1483,9 +1505,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/investment/{{opportunityId}}",
+              "raw": "{{baseUrl}}/api/investment/opportunities/{{opportunityId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "investment", "{{opportunityId}}"]
+              "path": ["api", "investment", "opportunities", "{{opportunityId}}"]
             },
             "description": "Get specific investment opportunity details by ID"
           }
@@ -1550,9 +1572,9 @@
               ]
             },
             "url": {
-              "raw": "{{baseUrl}}/api/investment",
+              "raw": "{{baseUrl}}/api/investment/opportunities",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "investment"]
+              "path": ["api", "investment", "opportunities"]
             },
             "description": "Create a new investment opportunity (admin only). Supports up to 10 photos and 5 documents."
           }
@@ -1600,9 +1622,9 @@
               ]
             },
             "url": {
-              "raw": "{{baseUrl}}/api/investment/{{opportunityId}}",
+              "raw": "{{baseUrl}}/api/investment/opportunities/{{opportunityId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "investment", "{{opportunityId}}"]
+              "path": ["api", "investment", "opportunities", "{{opportunityId}}"]
             },
             "description": "Update an existing investment opportunity (admin only)"
           }
@@ -1622,9 +1644,9 @@
               "raw": "{\n  \"message\": \"I am interested in this investment opportunity and would like to discuss further.\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/investment/{{opportunityId}}/interest",
+              "raw": "{{baseUrl}}/api/investment/opportunities/{{opportunityId}}/interest",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "investment", "{{opportunityId}}", "interest"]
+              "path": ["api", "investment", "opportunities", "{{opportunityId}}", "interest"]
             },
             "description": "Express interest in an investment opportunity (contractor only)"
           }
@@ -1635,9 +1657,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/investment/my-interests",
+              "raw": "{{baseUrl}}/api/investment/opportunities/my-interests",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "investment", "my-interests"]
+              "path": ["api", "investment", "opportunities", "my-interests"]
             },
             "description": "Get all investment opportunities the contractor has expressed interest in (contractor only)"
           }
@@ -1657,9 +1679,16 @@
               "raw": "{\n  \"status\": \"accepted\",\n  \"adminNote\": \"Contractor profile matches our requirements\"\n}\n\n// status: \"pending\", \"accepted\", \"rejected\""
             },
             "url": {
-              "raw": "{{baseUrl}}/api/investment/{{opportunityId}}/interests/{{contractorId}}",
+              "raw": "{{baseUrl}}/api/investment/opportunities/{{opportunityId}}/interests/{{contractorId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "investment", "{{opportunityId}}", "interests", "{{contractorId}}"]
+              "path": [
+                "api",
+                "investment",
+                "opportunities",
+                "{{opportunityId}}",
+                "interests",
+                "{{contractorId}}"
+              ]
             },
             "description": "Update the status of a contractor's interest in an opportunity (admin only)"
           }
@@ -1670,9 +1699,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/investment/statistics",
+              "raw": "{{baseUrl}}/api/investment/opportunities/statistics",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "investment", "statistics"]
+              "path": ["api", "investment", "opportunities", "statistics"]
             },
             "description": "Get investment opportunity statistics and analytics (admin only)"
           }
