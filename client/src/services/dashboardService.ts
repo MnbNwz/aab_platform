@@ -139,28 +139,22 @@ export interface PlatformDashboardResponse {
         inProgressJobs: number;
         completedJobs: number;
         cancelledJobs: number;
-        totalValue: number;
-        avgJobValue: number;
         monthlyJobs: Array<{
           month: number;
           year: number;
-          status: "open" | "inprogress" | "completed" | "cancelled";
-          value: number;
+          status: string;
         }>;
         serviceBreakdown: Array<{
           service: string;
-          estimate: number;
           status: string;
         }>;
       };
       memberships: {
+        totalMemberships: number;
         membershipBreakdown: Array<{
           status: string;
           count: number;
-          totalRevenue: number;
         }>;
-        totalMemberships: number;
-        totalRevenue: number;
       };
     };
     summary: {
@@ -205,6 +199,11 @@ export const dashboardApi = {
 
   getPlatformDashboard: async (): Promise<any> => {
     const response = await api.get<any>("/api/dashboard");
+    return response.data;
+  },
+
+  getAnalytics: async (): Promise<any> => {
+    const response = await api.get<any>("/api/analytics");
     return response.data;
   },
 } as const;

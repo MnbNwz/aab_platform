@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import type { RootState } from "../../store";
 import Loader from "../ui/Loader";
+import { formatCurrency } from "../../utils";
 
 interface StatCardProps {
   title: string;
@@ -44,7 +45,7 @@ const StatCard: React.FC<StatCardProps> = ({
       {loading ? (
         <Loader size="small" color="gray" />
       ) : typeof value === "number" ? (
-        value.toLocaleString()
+        formatCurrency(value)
       ) : (
         value
       )}
@@ -141,9 +142,7 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
         },
         {
           title: "Total Earnings",
-          value: `$${(
-            (earningsStats?.totalEarnings ?? 0) / 100
-          ).toLocaleString()}`,
+          value: formatCurrency((earningsStats?.totalEarnings ?? 0) / 100),
           icon: DollarSign,
           color: "bg-emerald-500",
           textColor: "text-emerald-600",
@@ -176,7 +175,7 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
           </div>
           <div className="text-right ml-4">
             <p className="text-sm font-medium text-primary-700">
-              ${((bid.bidAmount || 0) / 100).toLocaleString()}
+              {formatCurrency((bid.bidAmount || 0) / 100)}
             </p>
             <span
               className={`inline-flex px-2 py-1 text-xs rounded-full font-semibold ${
@@ -212,7 +211,7 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
           </div>
           <div className="text-right ml-4">
             <p className="text-sm font-semibold text-green-600">
-              ${((job.bidAmount || 0) / 100).toLocaleString()}
+              {formatCurrency((job.bidAmount || 0) / 100)}
             </p>
           </div>
         </div>
@@ -270,7 +269,7 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
           <RecentActivityCard
             title="Recent Bids"
             items={analytics?.recentBids ?? []}
-            loading={false}
+            loading={isLoading}
             emptyMessage="No recent bids"
             renderItem={renderBidItem}
           />
@@ -279,7 +278,7 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
           <RecentActivityCard
             title="Recent Won Jobs"
             items={analytics?.recentWonJobs ?? []}
-            loading={false}
+            loading={isLoading}
             emptyMessage="No won jobs yet"
             renderItem={renderWonJobItem}
           />

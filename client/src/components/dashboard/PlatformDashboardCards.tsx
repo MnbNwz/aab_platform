@@ -6,14 +6,17 @@ import {
   Briefcase,
   Activity,
   RefreshCw,
-  DollarSign,
-  TrendingUp,
   Calendar,
   Shield,
   Building2,
+  CheckCircle,
+  Crown,
+  Star,
+  Zap,
 } from "lucide-react";
 import type { RootState } from "../../store";
 import Loader from "../ui/Loader";
+import { formatCurrency } from "../../utils";
 
 interface StatCardProps {
   title: string;
@@ -38,27 +41,27 @@ const StatCard = React.memo<StatCardProps>(
     loading = false,
   }) => (
     <div
-      className={`${bgColor} rounded-lg shadow p-3 sm:p-4 border border-gray-100 flex flex-col items-center transition-transform hover:scale-105 hover:shadow-lg min-h-[100px] sm:min-h-[120px]`}
+      className={`${bgColor} rounded-lg shadow-sm p-4 sm:p-6 border border-gray-200 flex flex-col items-center transition-all duration-200 hover:shadow-md hover:border-gray-300 min-h-[120px] sm:min-h-[140px]`}
     >
       <div
-        className={`${color} p-2 rounded-full mb-2 flex items-center justify-center`}
+        className={`${color} p-3 rounded-full mb-3 flex items-center justify-center shadow-sm`}
       >
-        <Icon className="h-5 w-5 text-white" />
+        <Icon className="h-6 w-6 text-white" />
       </div>
-      <div className={`text-lg sm:text-xl font-bold ${textColor} mb-1`}>
+      <div className={`text-xl sm:text-2xl font-bold ${textColor} mb-2`}>
         {loading ? (
           <Loader size="small" color="gray" />
         ) : typeof value === "number" ? (
-          value.toLocaleString()
+          formatCurrency(value)
         ) : (
           value
         )}
       </div>
-      <p className="text-xs font-medium text-gray-600 text-center uppercase tracking-wide leading-tight">
+      <p className="text-sm font-semibold text-gray-700 text-center uppercase tracking-wide leading-tight">
         {title}
       </p>
       {subtitle && (
-        <p className="text-xs text-gray-500 mt-1 text-center leading-tight">
+        <p className="text-xs text-gray-600 mt-2 text-center leading-tight font-medium">
           {subtitle}
         </p>
       )}
@@ -113,40 +116,53 @@ export const PlatformDashboardCards = React.memo<PlatformDashboardCardsProps>(
       () => [
         {
           title: "Total Users",
-          value: platform?.users.totalUsers ?? 0,
+          value: platform?.users?.totalUsers ?? 0,
           icon: Users,
           color: "bg-primary-500",
           textColor: "text-primary-600",
           bgColor: "bg-primary-50",
+          subtitle: `${platform?.users?.totalApproved ?? 0} approved`,
         },
         {
           title: "Total Jobs",
-          value: platform?.jobs.totalJobs ?? 0,
+          value: platform?.jobs?.totalJobs ?? 0,
           icon: Briefcase,
           color: "bg-blue-500",
           textColor: "text-blue-600",
           bgColor: "bg-blue-50",
+          subtitle: `${platform?.jobs?.openJobs ?? 0} open`,
         },
         {
-          title: "Job Value",
-          value: `$${(
-            (platform?.jobs.totalValue ?? 0) / 100
-          ).toLocaleString()}`,
-          icon: DollarSign,
+          title: "Completed Jobs",
+          value: platform?.jobs?.completedJobs ?? 0,
+          icon: CheckCircle,
           color: "bg-green-500",
           textColor: "text-green-600",
           bgColor: "bg-green-50",
         },
         {
-          title: "Platform Health",
-          value: `${(summary?.healthScore ?? 0).toFixed(1)}%`,
-          icon: Activity,
+          title: "Active Memberships",
+          value: platform?.memberships?.totalMemberships ?? 0,
+          icon: Shield,
           color: "bg-purple-500",
           textColor: "text-purple-600",
           bgColor: "bg-purple-50",
         },
+        {
+          title: "Platform Health",
+          value: `${(summary?.healthScore ?? 0).toFixed(1)}%`,
+          icon: Activity,
+          color: "bg-orange-500",
+          textColor: "text-orange-600",
+          bgColor: "bg-orange-50",
+        },
       ],
-      [platform?.users, platform?.jobs, summary?.healthScore]
+      [
+        platform?.users,
+        platform?.jobs,
+        platform?.memberships,
+        summary?.healthScore,
+      ]
     );
 
     if (dashboardState.platformError) {
@@ -203,7 +219,7 @@ export const PlatformDashboardCards = React.memo<PlatformDashboardCardsProps>(
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
           {statCards.map((card) => (
             <StatCard key={card.title} {...card} loading={isLoading} />
           ))}
@@ -337,103 +353,168 @@ export const PlatformDashboardCards = React.memo<PlatformDashboardCardsProps>(
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-gradient-to-br from-green-50 to-emerald-100 border border-green-200 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-green-600">
-                      Total Job Value
-                    </p>
-                    <p className="text-2xl font-bold text-green-700">
-                      ${(platform.jobs.totalValue / 100).toLocaleString()}
-                    </p>
-                  </div>
-                  <DollarSign className="h-8 w-8 text-green-500" />
-                </div>
-              </div>
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-100 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-blue-600">
-                      Average Job Value
-                    </p>
-                    <p className="text-2xl font-bold text-blue-700">
-                      ${(platform.jobs.avgJobValue / 100).toLocaleString()}
-                    </p>
-                  </div>
-                  <TrendingUp className="h-8 w-8 text-blue-500" />
-                </div>
-              </div>
-            </div>
           </div>
         )}
 
-        {/* Membership Overview */}
+        {/* Membership Analytics */}
         {platform?.memberships && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
-            <div className="flex items-center mb-4">
-              <div className="p-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 mr-3">
-                <Users className="h-5 w-5 text-white" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                Membership Overview
-              </h3>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-              <div className="bg-gradient-to-br from-purple-50 to-pink-100 border border-purple-200 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-purple-600">
-                      Total Memberships
-                    </p>
-                    <p className="text-2xl font-bold text-purple-700">
-                      {platform.memberships.totalMemberships}
-                    </p>
-                  </div>
-                  <Users className="h-8 w-8 text-purple-500" />
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center">
+                <div className="p-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 mr-3">
+                  <Shield className="h-5 w-5 text-white" />
                 </div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Membership Analytics
+                </h3>
               </div>
-              <div className="bg-gradient-to-br from-green-50 to-emerald-100 border border-green-200 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-green-600">
-                      Total Revenue
-                    </p>
-                    <p className="text-2xl font-bold text-green-700">
-                      $
-                      {(
-                        platform.memberships.totalRevenue / 100
-                      ).toLocaleString()}
-                    </p>
-                  </div>
-                  <DollarSign className="h-8 w-8 text-green-500" />
+              <div className="text-right">
+                <div className="text-2xl font-bold text-purple-700">
+                  {platform.memberships.totalMemberships}
                 </div>
+                <div className="text-sm text-gray-500">Total Memberships</div>
               </div>
             </div>
+
+            {/* Membership Breakdown */}
             {platform.memberships.membershipBreakdown &&
               platform.memberships.membershipBreakdown.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {platform.memberships.membershipBreakdown.map(
-                    (membership: any) => (
-                      <div
-                        key={membership.status}
-                        className="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-lg p-4"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-medium text-gray-900 capitalize">
-                            {membership.status} Memberships
-                          </h4>
-                          <span className="text-xl font-bold text-gray-700">
-                            {membership.count}
-                          </span>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {platform.memberships.membershipBreakdown.map(
+                      (membership: any) => {
+                        // Define membership types with specific colors and icons
+                        const membershipConfig = {
+                          active: {
+                            bg: "from-blue-50 to-blue-100",
+                            border: "border-blue-200",
+                            text: "text-blue-700",
+                            icon: "text-blue-500",
+                            bgDot: "bg-blue-500",
+                            iconComponent: Shield,
+                          },
+                          upgraded: {
+                            bg: "from-green-50 to-green-100",
+                            border: "border-green-200",
+                            text: "text-green-700",
+                            icon: "text-green-500",
+                            bgDot: "bg-green-500",
+                            iconComponent: Crown,
+                          },
+                          premium: {
+                            bg: "from-purple-50 to-purple-100",
+                            border: "border-purple-200",
+                            text: "text-purple-700",
+                            icon: "text-purple-500",
+                            bgDot: "bg-purple-500",
+                            iconComponent: Star,
+                          },
+                          basic: {
+                            bg: "from-orange-50 to-orange-100",
+                            border: "border-orange-200",
+                            text: "text-orange-700",
+                            icon: "text-orange-500",
+                            bgDot: "bg-orange-500",
+                            iconComponent: Zap,
+                          },
+                        };
+
+                        const config =
+                          membershipConfig[
+                            membership.status as keyof typeof membershipConfig
+                          ] || membershipConfig.basic;
+                        const IconComponent = config.iconComponent;
+
+                        return (
+                          <div
+                            key={membership.status}
+                            className={`bg-gradient-to-br ${config.bg} border ${config.border} rounded-lg p-4 hover:shadow-md transition-all duration-200 hover:scale-105`}
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center">
+                                <IconComponent
+                                  className={`h-5 w-5 ${config.icon} mr-2`}
+                                />
+                                <h4
+                                  className={`font-semibold ${config.text} capitalize text-sm sm:text-base`}
+                                >
+                                  {membership.status}
+                                </h4>
+                              </div>
+                              <div
+                                className={`text-xl sm:text-2xl font-bold ${config.text}`}
+                              >
+                                {membership.count}
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between text-xs sm:text-sm">
+                              <span className="text-gray-600">Members</span>
+                              <div className="flex items-center">
+                                <div
+                                  className={`w-2 h-2 rounded-full ${config.bgDot} mr-2`}
+                                ></div>
+                                <span className="font-medium text-gray-700">
+                                  {(
+                                    (membership.count /
+                                      platform.memberships.totalMemberships) *
+                                    100
+                                  ).toFixed(1)}
+                                  %
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+                    )}
+                  </div>
+
+                  {/* Summary Stats */}
+                  <div className="bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-lg p-4 sm:p-6">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-4 text-center">
+                      Quick Overview
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-center">
+                      <div className="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-lg p-3 shadow-sm">
+                        <div className="text-lg sm:text-xl font-bold text-gray-800">
+                          {platform.memberships.totalMemberships}
                         </div>
-                        <div className="text-sm text-gray-600">
-                          Revenue: $
-                          {(membership.totalRevenue / 100).toLocaleString()}
+                        <div className="text-xs text-gray-600 uppercase tracking-wide">
+                          Total Members
                         </div>
                       </div>
-                    )
-                  )}
+                      <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-3 shadow-sm">
+                        <div className="text-lg sm:text-xl font-bold text-blue-700">
+                          {platform.memberships.membershipBreakdown?.find(
+                            (m: any) => m.status === "active"
+                          )?.count || 0}
+                        </div>
+                        <div className="text-xs text-blue-600 uppercase tracking-wide">
+                          Active
+                        </div>
+                      </div>
+                      <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-lg p-3 shadow-sm">
+                        <div className="text-lg sm:text-xl font-bold text-green-700">
+                          {platform.memberships.membershipBreakdown?.find(
+                            (m: any) => m.status === "upgraded"
+                          )?.count || 0}
+                        </div>
+                        <div className="text-xs text-green-600 uppercase tracking-wide">
+                          Upgraded
+                        </div>
+                      </div>
+                      <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-lg p-3 shadow-sm">
+                        <div className="text-lg sm:text-xl font-bold text-purple-700">
+                          {platform.memberships.membershipBreakdown?.find(
+                            (m: any) => m.status === "premium"
+                          )?.count || 0}
+                        </div>
+                        <div className="text-xs text-purple-600 uppercase tracking-wide">
+                          Premium
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
           </div>
@@ -468,11 +549,10 @@ export const PlatformDashboardCards = React.memo<PlatformDashboardCardsProps>(
                   </div>
                   <div className="bg-gradient-to-br from-green-50 to-emerald-100 border border-green-200 rounded-lg p-3 sm:p-4 text-center">
                     <div className="text-xl sm:text-2xl font-bold text-green-700">
-                      $
-                      {(
+                      {formatCurrency(
                         dashboardState.investmentStatistics.overallStats[0]
                           .totalValue / 100
-                      ).toLocaleString()}
+                      )}
                     </div>
                     <div className="text-xs sm:text-sm font-medium text-green-600 uppercase tracking-wide">
                       Value
@@ -500,72 +580,6 @@ export const PlatformDashboardCards = React.memo<PlatformDashboardCardsProps>(
                       Interests
                     </div>
                   </div>
-                </div>
-              )}
-
-            {/* Status Breakdown */}
-            {dashboardState.investmentStatistics.statusBreakdown &&
-              dashboardState.investmentStatistics.statusBreakdown.length >
-                0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {dashboardState.investmentStatistics.statusBreakdown.map(
-                    (status: any) => {
-                      const statusColors = {
-                        available: {
-                          bg: "from-green-50 to-emerald-100",
-                          border: "border-green-200",
-                          text: "text-green-700",
-                        },
-                        under_offer: {
-                          bg: "from-amber-50 to-yellow-100",
-                          border: "border-amber-200",
-                          text: "text-amber-700",
-                        },
-                        sold: {
-                          bg: "from-gray-50 to-slate-100",
-                          border: "border-gray-200",
-                          text: "text-gray-700",
-                        },
-                      };
-                      const colors =
-                        statusColors[status._id as keyof typeof statusColors] ||
-                        statusColors.available;
-
-                      return (
-                        <div
-                          key={status._id}
-                          className={`bg-gradient-to-br ${colors.bg} border ${colors.border} rounded-lg p-3 sm:p-4`}
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <h4
-                              className={`text-sm sm:text-base font-medium ${colors.text} capitalize`}
-                            >
-                              {status._id.replace("_", " ")}
-                            </h4>
-                            <span
-                              className={`text-lg sm:text-xl font-bold ${colors.text}`}
-                            >
-                              {status.count}
-                            </span>
-                          </div>
-                          <div className="space-y-1 text-xs sm:text-sm">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Value:</span>
-                              <span className="font-medium">
-                                ${(status.totalValue / 100).toLocaleString()}
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Avg ROI:</span>
-                              <span className="font-medium">
-                                {status.avgROI.toFixed(1)}%
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    }
-                  )}
                 </div>
               )}
           </div>

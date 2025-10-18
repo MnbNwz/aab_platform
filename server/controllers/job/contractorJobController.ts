@@ -90,7 +90,7 @@ export const getContractorJobById = async (req: Request, res: Response) => {
     const selfBidAccepted = myBid?.status === "accepted";
 
     // SECURITY: Only show customer contact info if contractor's bid was accepted
-    let responseData: any = {
+    const responseData: any = {
       ...job,
       self, // NEW: true if contractor has bid on this job
       myBid, // NEW: contractor's bid details (or null)

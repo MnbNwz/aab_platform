@@ -6,17 +6,22 @@ import { useNavigate, Link } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { loginThunk } from "../../store/thunks/authThunks";
 import { clearError } from "../../store/slices/authSlice";
+import { getVerificationStateThunk } from "../../store/thunks/verificationThunks";
+import {
+  fetchCurrentMembership,
+  fetchMembershipPlans,
+} from "../../store/slices/membershipSlice";
+import { fetchAdminProfileThunk } from "../../store/thunks/adminProfileThunks";
 import type { RootState, AppDispatch } from "../../store";
 import { loginSchema, type LoginData } from "../../schemas/authSchemas";
 
 const LoginForm: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  const { isLoading, error, isAuthenticated, user } = useSelector(
-    (state: RootState) => state.auth
-  );
+  const { isLoading, error } = useSelector((state: RootState) => state.auth);
 
   const [showPassword, setShowPassword] = useState(false);
+  const [isPreparingDashboard, setIsPreparingDashboard] = useState(false);
 
   const {
     register,
@@ -35,26 +40,53 @@ const LoginForm: React.FC = () => {
     dispatch(clearError());
   }, [dispatch]);
 
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      // Redirect to dashboard
-      navigate("/dashboard", { replace: true });
-    }
-  }, [isAuthenticated, user, navigate]);
-
   const onSubmit = async (data: LoginData) => {
     try {
-      await dispatch(
+      setIsPreparingDashboard(true);
+
+      const result = await dispatch(
         loginThunk({
           email: data.email,
           password: data.password,
           rememberMe: false,
         })
-      );
+      ).unwrap();
+
+      const loggedInUser = result.user;
+
+      const dataPromises = [
+        dispatch(
+          getVerificationStateThunk({ email: loggedInUser.email })
+        ).unwrap(),
+        dispatch(fetchMembershipPlans(loggedInUser.role)).unwrap(),
+        dispatch(fetchCurrentMembership()).unwrap(),
+      ];
+
+      if (loggedInUser.role !== "admin") {
+        dataPromises.push(dispatch(fetchAdminProfileThunk()).unwrap());
+      }
+
+      await Promise.allSettled(dataPromises);
+
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      navigate("/dashboard", { replace: true });
     } catch (err) {
       console.error("Login error:", err);
+      setIsPreparingDashboard(false);
     }
   };
+
+  if (isPreparingDashboard) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-900 to-primary-800">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-white text-lg">Loading AAS Platform...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-primary-800 flex items-center justify-center px-4 py-8">

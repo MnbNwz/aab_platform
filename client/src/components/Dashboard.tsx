@@ -37,6 +37,7 @@ import MyBids from "./MyBids";
 import InvestmentOpportunitiesManagement from "./dashboard/InvestmentOpportunitiesManagement";
 import ContractorOffMarketOpportunities from "./contractor/ContractorOffMarketOpportunities";
 import InterestedProperties from "./contractor/InterestedProperties";
+import Analytics from "./dashboard/Analytics";
 import type { User, DashboardCardProps } from "../types";
 import { handleApiError } from "../services/apiService";
 import {
@@ -327,6 +328,12 @@ const DashboardContent = memo<DashboardContentProps>(
           title: "User Management",
           subtitle: "Manage system users",
           children: <UserManagementTable />,
+        },
+        analytics: isAdmin && {
+          ...baseProps,
+          title: "Analytics",
+          subtitle: "Business intelligence insights",
+          children: <Analytics />,
         },
         properties:
           user.role === "admin"

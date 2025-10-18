@@ -257,9 +257,12 @@ const JobManagementTable: React.FC = () => {
       {/* Mobile Card View */}
       <div className="block lg:hidden w-full overflow-x-hidden">
         {jobsLoading ? (
-          <div className="py-12">
-            <div className="flex justify-center items-center w-full h-full">
+          <div className="min-h-[400px] bg-gray-50 flex items-center justify-center rounded-lg">
+            <div className="text-center">
               <Loader size="large" color="accent" />
+              <p className="text-gray-600 mt-4 font-medium text-lg">
+                Loading jobs...
+              </p>
             </div>
           </div>
         ) : (
@@ -361,8 +364,11 @@ const JobManagementTable: React.FC = () => {
             {jobsLoading ? (
               <tr>
                 <td colSpan={4} className="py-12">
-                  <div className="flex justify-center items-center w-full h-full">
+                  <div className="flex flex-col items-center justify-center w-full h-full">
                     <Loader size="large" color="accent" />
+                    <p className="text-gray-600 mt-4 font-medium">
+                      Loading jobs...
+                    </p>
                   </div>
                 </td>
               </tr>

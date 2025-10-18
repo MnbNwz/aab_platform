@@ -8,6 +8,7 @@ import propertyRoutes from "@routes/property";
 import paymentRoutes from "@routes/payment";
 import dashboardRoutes from "@routes/dashboard";
 import investmentRoutes from "@routes/investment";
+import analyticsRoutes from "@routes/analytics";
 import { authenticate } from "@middlewares/auth";
 import serviceRoutes from "@routes/admin/service";
 import favoriteRoutes from "@routes/user/favorites";
@@ -54,7 +55,8 @@ router.use("/membership", membershipRoutes);
 router.use("/job", jobRoutes); // All job-related routes under /job
 router.use("/property", propertyRoutes);
 router.use("/investment", investmentRoutes); // Investment opportunities with role-based access
-router.use("/dashboard", dashboardRoutes); // Dashboard and analytics
+router.use("/dashboard", dashboardRoutes); // Quick health check dashboard
+router.use("/analytics", analyticsRoutes); // Comprehensive business analytics (admin only)
 
 // Example route
 router.get("/", (req: Request, res: Response) => {

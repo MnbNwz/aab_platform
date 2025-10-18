@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import type { RootState } from "../../store";
 import Loader from "../ui/Loader";
+import { formatCurrency } from "../../utils";
 
 interface StatCardProps {
   title: string;
@@ -44,7 +45,7 @@ const StatCard: React.FC<StatCardProps> = ({
       {loading ? (
         <Loader size="small" color="gray" />
       ) : typeof value === "number" ? (
-        value.toLocaleString()
+        formatCurrency(value)
       ) : (
         value
       )}
@@ -142,9 +143,9 @@ export const CustomerDashboardCards: React.FC<CustomerDashboardCardsProps> =
         },
         {
           title: "Total Spent",
-          value: `$${(
+          value: formatCurrency(
             (analytics?.paymentStats.totalAmount ?? 0) / 100
-          ).toLocaleString()}`,
+          ),
           icon: DollarSign,
           color: "bg-emerald-500",
           textColor: "text-emerald-600",
@@ -204,7 +205,7 @@ export const CustomerDashboardCards: React.FC<CustomerDashboardCardsProps> =
           <RecentActivityCard
             title="Recent Jobs"
             items={analytics?.recentJobs ?? []}
-            loading={false}
+            loading={isLoading}
             emptyMessage="No recent jobs"
             renderItem={(job, index) => (
               <div
@@ -221,7 +222,7 @@ export const CustomerDashboardCards: React.FC<CustomerDashboardCardsProps> =
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-medium text-green-600">
-                    ${(job.estimate / 100).toLocaleString()}
+                    {formatCurrency(job.estimate / 100)}
                   </p>
                   <span
                     className={`inline-flex px-2 py-1 text-xs rounded-full ${
@@ -243,7 +244,7 @@ export const CustomerDashboardCards: React.FC<CustomerDashboardCardsProps> =
           <RecentActivityCard
             title="Recent Payments"
             items={analytics?.recentPayments ?? []}
-            loading={false}
+            loading={isLoading}
             emptyMessage="No recent payments"
             renderItem={(payment, index) => (
               <div
@@ -252,7 +253,7 @@ export const CustomerDashboardCards: React.FC<CustomerDashboardCardsProps> =
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900">
-                    ${(payment.amount / 100).toLocaleString()}
+                    {formatCurrency(payment.amount / 100)}
                   </p>
                   <p className="text-xs text-gray-500">
                     {payment.job?.title || "Payment"} • {payment.paymentMethod}

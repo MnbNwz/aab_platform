@@ -22,45 +22,22 @@ const OTPVerificationGuard: React.FC<OTPVerificationGuardProps> = ({
   );
 
   useEffect(() => {
-    // If user is not authenticated, redirect to login
     if (!isAuthenticated || !user) {
       navigate("/login", { replace: true });
       return;
     }
 
-    // Get verification state for the user
-    if (user.email) {
+    if (user.email && !userVerification && !isLoading) {
       dispatch(getVerificationStateThunk({ email: user.email }));
     }
-  }, [isAuthenticated, user, navigate, dispatch]);
+  }, [isAuthenticated, user, navigate, dispatch, userVerification, isLoading]);
 
-  // If user is not authenticated, don't render anything
   if (!isAuthenticated || !user) {
     return null;
   }
 
-  // If loading verification state, show loading
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-primary-800">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white mx-auto mb-4"></div>
-          <p className="text-white text-lg">Loading verification status...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // If userVerification is not loaded yet, show loading
-  if (!userVerification) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-primary-800">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white mx-auto mb-4"></div>
-          <p className="text-white text-lg">Checking verification status...</p>
-        </div>
-      </div>
-    );
+  if (isLoading || !userVerification) {
+    return null;
   }
 
   // If user verification is not verified, show OTP verification

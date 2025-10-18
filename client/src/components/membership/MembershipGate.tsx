@@ -5,7 +5,6 @@ import {
   fetchMembershipPlans,
 } from "../../store/slices/membershipSlice";
 import { fetchAdminProfileThunk } from "../../store/thunks/adminProfileThunks";
-import { Loader } from "../ui/Loader";
 import AdminContactInfo from "../ui/AdminContactInfo";
 import { RootState, AppDispatch } from "../../store";
 import MembershipPlans from "./MembershipPlans";
@@ -28,24 +27,36 @@ const MembershipGate: React.FC<{ children: React.ReactNode }> = ({
     loading,
     error,
     current: currentMembership,
+    plans,
   } = useSelector((state: RootState) => state.membership);
 
   useEffect(() => {
     if (!user || !user.role) {
       return;
     }
-    dispatch(fetchMembershipPlans(user.role));
-    dispatch(fetchCurrentMembership());
 
-    if (!isAdminProfileLoaded) {
+    if (!plans || plans.length === 0) {
+      dispatch(fetchMembershipPlans(user.role));
+    }
+
+    if (!currentMembership && user.role !== "admin") {
+      dispatch(fetchCurrentMembership());
+    }
+
+    if (!isAdminProfileLoaded && user.role !== "admin") {
       dispatch(fetchAdminProfileThunk());
     }
-  }, [user, dispatch, isAdminProfileLoaded]);
+  }, [user, dispatch, isAdminProfileLoaded, currentMembership, plans]);
 
-  if (loading) {
+  const needsLoading = loading || !plans || plans.length === 0;
+
+  if (needsLoading && user?.role) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-primary-50">
-        <Loader size="large" color="accent" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-900 to-primary-800">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-white text-lg">Loading AAS Platform...</p>
+        </div>
       </div>
     );
   }

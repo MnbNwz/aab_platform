@@ -493,10 +493,12 @@ const UserManagementTable: React.FC = () => {
 
       {/* Content */}
       {usersLoading ? (
-        <div className="p-8 text-center">
-          <div className="flex items-center justify-center">
-            <Loader size="medium" color="primary" />
-            <span className="ml-3 text-primary-600">Loading users...</span>
+        <div className="min-h-[400px] bg-gray-50 flex items-center justify-center rounded-lg">
+          <div className="text-center">
+            <Loader size="large" color="accent" />
+            <p className="text-gray-600 mt-4 font-medium text-lg">
+              Loading users...
+            </p>
           </div>
         </div>
       ) : users.length === 0 ? (

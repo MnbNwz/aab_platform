@@ -18,6 +18,7 @@ import contractorBidsReducer from "./slices/contractorBidsSlice";
 import paymentReducer from "./slices/paymentSlice";
 import favoritesReducer from "./slices/favoritesSlice";
 import investmentOpportunityReducer from "./slices/investmentOpportunitySlice";
+import analyticsReducer from "./slices/analyticsSlice";
 
 export const store = configureStore({
   reducer: {
@@ -39,6 +40,7 @@ export const store = configureStore({
     payment: paymentReducer,
     favorites: favoritesReducer,
     investmentOpportunity: investmentOpportunityReducer,
+    analytics: analyticsReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

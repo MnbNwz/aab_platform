@@ -13,7 +13,15 @@ export const getPlatformAnalytics = async () => {
       jobAnalytics = await getJobAnalytics();
     } catch (error) {
       console.error("Job analytics failed:", error);
-      jobAnalytics = { totalJobs: 0, openJobs: 0, completedJobs: 0, totalValue: 0 };
+      jobAnalytics = {
+        totalJobs: 0,
+        openJobs: 0,
+        inProgressJobs: 0,
+        completedJobs: 0,
+        cancelledJobs: 0,
+        monthlyJobs: [],
+        serviceBreakdown: [],
+      };
     }
 
     try {
@@ -27,7 +35,7 @@ export const getPlatformAnalytics = async () => {
       membershipAnalytics = await getMembershipAnalytics();
     } catch (error) {
       console.error("Membership analytics failed:", error);
-      membershipAnalytics = { totalMemberships: 0, totalRevenue: 0, membershipBreakdown: [] };
+      membershipAnalytics = { totalMemberships: 0, membershipBreakdown: [] };
     }
 
     // Calculate platform health score
@@ -54,7 +62,7 @@ export const getPlatformAnalytics = async () => {
   }
 };
 
-// Job analytics aggregation
+// Job analytics aggregation (counts only, no money metrics)
 const getJobAnalytics = async () => {
   const pipeline = [
     {
@@ -65,24 +73,20 @@ const getJobAnalytics = async () => {
         inProgressJobs: { $sum: { $cond: [{ $eq: ["$status", "inprogress"] }, 1, 0] } },
         completedJobs: { $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] } },
         cancelledJobs: { $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] } },
-        totalValue: { $sum: "$estimate" },
-        avgJobValue: { $avg: "$estimate" },
 
-        // Monthly breakdown
+        // Monthly breakdown (counts only)
         monthlyJobs: {
           $push: {
             month: { $month: "$createdAt" },
             year: { $year: "$createdAt" },
             status: "$status",
-            value: "$estimate",
           },
         },
 
-        // Service breakdown
+        // Service breakdown (counts only)
         serviceBreakdown: {
           $push: {
             service: "$service",
-            estimate: "$estimate",
             status: "$status",
           },
         },
@@ -98,8 +102,6 @@ const getJobAnalytics = async () => {
       inProgressJobs: 0,
       completedJobs: 0,
       cancelledJobs: 0,
-      totalValue: 0,
-      avgJobValue: 0,
       monthlyJobs: [],
       serviceBreakdown: [],
     };
@@ -177,55 +179,13 @@ const getUserAnalytics = async () => {
   return cleanResult;
 };
 
-// Membership analytics aggregation
+// Membership analytics aggregation (counts only, no revenue metrics)
 const getMembershipAnalytics = async () => {
-  // Get current month date range
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-
   const pipeline = [
     {
-      // Filter memberships created in the current month
-      $match: {
-        createdAt: {
-          $gte: startOfMonth,
-          $lte: endOfMonth,
-        },
-      },
-    },
-    {
-      $lookup: {
-        from: "membershipplans",
-        localField: "planId",
-        foreignField: "_id",
-        as: "plan",
-      },
-    },
-    {
-      $addFields: {
-        plan: { $arrayElemAt: ["$plan", 0] },
-      },
-    },
-    {
-      $addFields: {
-        // Calculate the actual price based on billingPeriod
-        actualPrice: {
-          $cond: {
-            if: { $eq: ["$billingPeriod", "yearly"] },
-            then: "$plan.yearlyPrice",
-            else: "$plan.monthlyPrice",
-          },
-        },
-      },
-    },
-    {
       $group: {
-        _id: {
-          status: "$status",
-        },
+        _id: "$status",
         count: { $sum: 1 },
-        totalRevenue: { $sum: "$actualPrice" },
       },
     },
     {
@@ -233,13 +193,11 @@ const getMembershipAnalytics = async () => {
         _id: null,
         membershipBreakdown: {
           $push: {
-            status: "$_id.status",
+            status: "$_id",
             count: "$count",
-            totalRevenue: "$totalRevenue",
           },
         },
         totalMemberships: { $sum: "$count" },
-        totalRevenue: { $sum: "$totalRevenue" },
       },
     },
   ];
@@ -249,7 +207,6 @@ const getMembershipAnalytics = async () => {
     return {
       membershipBreakdown: [],
       totalMemberships: 0,
-      totalRevenue: 0,
     };
   }
 

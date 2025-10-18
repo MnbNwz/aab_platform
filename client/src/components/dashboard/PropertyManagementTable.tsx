@@ -217,9 +217,12 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
       {/* Mobile Card View */}
       <div className="block lg:hidden">
         {loading || searchLoading ? (
-          <div className="py-12">
-            <div className="flex justify-center items-center w-full h-full">
+          <div className="min-h-[400px] bg-gray-50 flex items-center justify-center rounded-lg">
+            <div className="text-center">
               <Loader size="large" color="accent" />
+              <p className="text-gray-600 mt-4 font-medium text-lg">
+                Loading properties...
+              </p>
             </div>
           </div>
         ) : (
@@ -340,8 +343,11 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
             {loading || searchLoading ? (
               <tr>
                 <td colSpan={4} className="py-12">
-                  <div className="flex justify-center items-center w-full h-full">
+                  <div className="flex flex-col items-center justify-center w-full h-full">
                     <Loader size="large" color="accent" />
+                    <p className="text-gray-600 mt-4 font-medium">
+                      Loading properties...
+                    </p>
                   </div>
                 </td>
               </tr>
