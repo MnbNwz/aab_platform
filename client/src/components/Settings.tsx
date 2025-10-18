@@ -8,7 +8,7 @@ import {
   Camera,
   X,
 } from "lucide-react";
-import { User as UserType } from "../types";
+import type { SettingsProps, SettingsSection } from "../types/component";
 import ChangeEmailModal from "./ChangeEmailModal";
 import ChangePasswordModal from "./ChangePasswordModal";
 import ServicesManagement from "./ServicesManagement";
@@ -27,44 +27,11 @@ import {
 import type { AppDispatch, RootState } from "../store";
 import { toggleAutoRenewal } from "../store/slices/membershipSlice";
 
-interface SettingsProps {
-  user: UserType;
-  onProfileEdit?: () => void;
-  onEmailChange?: (oldEmail: string, newEmail: string) => Promise<void>;
-  onPasswordChange?: (
-    currentPassword: string,
-    newPassword: string
-  ) => Promise<void>;
-  onProfileImageUpdate?: (profileImage: string) => void;
-}
-
-interface SettingsSection {
-  id: string;
-  title: string;
-  icon: React.ComponentType<{ className?: string }>;
-  description: string;
-  disabled?: boolean;
-  items: SettingsItem[];
-}
-
-interface SettingsItem {
-  id: string;
-  label: string;
-  description?: string;
-  type: "toggle" | "select" | "input" | "button" | "info";
-  value?: any;
-  options?: { value: string; label: string }[];
-  disabled?: boolean;
-  onClick?: () => void;
-  onChange?: (value: any) => void;
-}
-
 const Settings: React.FC<SettingsProps> = ({
   user,
   onProfileEdit,
   onEmailChange,
   onPasswordChange,
-  onProfileImageUpdate,
 }) => {
   const [activeSection, setActiveSection] = useState<string>("profile");
   const [changeEmailOpen, setChangeEmailOpen] = useState(false);
@@ -188,11 +155,8 @@ const Settings: React.FC<SettingsProps> = ({
       );
 
       if (updateProfileWithFormDataThunk.fulfilled.match(result)) {
-        if (onProfileImageUpdate) {
-          const newProfileImage =
-            result.payload?.profileImage || user.profileImage || "";
-          onProfileImageUpdate(newProfileImage);
-        }
+        // Profile image updated successfully - Redux will handle the state update
+        // onProfileImageUpdate callback is optional and not used in current implementation
       } else if (updateProfileWithFormDataThunk.rejected.match(result)) {
         console.error("Profile image update failed:", result.payload);
         showToast.error("Failed to update profile picture");
@@ -536,7 +500,7 @@ const Settings: React.FC<SettingsProps> = ({
 
                         {item.type === "select" && (
                           <select
-                            value={item.value}
+                            value={String(item.value || "")}
                             onChange={(e) => item.onChange?.(e.target.value)}
                             className="text-sm border border-primary-300 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
                           >
@@ -551,7 +515,7 @@ const Settings: React.FC<SettingsProps> = ({
                         {item.type === "input" && (
                           <input
                             type="number"
-                            value={item.value}
+                            value={String(item.value || "")}
                             onChange={(e) => item.onChange?.(e.target.value)}
                             className="w-20 text-sm border border-primary-300 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
                           />

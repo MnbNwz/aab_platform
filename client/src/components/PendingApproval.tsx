@@ -47,7 +47,7 @@ const PendingApproval: React.FC<{ children: React.ReactNode }> = ({
       showToast.loading("Checking your account status...");
       await dispatch(getProfileThunk()).unwrap();
       showToast.dismiss();
-    } catch (error) {
+    } catch (_error) {
       showToast.dismiss();
       showToast.error("Failed to check account status. Please try again.");
     } finally {

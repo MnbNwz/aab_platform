@@ -5,13 +5,14 @@ import { getServicesThunk } from "../store/thunks/servicesThunks";
 import ConfirmModal from "./ui/ConfirmModal";
 import { baseUserSchema } from "../schemas/authSchemas";
 import { User, UserRole } from "../types";
-import { MapPin, CheckCircle2 } from "lucide-react";
+import { MapPin } from "lucide-react";
 import LocationSelector from "./LocationSelector";
 import { ProfileFormState } from "../store/slices/userSlice";
 import { useGeocoding } from "../hooks/useGeocoding";
 import Loader from "./ui/Loader";
 
-interface ProfileModalProps {
+// Extended ProfileModalProps to include showAllFields property
+interface ExtendedProfileModalProps {
   user: User;
   isOpen: boolean;
   onClose: () => void;
@@ -27,7 +28,7 @@ const getInputClassName = (disabled: boolean = false) =>
       : "bg-white text-primary-900"
   }`;
 
-const ProfileModal: React.FC<ProfileModalProps> = ({
+const ProfileModal: React.FC<ExtendedProfileModalProps> = ({
   user,
   isOpen,
   onClose,
@@ -231,7 +232,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       setPhoneError("");
       // Close the modal after successful save
       onClose();
-    } catch (error) {
+    } catch (_error) {
       setIsUpdating(false);
       // Error will be handled by the parent component
       // Don't close the modal on error

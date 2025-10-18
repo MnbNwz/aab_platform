@@ -4,14 +4,10 @@ import type { RootState } from "../store";
 import PropertyManagementTable from "./dashboard/PropertyManagementTable";
 import PropertyFormModal from "./dashboard/PropertyFormModal";
 import RenovationCalculator from "./RenovationCalculator";
-
-interface MyPropertiesProps {
-  userRole: string;
-}
+import type { MyPropertiesProps } from "../types/component";
 
 const MyProperties: React.FC<MyPropertiesProps> = ({ userRole }) => {
-  if (userRole !== "admin" && userRole !== "customer") return null;
-
+  // All hooks must be called before any conditional returns
   const [propertyModalOpen, setPropertyModalOpen] = useState(false);
   const [createOptionsModalOpen, setCreateOptionsModalOpen] = useState(false);
   const [calculatorOpen, setCalculatorOpen] = useState(false);
@@ -34,6 +30,9 @@ const MyProperties: React.FC<MyPropertiesProps> = ({ userRole }) => {
       setPage(1);
     };
   }, []);
+
+  // Conditional return AFTER all hooks are called
+  if (userRole !== "admin" && userRole !== "customer") return null;
 
   const handleCreateNew = () => {
     // For customers, show options modal

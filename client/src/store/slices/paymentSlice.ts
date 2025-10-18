@@ -1,9 +1,9 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import {
   paymentService,
-  PaymentFilters,
-  Payment,
+  type PaymentFilters,
 } from "../../services/paymentService";
+import type { PaymentState } from "../../types/payment";
 
 export const fetchPaymentHistory = createAsyncThunk(
   "payment/fetchPaymentHistory",
@@ -28,25 +28,6 @@ export const fetchPaymentDetail = createAsyncThunk(
     }
   }
 );
-
-interface PaymentState {
-  history: {
-    payments: Payment[];
-    pagination: {
-      page: number;
-      limit: number;
-      total: number;
-      pages: number;
-    } | null;
-    loading: boolean;
-    error: string | null;
-  };
-  detail: {
-    payment: Payment | null;
-    loading: boolean;
-    error: string | null;
-  };
-}
 
 const initialState: PaymentState = {
   history: {

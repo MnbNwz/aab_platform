@@ -213,7 +213,7 @@ const InvestmentOpportunityDetailsModal: React.FC<
         onClose(); // Close the details modal
         dispatch(clearSelectedOpportunity());
       }, 2000);
-    } catch (error) {
+    } catch (_error) {
       // Error already handled by toast in thunk
       setShowInterestModal(false);
     } finally {
@@ -231,7 +231,7 @@ const InvestmentOpportunityDetailsModal: React.FC<
 
       // Refresh opportunity details
       dispatch(fetchInvestmentOpportunityByIdThunk(selectedOpportunity._id));
-    } catch (error) {
+    } catch (_error) {
       // Error already handled by toast in thunk
     } finally {
       setSubmittingInterest(false);

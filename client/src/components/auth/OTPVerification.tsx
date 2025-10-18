@@ -1,14 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
-import {
-  ArrowLeft,
-  RefreshCw,
-  CheckCircle,
-  AlertCircle,
-  Mail,
-  Clock,
-} from "lucide-react";
+import { ArrowLeft, RefreshCw, CheckCircle, Mail, Clock } from "lucide-react";
 import OtpInput from "react-otp-input";
 import {
   verifyOTPThunk as verifyOTPVerificationThunk,
@@ -34,15 +27,12 @@ const OTPVerification: React.FC<OTPVerificationProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { error, isAuthenticated, user } = useSelector(
+  const { isAuthenticated, user } = useSelector(
     (state: RootState) => state.auth
   );
-  const {
-    userVerification,
-    error: verificationError,
-    isVerifying,
-    isResending,
-  } = useSelector((state: RootState) => state.verification);
+  const { userVerification, isVerifying, isResending } = useSelector(
+    (state: RootState) => state.verification
+  );
 
   // Get email from props, location state, or use a default
   const email = propEmail || location.state?.email || "";
@@ -205,7 +195,7 @@ const OTPVerification: React.FC<OTPVerificationProps> = ({
       redirectTimerRef.current = setTimeout(() => {
         navigate("/dashboard", { replace: true });
       }, 1500);
-    } catch (error) {
+    } catch (_error) {
       setVerificationStatus("error");
       // Clear OTP on error
       setOtp("");

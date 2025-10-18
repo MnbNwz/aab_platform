@@ -131,7 +131,7 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
     try {
       const res = await searchPropertiesApi(search);
       setSearchResults(res.data.properties || []);
-    } catch (e) {
+    } catch (_e) {
       setSearchResults([]);
     } finally {
       setSearchLoading(false);

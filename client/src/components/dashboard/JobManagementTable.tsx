@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState, AppDispatch } from "../../store";
@@ -28,104 +28,102 @@ const JobManagementTable: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [jobDetailViewOpen, setJobDetailViewOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [selectedJob, setSelectedJob] = useState<any>(null);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [noPropertyConfirmOpen, setNoPropertyConfirmOpen] = useState(false);
   const [editFromDetailView, setEditFromDetailView] = useState(false);
   const [shouldRefetchBids, setShouldRefetchBids] = useState(true);
 
-  // Fetch jobs on mount and when filters change
+  const isAdmin = user?.role === "admin";
+  const isCustomer = user?.role === "customer";
+
   useEffect(() => {
     dispatch(getJobsThunk(filters));
   }, [dispatch, filters]);
 
-  // Fetch properties on mount
   useEffect(() => {
     if (user) {
       dispatch(getMyPropertiesThunk());
     }
   }, [user, dispatch]);
 
-  // Handle search
-  const handleSearch = () => {
+  const handleSearch = useCallback(() => {
     dispatch(setJobFilters({ search: searchTerm, page: 1 }));
-  };
+  }, [dispatch, searchTerm]);
 
-  // Handle filter changes
-  const handleFilterChange = (newFilters: any) => {
-    dispatch(setJobFilters({ ...newFilters, page: 1 }));
-  };
+  const handleFilterChange = useCallback(
+    (newFilters: Partial<typeof filters>) => {
+      dispatch(setJobFilters({ ...newFilters, page: 1 }));
+    },
+    [dispatch]
+  );
 
-  // Handle pagination
-  const handlePageChange = (page: number) => {
-    dispatch(setJobFilters({ page }));
-  };
+  const handlePageChange = useCallback(
+    (page: number) => {
+      dispatch(setJobFilters({ page }));
+    },
+    [dispatch]
+  );
 
-  // Handle job details with bids
-  const handleViewJobDetails = (job: any) => {
+  const handleViewJobDetails = useCallback((job: Job) => {
     setSelectedJob(job);
-    setShouldRefetchBids(true); // Always refetch when opening fresh
+    setShouldRefetchBids(true);
     setJobDetailViewOpen(true);
-  };
+  }, []);
 
-  const handleCloseJobDetailView = () => {
+  const handleCloseJobDetailView = useCallback(() => {
     setJobDetailViewOpen(false);
     setSelectedJob(null);
-  };
+  }, []);
 
-  // Handle edit job from detail modal
-  const handleEditJobFromDetail = () => {
+  const handleEditJobFromDetail = useCallback(() => {
     if (selectedJob) {
       setJobDetailViewOpen(false);
       setEditModalOpen(true);
       setEditFromDetailView(true);
     }
-  };
+  }, [selectedJob]);
 
-  const handleCloseEditModal = async (wasSaved?: boolean) => {
-    setEditModalOpen(false);
+  const handleCloseEditModal = useCallback(
+    async (wasSaved?: boolean) => {
+      setEditModalOpen(false);
 
-    // Only refresh jobs if changes were actually saved
-    if (wasSaved) {
-      const result = await dispatch(getJobsThunk(filters));
+      if (wasSaved) {
+        const result = await dispatch(getJobsThunk(filters));
 
-      // Reopen detail view modal if we came from it
-      if (editFromDetailView && selectedJob) {
-        // Find the updated job in the refreshed list
-        if (getJobsThunk.fulfilled.match(result)) {
-          const updatedJob = result.payload.jobs?.find(
-            (j: any) => j._id === selectedJob._id
-          );
+        if (editFromDetailView && selectedJob) {
+          if (getJobsThunk.fulfilled.match(result)) {
+            const updatedJob = result.payload.jobs?.find(
+              (j: Job) => j._id === selectedJob._id
+            );
 
-          if (updatedJob) {
-            setSelectedJob(updatedJob);
-            setShouldRefetchBids(true); // Refetch bids since job was updated
-            setJobDetailViewOpen(true);
+            if (updatedJob) {
+              setSelectedJob(updatedJob);
+              setShouldRefetchBids(true);
+              setJobDetailViewOpen(true);
+            }
           }
+          setEditFromDetailView(false);
+        } else {
+          setSelectedJob(null);
         }
-        setEditFromDetailView(false);
       } else {
-        setSelectedJob(null);
+        if (editFromDetailView && selectedJob) {
+          setShouldRefetchBids(false);
+          setJobDetailViewOpen(true);
+          setEditFromDetailView(false);
+        } else {
+          setSelectedJob(null);
+        }
       }
-    } else {
-      // If no changes were saved, just clean up state
-      if (editFromDetailView && selectedJob) {
-        // Reopen detail view modal with the original job data
-        setShouldRefetchBids(false); // Don't refetch bids since nothing changed
-        setJobDetailViewOpen(true);
-        setEditFromDetailView(false);
-      } else {
-        setSelectedJob(null);
-      }
-    }
-  };
+    },
+    [dispatch, filters, editFromDetailView, selectedJob]
+  );
 
-  const handleRefreshJobs = () => {
+  const handleRefreshJobs = useCallback(() => {
     dispatch(getJobsThunk(filters));
-  };
+  }, [dispatch, filters]);
 
-  // Handle create job button click
-  const handleCreateJobClick = () => {
-    // Check if user has any properties or any active properties
+  const handleCreateJobClick = useCallback(() => {
     const hasActiveProperties = properties.some((p) => p.isActive);
 
     if (properties.length === 0 || !hasActiveProperties) {
@@ -133,21 +131,15 @@ const JobManagementTable: React.FC = () => {
     } else {
       setShowCreateModal(true);
     }
-  };
+  }, [properties]);
 
-  const handleNoPropertyConfirm = () => {
+  const handleNoPropertyConfirm = useCallback(() => {
     setNoPropertyConfirmOpen(false);
-    // You can redirect to property creation page here if needed
-    // For now, just close the modal
-  };
+  }, []);
 
-  const handleNoPropertyCancel = () => {
+  const handleNoPropertyCancel = useCallback(() => {
     setNoPropertyConfirmOpen(false);
-  };
-
-  // Show filters for admin, minimal for customer
-  const isAdmin = user?.role === "admin";
-  const isCustomer = user?.role === "customer";
+  }, []);
 
   return (
     <div className="bg-white rounded-lg shadow w-full max-w-full overflow-x-hidden">

@@ -5,20 +5,8 @@ import { createJobThunk } from "../store/thunks/jobThunks";
 import { getServicesThunk } from "../store/thunks/servicesThunks";
 import { useForm, Controller } from "react-hook-form";
 import { showToast } from "../utils/toast";
-
-interface JobCreateProps {
-  properties?: any[];
-  onClose?: () => void;
-}
-
-interface JobFormInputs {
-  title: string;
-  description: string;
-  category: string;
-  estimate?: string;
-  property?: string;
-  timeline?: string;
-}
+import type { JobCreateProps } from "../types/component";
+import type { JobFormInputs } from "../types/job";
 
 const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
   const dispatch = useDispatch<AppDispatch>();

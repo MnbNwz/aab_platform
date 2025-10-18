@@ -30,17 +30,8 @@ import {
 import ProfileViewModal from "./ProfileViewModal";
 import { showToast } from "../utils/toast";
 import { jobApi } from "../services/jobService";
-import type { Job, PropertyInJob } from "../store/slices/jobSlice";
 import type { RootState } from "../store";
-
-interface JobDetailViewModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  job: Job;
-  onRefreshJobs: () => void;
-  onEditJob?: () => void;
-  shouldRefetch?: boolean;
-}
+import type { JobDetailViewModalProps, Bid, PropertyInJob } from "../types/job";
 
 const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
   isOpen,
@@ -53,18 +44,31 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
   const modalRef = useRef<HTMLDivElement>(null);
   const lastFetchedJobId = useRef<string | null>(null);
 
-  // Get user from Redux to check role
   const { user } = useSelector((state: RootState) => state.auth);
   const isAdmin = user?.role === "admin";
 
   const [activeTab, setActiveTab] = useState<"details" | "bids">("details");
-  const [bids, setBids] = useState<any[]>([]);
+  const [bids, setBids] = useState<Bid[]>([]);
   const [bidsLoading, setBidsLoading] = useState(false);
   const [acceptingBid, setAcceptingBid] = useState<string | null>(null);
   const [rejectingBid, setRejectingBid] = useState<string | null>(null);
   const [profileViewOpen, setProfileViewOpen] = useState(false);
-  const [selectedContractor, setSelectedContractor] = useState<any>(null);
+  const [selectedContractor, setSelectedContractor] = useState<
+    Bid["contractor"] | null
+  >(null);
   const [expandedBids, setExpandedBids] = useState<Set<string>>(new Set());
+
+  const fetchBids = useCallback(async () => {
+    setBidsLoading(true);
+    try {
+      const response = await jobApi.getBidsForJob(job._id);
+      setBids(response.data || []);
+    } catch (_err) {
+      setBids([]);
+    } finally {
+      setBidsLoading(false);
+    }
+  }, [job._id]);
 
   useEffect(() => {
     if (isOpen && job._id) {
@@ -73,7 +77,7 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
         lastFetchedJobId.current = job._id;
       }
     }
-  }, [isOpen, job._id, shouldRefetch]);
+  }, [isOpen, job._id, shouldRefetch, fetchBids]);
 
   const handleClickOutside = useCallback(
     (e: MouseEvent) => {
@@ -95,67 +99,62 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
     }
   }, [isOpen, handleClickOutside]);
 
-  const fetchBids = async () => {
-    setBidsLoading(true);
-    try {
-      const response = await jobApi.getBidsForJob(job._id);
-      setBids(response.data || []);
-    } catch (error) {
-      setBids([]);
-    } finally {
-      setBidsLoading(false);
-    }
-  };
-
   const hasAcceptedBid = bids.some((bid) => bid.status === "accepted");
 
-  const handleAcceptBid = async (bidId: string) => {
-    setAcceptingBid(bidId);
-    try {
-      await jobApi.updateBidStatus(bidId, "accept");
-      showToast.success("Bid accepted successfully!");
+  const handleAcceptBid = useCallback(
+    async (bidId: string) => {
+      setAcceptingBid(bidId);
+      try {
+        await jobApi.updateBidStatus(bidId, "accept");
+        showToast.success("Bid accepted successfully!");
 
-      // Optimistically update bids locally (no re-fetch)
-      setBids((prevBids) =>
-        prevBids.map((bid) =>
-          bid._id === bidId ? { ...bid, status: "accepted" } : bid
-        )
-      );
+        setBids((prevBids) =>
+          prevBids.map((bid) =>
+            bid._id === bidId ? { ...bid, status: "accepted" as const } : bid
+          )
+        );
 
-      // Refresh jobs in parent to update job list
-      onRefreshJobs();
-    } catch (error: any) {
-      showToast.error(error?.message || "Failed to accept bid");
-    } finally {
-      setAcceptingBid(null);
-    }
-  };
+        onRefreshJobs();
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to accept bid";
+        showToast.error(errorMessage);
+      } finally {
+        setAcceptingBid(null);
+      }
+    },
+    [onRefreshJobs]
+  );
 
-  const handleRejectBid = async (bidId: string) => {
+  const handleRejectBid = useCallback(async (bidId: string) => {
     setRejectingBid(bidId);
     try {
       await jobApi.updateBidStatus(bidId, "reject");
       showToast.success("Bid rejected successfully!");
 
-      // Optimistically update bids locally (no re-fetch)
       setBids((prevBids) =>
         prevBids.map((bid) =>
-          bid._id === bidId ? { ...bid, status: "rejected" } : bid
+          bid._id === bidId ? { ...bid, status: "rejected" as const } : bid
         )
       );
-    } catch (error: any) {
-      showToast.error(error?.message || "Failed to reject bid");
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to reject bid";
+      showToast.error(errorMessage);
     } finally {
       setRejectingBid(null);
     }
-  };
+  }, []);
 
-  const handleViewContractorProfile = (contractor: any) => {
-    setSelectedContractor(contractor);
-    setProfileViewOpen(true);
-  };
+  const handleViewContractorProfile = useCallback(
+    (contractor: Bid["contractor"]) => {
+      setSelectedContractor(contractor);
+      setProfileViewOpen(true);
+    },
+    []
+  );
 
-  const toggleBidExpanded = (bidId: string) => {
+  const toggleBidExpanded = useCallback((bidId: string) => {
     setExpandedBids((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(bidId)) {
@@ -165,7 +164,12 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
       }
       return newSet;
     });
-  };
+  }, []);
+
+  const handleCloseProfileView = useCallback(() => {
+    setProfileViewOpen(false);
+    setSelectedContractor(null);
+  }, []);
 
   const formatCurrency = (amount: number) => {
     return `$${(amount / 100).toLocaleString("en-US", {
@@ -847,12 +851,9 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
       {/* Profile View Modal */}
       {profileViewOpen && selectedContractor && (
         <ProfileViewModal
-          user={selectedContractor}
+          user={selectedContractor as any}
           isOpen={profileViewOpen}
-          onClose={() => {
-            setProfileViewOpen(false);
-            setSelectedContractor(null);
-          }}
+          onClose={handleCloseProfileView}
         />
       )}
     </>

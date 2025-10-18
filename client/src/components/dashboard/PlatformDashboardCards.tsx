@@ -11,7 +11,6 @@ import {
   Calendar,
   Shield,
   Building2,
-  Eye,
 } from "lucide-react";
 import type { RootState } from "../../store";
 import Loader from "../ui/Loader";
@@ -105,24 +104,7 @@ export const PlatformDashboardCards = React.memo<PlatformDashboardCardsProps>(
 
     const dashboardData =
       data || dashboardState.data || dashboardState.platformData;
-    const shouldShowLoading = dashboardState.platformLoading || !dashboardData;
-
-    if (dashboardState.platformError) {
-      return (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-700">
-            Error loading dashboard: {dashboardState.platformError}
-          </p>
-          <button
-            onClick={onRefresh}
-            className="mt-2 text-red-600 hover:text-red-800 font-medium"
-          >
-            Try Again
-          </button>
-        </div>
-      );
-    }
-
+    const isLoading = dashboardState.platformLoading || !dashboardData;
     const platform = dashboardData?.platform || dashboardData;
     const summary =
       dashboardData?.summary || dashboardState.platformData?.summary;
@@ -167,6 +149,22 @@ export const PlatformDashboardCards = React.memo<PlatformDashboardCardsProps>(
       [platform?.users, platform?.jobs, summary?.healthScore]
     );
 
+    if (dashboardState.platformError) {
+      return (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-700">
+            Error loading dashboard: {dashboardState.platformError}
+          </p>
+          <button
+            onClick={onRefresh}
+            className="mt-2 text-red-600 hover:text-red-800 font-medium"
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-4 sm:space-y-6 md:space-y-8">
         {/* Header */}
@@ -193,12 +191,12 @@ export const PlatformDashboardCards = React.memo<PlatformDashboardCardsProps>(
           </div>
           <button
             onClick={onRefresh}
-            disabled={false}
+            disabled={isLoading}
             className="flex items-center px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-accent-600 bg-accent-50 border border-accent-200 rounded-lg hover:bg-accent-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <RefreshCw
               className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${
-                false ? "animate-spin" : ""
+                isLoading ? "animate-spin" : ""
               }`}
             />
             Refresh
@@ -207,7 +205,7 @@ export const PlatformDashboardCards = React.memo<PlatformDashboardCardsProps>(
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
           {statCards.map((card) => (
-            <StatCard key={card.title} {...card} loading={shouldShowLoading} />
+            <StatCard key={card.title} {...card} loading={isLoading} />
           ))}
         </div>
 

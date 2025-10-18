@@ -22,8 +22,10 @@ export const UserStatsCards: React.FC<{
   );
 
   useEffect(() => {
-    !stats && dispatch(fetchUserStatsThunk());
-  }, [dispatch]);
+    if (!stats) {
+      dispatch(fetchUserStatsThunk());
+    }
+  }, [dispatch, stats]);
 
   if (statsError) {
     return (

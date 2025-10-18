@@ -1,32 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
+import type { PropertyFormData, PropertyState } from "../../types/property";
 
-export interface PropertyFormData {
-  title: string;
-  propertyType: "apartment" | "house" | "villa";
-  location: {
-    type: "Point";
-    coordinates: [number, number];
-    address: string;
-  };
-  area: number;
-  areaUnit: "sqft" | "sqm" | "marla" | "kanal";
-  totalRooms: number;
-  bedrooms: number;
-  bathrooms: number;
-  kitchens: number;
-  description: string;
-  images: (string | File)[];
-  isActive?: boolean;
-  _id?: string;
-}
-
-export interface PropertyState {
-  properties: PropertyFormData[];
-  property: PropertyFormData | null;
-  loading: boolean;
-  statusUpdateLoading: boolean;
-  error: string | null;
-}
+export type { PropertyFormData, PropertyState };
 
 const initialState: PropertyState = {
   properties: [],

@@ -1,9 +1,5 @@
 import { api } from "./apiService";
-import type {
-  ContractorJobFilters,
-  ContractorJobsResponse,
-  ContractorJob,
-} from "../types";
+import type { ContractorJobFilters } from "../types";
 
 // Contractor Job API functions
 export const contractorJobApi = {

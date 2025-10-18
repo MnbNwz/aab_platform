@@ -1,7 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { api, handleApiError } from "../../services/apiService";
 import { showToast } from "../../utils/toast";
-import { hasAuthCookies } from "../../utils/auth";
 import type {
   LoginCredentials,
   RegisterData,
@@ -111,7 +110,7 @@ export const restoreSessionThunk = createAsyncThunk<
     // Try to get user profile from API using stored token
     const response = await api.auth.getProfile();
     return response;
-  } catch (error) {
+  } catch (_error) {
     // If token is invalid or expired, just proceed to login
     return rejectWithValue("Session expired");
   }

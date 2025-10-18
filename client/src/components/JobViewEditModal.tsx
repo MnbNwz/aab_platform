@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState, AppDispatch } from "../store";
 import { updateJobThunk } from "../store/thunks/jobThunks";
@@ -8,34 +8,12 @@ import { showToast } from "../utils/toast";
 import { X, Save, Settings } from "lucide-react";
 import ConfirmModal from "./ui/ConfirmModal";
 import type { Job } from "../store/slices/jobSlice";
-import type { PropertyFormData } from "../store/slices/propertySlice";
-
-interface JobViewEditModalProps {
-  isOpen: boolean;
-  onClose: (wasSaved?: boolean) => void;
-  job: Job;
-  properties?: PropertyFormData[];
-}
-
-interface JobFormInputs {
-  title: string;
-  description: string;
-  category: string;
-  estimate: string;
-  property: string;
-  timeline: string;
-  status?: "open" | "in_progress" | "completed" | "cancelled";
-}
-
-type ConfirmModalType = "save" | "cancel" | "close";
-
-interface ConfirmModalState {
-  open: boolean;
-  type: ConfirmModalType | null;
-  message: string;
-  title: string;
-  confirmText: string;
-}
+import type {
+  JobViewEditModalProps,
+  JobFormInputs,
+  ConfirmModalState,
+  JobUpdateData,
+} from "../types/job";
 
 const formatJobDataForForm = (job: Job): JobFormInputs => ({
   title: job.title || "",
@@ -52,8 +30,8 @@ const prepareJobUpdateData = (
   data: JobFormInputs,
   jobType: string,
   userId: string
-): Record<string, any> => {
-  const jobData: Record<string, any> = {
+): JobUpdateData => {
+  const jobData: JobUpdateData = {
     title: data.title,
     description: data.description,
     service: data.category,
@@ -105,13 +83,25 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
     confirmText: "",
   });
 
-  const isAdmin = user?.role === "admin";
-  const isCustomer = user?.role === "customer";
-  const displayJob = currentJob?._id === job._id ? currentJob : job;
-  const jobType =
-    user?.role === "customer" || user?.role === "admin" ? "regular" : "";
-  const canEdit = isAdmin || displayJob.status === "open";
-  const canEditStatus = isAdmin || (isCustomer && displayJob.status === "open");
+  const isAdmin = useMemo(() => user?.role === "admin", [user?.role]);
+  const isCustomer = useMemo(() => user?.role === "customer", [user?.role]);
+  const displayJob = useMemo(
+    () => (currentJob?._id === job._id ? currentJob : job),
+    [currentJob, job]
+  );
+  const jobType = useMemo(
+    () =>
+      user?.role === "customer" || user?.role === "admin" ? "regular" : "",
+    [user?.role]
+  );
+  const canEdit = useMemo(
+    () => isAdmin || displayJob.status === "open",
+    [isAdmin, displayJob.status]
+  );
+  const canEditStatus = useMemo(
+    () => isAdmin || (isCustomer && displayJob.status === "open"),
+    [isAdmin, isCustomer, displayJob.status]
+  );
 
   const {
     control,
@@ -140,43 +130,48 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
     }
   }, [displayJob, reset, services]);
 
-  const onSubmit = async (data: JobFormInputs) => {
-    if (!canEdit || !jobType) return;
+  const onSubmit = useCallback(
+    async (data: JobFormInputs) => {
+      if (!canEdit || !jobType) return;
 
-    if (servicesLoading) {
-      showToast.error("Services are still loading. Please wait and try again.");
-      return;
-    }
-    if (!data.category?.trim()) {
-      showToast.error("Please select a service category");
-      return;
-    }
-    if (!data.estimate?.trim()) {
-      showToast.error("Please enter an estimated budget");
-      return;
-    }
-    if (!data.timeline?.trim()) {
-      showToast.error("Please enter a timeline");
-      return;
-    }
+      if (servicesLoading) {
+        showToast.error(
+          "Services are still loading. Please wait and try again."
+        );
+        return;
+      }
+      if (!data.category?.trim()) {
+        showToast.error("Please select a service category");
+        return;
+      }
+      if (!data.estimate?.trim()) {
+        showToast.error("Please enter an estimated budget");
+        return;
+      }
+      if (!data.timeline?.trim()) {
+        showToast.error("Please enter a timeline");
+        return;
+      }
 
-    const jobData = prepareJobUpdateData(
-      data,
-      jobType,
-      user?._id || user?.id || ""
-    );
+      const jobData = prepareJobUpdateData(
+        data,
+        jobType,
+        user?._id || user?.id || ""
+      );
 
-    const result = await dispatch(
-      updateJobThunk({ jobId: job._id, updateData: jobData })
-    );
+      const result = await dispatch(
+        updateJobThunk({ jobId: job._id, updateData: jobData })
+      );
 
-    if (updateJobThunk.fulfilled.match(result)) {
-      showToast.success("Job updated successfully!");
-      onClose(true);
-    }
-  };
+      if (updateJobThunk.fulfilled.match(result)) {
+        showToast.success("Job updated successfully!");
+        onClose(true);
+      }
+    },
+    [canEdit, jobType, servicesLoading, user, job._id, dispatch, onClose]
+  );
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     if (isDirty) {
       setConfirmModal({
         open: true,
@@ -189,9 +184,9 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
     } else {
       onClose(false);
     }
-  };
+  }, [isDirty, onClose]);
 
-  const handleCloseModal = () => {
+  const handleCloseModal = useCallback(() => {
     if (isDirty) {
       setConfirmModal({
         open: true,
@@ -204,9 +199,9 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
     } else {
       onClose(false);
     }
-  };
+  }, [isDirty, onClose]);
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = useCallback(() => {
     setConfirmModal({
       open: false,
       type: null,
@@ -215,7 +210,7 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
       confirmText: "",
     });
     onClose(false);
-  };
+  }, [onClose]);
 
   if (!isOpen || !job) return null;
 

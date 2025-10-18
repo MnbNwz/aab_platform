@@ -9,6 +9,8 @@ import type {
   UserFilters,
   UserUpdateData,
 } from "../types";
+import type { ApiError } from "../types/api";
+import type { ServicesResponse } from "../types/service";
 
 // Simple error messages
 const ERROR_MESSAGES = {
@@ -16,14 +18,6 @@ const ERROR_MESSAGES = {
   GENERIC_ERROR: "Something went wrong. Please try again.",
   UNAUTHORIZED: "Access denied. Please log in again.",
 } as const;
-
-// Custom error type for API errors
-export interface ApiError {
-  name: "ApiError";
-  message: string;
-  status: number;
-  errors?: Record<string, string[]>;
-}
 
 // Helper function to create API errors
 const createApiError = (
@@ -54,9 +48,9 @@ const API_CONFIG = {
 } as const;
 
 // Advanced caching with per-endpoint TTL and invalidation
-type CachedEntry<T> = { expiresAt: number; value: ApiResponse<T> };
+import type { CachedEntry } from "../types/api";
 const inFlightRequests = new Map<string, Promise<any>>();
-const getCache = new Map<string, CachedEntry<any>>();
+const getCache = new Map<string, CachedEntry<ApiResponse<any>>>();
 
 // Per-endpoint cache TTL configuration
 const CACHE_TTL_CONFIG = {
@@ -392,31 +386,15 @@ export const authApi = {
 
 // Services API
 const servicesApi = {
-  getServices: async (): Promise<{
-    services: string[];
-    version: number;
-    lastUpdated: string;
-  }> => {
-    const response = await get<{
-      services: string[];
-      version: number;
-      lastUpdated: string;
-    }>("/api/services");
+  getServices: async (): Promise<ServicesResponse> => {
+    const response = await get<ServicesResponse>("/api/services");
     return response.data!;
   },
 
-  createServices: async (
-    services: string[]
-  ): Promise<{
-    services: string[];
-    version: number;
-    lastUpdated: string;
-  }> => {
-    const response = await post<{
-      services: string[];
-      version: number;
-      lastUpdated: string;
-    }>("/api/services", { services });
+  createServices: async (services: string[]): Promise<ServicesResponse> => {
+    const response = await post<ServicesResponse>("/api/services", {
+      services,
+    });
     // Invalidate services cache after creation
     invalidateCaches("services");
     return response.data!;

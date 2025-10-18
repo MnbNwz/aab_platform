@@ -151,7 +151,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       await onPasswordChange(formData.currentPassword, formData.newPassword);
       // Close modal immediately after successful password change
       onClose();
-    } catch (error) {
+    } catch (_error) {
       // Error will be handled by parent component
     } finally {
       setIsUpdating(false);

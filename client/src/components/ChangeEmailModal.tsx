@@ -99,7 +99,7 @@ const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
       await onEmailChange(formData.oldEmail, formData.newEmail);
       // Close modal immediately after successful email change
       onClose();
-    } catch (error) {
+    } catch (_error) {
       // Error will be handled by parent component
     } finally {
       setIsUpdating(false);

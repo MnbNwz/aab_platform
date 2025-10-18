@@ -1,84 +1,18 @@
-export interface GeocodeResult {
-  address: string;
-  houseNumber?: string;
-  street?: string;
-  neighbourhood?: string;
-  district?: string;
-  city?: string;
-  state?: string;
-  country?: string;
-  postcode?: string;
-  full: string;
-}
+import type {
+  GeocodeResult,
+  ForwardGeocodeResult,
+  NominatimResponse,
+  NominatimSearchResponse,
+  LocationResult,
+} from "../types/geocoding";
 
-interface ForwardGeocodeResult {
-  lat: number;
-  lng: number;
-  address: string;
-  display_name: string;
-}
-
-interface NominatimResponse {
-  display_name: string;
-  address?: {
-    house_number?: string;
-    road?: string;
-    street?: string;
-    pedestrian?: string;
-    footway?: string;
-    neighbourhood?: string;
-    suburb?: string;
-    district?: string;
-    borough?: string;
-    city_district?: string;
-    quarter?: string;
-    city?: string;
-    town?: string;
-    village?: string;
-    municipality?: string;
-    county?: string;
-    state_district?: string;
-    state?: string;
-    province?: string;
-    region?: string;
-    country?: string;
-    country_code?: string;
-    postcode?: string;
-    "ISO3166-2-lvl4"?: string;
-  };
-}
-
-interface NominatimSearchResponse {
-  lat: string;
-  lon: string;
-  display_name: string;
-  address?: {
-    house_number?: string;
-    road?: string;
-    street?: string;
-    pedestrian?: string;
-    footway?: string;
-    neighbourhood?: string;
-    suburb?: string;
-    district?: string;
-    borough?: string;
-    city_district?: string;
-    quarter?: string;
-    city?: string;
-    town?: string;
-    village?: string;
-    municipality?: string;
-    county?: string;
-    state_district?: string;
-    state?: string;
-    province?: string;
-    region?: string;
-    country?: string;
-    country_code?: string;
-    postcode?: string;
-    "ISO3166-2-lvl4"?: string;
-  };
-}
+export type {
+  GeocodeResult,
+  ForwardGeocodeResult,
+  NominatimResponse,
+  NominatimSearchResponse,
+  LocationResult,
+};
 
 // Cache for storing geocoding results
 const geocodeCache = new Map<
@@ -298,7 +232,7 @@ export async function reverseGeocode(
     });
 
     return result;
-  } catch (error) {
+  } catch (_error) {
     // Return fallback coordinates format
     return {
       address: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
@@ -335,7 +269,7 @@ export async function getAddressFromCoordinates(
   try {
     const result = await reverseGeocode(lat, lng);
     return result.address;
-  } catch (error) {
+  } catch (_error) {
     // Fallback to coordinates if geocoding fails
     return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
   }
@@ -369,7 +303,7 @@ export async function getDetailedAddressFromCoordinates(
   try {
     const result = await reverseGeocode(lat, lng);
     return result;
-  } catch (error) {
+  } catch (_error) {
     // Return basic fallback
     return {
       address: `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
@@ -412,7 +346,7 @@ export async function getShortAddressFromCoordinates(
     }
 
     return parts.length > 0 ? parts.join(", ") : result.address;
-  } catch (error) {
+  } catch (_error) {
     let lat: number, lng: number;
     if (Array.isArray(coordinates)) {
       [lng, lat] = coordinates;
@@ -437,7 +371,7 @@ export async function batchReverseGeocode(
     try {
       const address = await getAddressFromCoordinates(item.coordinates);
       results.set(item.id, address);
-    } catch (error) {
+    } catch (_error) {
       const [lng, lat] = item.coordinates;
       results.set(item.id, `${lat.toFixed(4)}, ${lng.toFixed(4)}`);
     }
@@ -466,49 +400,45 @@ export async function forwardGeocode(
     return cached.result;
   }
 
-  try {
-    // Enforce rate limiting
-    await enforceRateLimit();
+  // Enforce rate limiting
+  await enforceRateLimit();
 
-    // Make API request
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-        trimmedQuery
-      )}&limit=${limit}&addressdetails=1`,
-      {
-        headers: {
-          "User-Agent": "AAS-Platform-Client/1.0 (Property Management System)",
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`Geocoding API error: ${response.status}`);
+  // Make API request
+  const response = await fetch(
+    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+      trimmedQuery
+    )}&limit=${limit}&addressdetails=1`,
+    {
+      headers: {
+        "User-Agent": "AAS-Platform-Client/1.0 (Property Management System)",
+      },
     }
+  );
 
-    const data: NominatimSearchResponse[] = await response.json();
-
-    // Format results
-    const results: ForwardGeocodeResult[] = data.map((item) => ({
-      lat: Number(parseFloat(item.lat).toFixed(6)),
-      lng: Number(parseFloat(item.lon).toFixed(6)),
-      address: formatAddress({
-        display_name: item.display_name,
-        address: item.address,
-      }).address,
-      display_name: item.display_name,
-    }));
-
-    // Cache the results
-    forwardGeocodeCache.set(trimmedQuery, {
-      result: results,
-      timestamp: Date.now(),
-    });
-
-    return results;
-  } catch (error) {
-    throw error;
+  if (!response.ok) {
+    throw new Error(`Geocoding API error: ${response.status}`);
   }
+
+  const data: NominatimSearchResponse[] = await response.json();
+
+  // Format results
+  const results: ForwardGeocodeResult[] = data.map((item) => ({
+    lat: Number(parseFloat(item.lat).toFixed(6)),
+    lng: Number(parseFloat(item.lon).toFixed(6)),
+    address: formatAddress({
+      display_name: item.display_name,
+      address: item.address,
+    }).address,
+    display_name: item.display_name,
+  }));
+
+  // Cache the results
+  forwardGeocodeCache.set(trimmedQuery, {
+    result: results,
+    timestamp: Date.now(),
+  });
+
+  return results;
 }
 
 /**
@@ -532,7 +462,7 @@ export async function searchLocations(
       lng: result.lng,
       address: result.address || result.display_name,
     }));
-  } catch (error) {
+  } catch (_error) {
     return [];
   }
 }
@@ -556,7 +486,7 @@ export async function getLocationFromClick(
       lng: Number(lng.toFixed(6)),
       address: result.address,
     };
-  } catch (error) {
+  } catch (_error) {
     return {
       lat: Number(lat.toFixed(6)),
       lng: Number(lng.toFixed(6)),
@@ -667,7 +597,7 @@ export async function getCurrentLocation(): Promise<{
             lng,
             address: addressResult.address,
           };
-        } catch (error) {
+        } catch (_error) {
           // If reverse geocoding fails, use city/region info from IP
           const addressParts = [
             parsed.city,
@@ -686,7 +616,7 @@ export async function getCurrentLocation(): Promise<{
           };
         }
       }
-    } catch (error) {
+    } catch (_error) {
       // Continue to next service
     }
   }

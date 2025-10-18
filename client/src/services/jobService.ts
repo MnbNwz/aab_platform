@@ -27,6 +27,11 @@ export const jobApi = {
     return api.put(`/api/job/requests/${jobId}`, updateData);
   },
 
+  // Cancel Job Request
+  cancelJob: async (jobId: string) => {
+    return api.put(`/api/job/requests/${jobId}`, { status: "cancelled" });
+  },
+
   // Get all bids for a job
   getBidsForJob: async (jobRequestId: string) => {
     return api.get(`/api/job/bids/job/${jobRequestId}`);

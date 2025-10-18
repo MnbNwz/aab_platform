@@ -4,20 +4,19 @@ import {
   Building,
   FileText,
   Users,
-  Calculator,
   Star,
   Settings,
   LogOut,
   Heart,
   ClipboardList,
   ChartBar,
-  ShieldCheck,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../store";
 import { logoutThunk } from "../../store/thunks/authThunks";
 
-interface SidebarProps {
+// Extended SidebarProps to include userRole property
+interface ExtendedSidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   isMobileOpen?: boolean;
@@ -25,7 +24,7 @@ interface SidebarProps {
   userRole: "admin" | "customer" | "contractor";
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({
+export const Sidebar: React.FC<ExtendedSidebarProps> = ({
   activeTab,
   onTabChange,
   isMobileOpen = false,

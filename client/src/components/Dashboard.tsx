@@ -37,7 +37,7 @@ import MyBids from "./MyBids";
 import InvestmentOpportunitiesManagement from "./dashboard/InvestmentOpportunitiesManagement";
 import ContractorOffMarketOpportunities from "./contractor/ContractorOffMarketOpportunities";
 import InterestedProperties from "./contractor/InterestedProperties";
-import type { User } from "../types";
+import type { User, DashboardCardProps } from "../types";
 import { handleApiError } from "../services/apiService";
 import {
   updateProfileWithFormDataThunk,
@@ -46,35 +46,13 @@ import {
 import { buildProfileFormDataFromUser } from "../utils/profileFormData";
 import { showToast } from "../utils/toast";
 
-interface DashboardCardProps {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  description: string;
-  onClick?: () => void;
-  iconBgColor: string;
-  iconColor: string;
+// Extended DashboardCardProps to include disabled property
+interface ExtendedDashboardCardProps extends DashboardCardProps {
   disabled?: boolean;
 }
 
-interface TabContentProps {
-  user: User;
-  activeTab: string;
-  handleLogout: () => void;
-  onProfile: () => void;
-  onProfileFromSettings: () => void;
-  onEmailChange?: (oldEmail: string, newEmail: string) => Promise<void>;
-  onPasswordChange?: (
-    currentPassword: string,
-    newPassword: string
-  ) => Promise<void>;
-  onProfileImageUpdate?: (profileImage: string) => void;
-  isMobileOpen: boolean;
-  onMobileToggle: () => void;
-  setActiveTab: (tab: string) => void;
-}
-
 // Reusable Dashboard Card Component
-const DashboardCard = memo<DashboardCardProps>(
+const DashboardCard = memo<ExtendedDashboardCardProps>(
   ({
     icon: Icon,
     title,
@@ -249,16 +227,28 @@ const TabContentWrapper = memo<{
 TabContentWrapper.displayName = "TabContentWrapper";
 
 // Main Dashboard Content Component
-const DashboardContent = memo<
-  TabContentProps & {
-    manualRefresh: () => void;
-    unifiedData: any;
-    unifiedLoading: boolean;
-    customerData: any;
-    contractorData: any;
-    platformData: any;
-  }
->(
+interface DashboardContentProps {
+  user: User;
+  activeTab: string;
+  handleLogout: () => void;
+  onProfile: () => void;
+  onProfileFromSettings: () => void;
+  onEmailChange?: (oldEmail: string, newEmail: string) => Promise<void>;
+  onPasswordChange?: (
+    currentPassword: string,
+    newPassword: string
+  ) => Promise<void>;
+  isMobileOpen: boolean;
+  onMobileToggle: () => void;
+  manualRefresh: () => void;
+  unifiedData: any;
+  unifiedLoading: boolean;
+  customerData: any;
+  contractorData: any;
+  platformData: any;
+}
+
+const DashboardContent = memo<DashboardContentProps>(
   ({
     user,
     activeTab,
@@ -267,10 +257,8 @@ const DashboardContent = memo<
     onProfileFromSettings,
     onEmailChange,
     onPasswordChange,
-    onProfileImageUpdate,
     isMobileOpen,
     onMobileToggle,
-    setActiveTab,
     manualRefresh,
     unifiedData,
     unifiedLoading,
@@ -279,10 +267,6 @@ const DashboardContent = memo<
     platformData,
   }) => {
     const isAdmin = user.role === "admin";
-
-    const handleNavigateToUsers = useCallback(() => {
-      setActiveTab("users");
-    }, [setActiveTab]);
 
     // Tab content configuration
     const tabConfig = useMemo(() => {
@@ -412,7 +396,6 @@ const DashboardContent = memo<
               onProfileEdit={onProfileFromSettings}
               onEmailChange={onEmailChange}
               onPasswordChange={onPasswordChange}
-              onProfileImageUpdate={onProfileImageUpdate}
             />
           ),
         },
@@ -427,12 +410,15 @@ const DashboardContent = memo<
       onProfile,
       isMobileOpen,
       onMobileToggle,
-      handleNavigateToUsers,
       onProfileFromSettings,
       onEmailChange,
       onPasswordChange,
-      onProfileImageUpdate,
       manualRefresh,
+      unifiedData,
+      unifiedLoading,
+      customerData,
+      contractorData,
+      platformData,
     ]);
 
     // Render tab content or default
@@ -526,30 +512,28 @@ const Dashboard: React.FC = () => {
 
   const handleEmailChange = useCallback(
     async (oldEmail: string, newEmail: string) => {
-      try {
-        // Validate that the old email matches the current user email
-        if (oldEmail !== user?.email) {
-          throw new Error("Current email does not match your account email");
-        }
+      // Validate that the old email matches the current user email
+      if (oldEmail !== user?.email) {
+        throw new Error("Current email does not match your account email");
+      }
 
-        // Build FormData for email update
-        const formData = buildProfileFormDataFromUser(user!, {
-          email: newEmail,
-        });
+      // Build FormData for email update
+      const formData = buildProfileFormDataFromUser(user!, {
+        email: newEmail,
+      });
 
-        await dispatch(
-          updateProfileWithFormDataThunk({
-            userId: user!._id,
-            formData,
-            successMessage: "Email updated successfully!",
-          })
-        ).unwrap();
+      const result = await dispatch(
+        updateProfileWithFormDataThunk({
+          userId: user!._id,
+          formData,
+          successMessage: "Email updated successfully!",
+        })
+      );
 
-        // Redux auth slice will automatically update the user state
-        // No need for manual displayUser updates
-      } catch (error) {
-        // Error is handled by the thunk
-        throw error; // Re-throw to let the modal handle it
+      // Redux auth slice will automatically update the user state
+      // Let the thunk handle errors
+      if (updateProfileWithFormDataThunk.rejected.match(result)) {
+        throw new Error(result.payload as string);
       }
     },
     [dispatch, user]
@@ -557,25 +541,17 @@ const Dashboard: React.FC = () => {
 
   const handlePasswordChange = useCallback(
     async (currentPassword: string, newPassword: string) => {
-      try {
-        await dispatch(
-          changePasswordThunk({
-            currentPassword,
-            newPassword,
-          })
-        ).unwrap();
-      } catch (error) {
-        // Error is handled by the thunk
-        throw error; // Re-throw to let the modal handle it
-      }
+      await dispatch(
+        changePasswordThunk({
+          currentPassword,
+          newPassword,
+        })
+      ).unwrap();
     },
     [dispatch]
   );
 
-  const handleProfileImageUpdate = useCallback(() => {
-    // Redux auth slice will automatically update the user state
-    // No need for manual displayUser updates
-  }, []);
+  // Remove unused handleProfileImageUpdate - Settings handles it internally via Redux
 
   const handleSaveProfile = useCallback(
     async (profileData: Partial<User>) => {
@@ -694,10 +670,8 @@ const Dashboard: React.FC = () => {
           onProfileFromSettings={handleProfileOpenFromSettings}
           onEmailChange={handleEmailChange}
           onPasswordChange={handlePasswordChange}
-          onProfileImageUpdate={handleProfileImageUpdate}
           isMobileOpen={isMobileOpen}
           onMobileToggle={handleMobileToggle}
-          setActiveTab={setActiveTab}
           manualRefresh={manualRefresh}
           unifiedData={unifiedData}
           unifiedLoading={unifiedLoading}

@@ -96,35 +96,15 @@ interface CustomerDashboardCardsProps {
 }
 
 export const CustomerDashboardCards: React.FC<CustomerDashboardCardsProps> =
-  memo(({ data, onRefresh }) => {
-    const {
-      customerData,
-      customerError,
-    } = useSelector((state: RootState) => state.dashboard);
+  memo(({ data, loading, onRefresh }) => {
+    const { customerData, customerError, customerLoading } = useSelector(
+      (state: RootState) => state.dashboard
+    );
 
     // Use prop data if available, fallback to Redux state
     const dashboardData = data || customerData;
-
-    // Dashboard data is loaded by the main Dashboard component
-    // No need to call API here to avoid multiple calls
-
-    if (customerError) {
-      return (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-700">
-            Error loading dashboard: {customerError}
-          </p>
-          <button
-            onClick={onRefresh}
-            className="mt-2 text-red-600 hover:text-red-800 font-medium"
-          >
-            Try Again
-          </button>
-        </div>
-      );
-    }
-
     const analytics = dashboardData?.analytics;
+    const isLoading = loading || customerLoading;
 
     const statCards = useMemo(
       () => [
@@ -174,6 +154,22 @@ export const CustomerDashboardCards: React.FC<CustomerDashboardCardsProps> =
       [analytics]
     );
 
+    if (customerError) {
+      return (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-700">
+            Error loading dashboard: {customerError}
+          </p>
+          <button
+            onClick={onRefresh}
+            className="mt-2 text-red-600 hover:text-red-800 font-medium"
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-6 md:space-y-8">
         {/* Header */}
@@ -185,13 +181,11 @@ export const CustomerDashboardCards: React.FC<CustomerDashboardCardsProps> =
           </div>
           <button
             onClick={onRefresh}
-            disabled={false}
+            disabled={isLoading}
             className="flex items-center px-4 py-2 text-sm font-medium text-accent-600 bg-accent-50 border border-accent-200 rounded-lg hover:bg-accent-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <RefreshCw
-              className={`h-4 w-4 mr-2 ${
-                false ? "animate-spin" : ""
-              }`}
+              className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
             />
             Refresh
           </button>
@@ -200,7 +194,7 @@ export const CustomerDashboardCards: React.FC<CustomerDashboardCardsProps> =
         {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
           {statCards.map((card) => (
-            <StatCard key={card.title} {...card} loading={false} />
+            <StatCard key={card.title} {...card} loading={isLoading} />
           ))}
         </div>
 

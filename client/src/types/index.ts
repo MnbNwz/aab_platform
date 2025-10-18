@@ -549,3 +549,14 @@ export interface InvestmentStatistics {
     createdAt: string;
   }>;
 }
+
+// Re-export all types from centralized type files
+export * from "./component";
+export * from "./job";
+export * from "./property";
+export * from "./payment";
+export * from "./service";
+export * from "./geocoding";
+export * from "./api";
+export * from "./dashboard";
+export * from "./bid";

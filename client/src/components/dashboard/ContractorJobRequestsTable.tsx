@@ -66,7 +66,7 @@ const ContractorJobRequestsTable: React.FC = () => {
         // No leadInfo in new response
         setSelectedJobLeadInfo(null);
       }
-    } catch (error) {
+    } catch (_error) {
       showToast.error("Failed to load job details");
       // Close modal on error
       handleCloseJobDetails();

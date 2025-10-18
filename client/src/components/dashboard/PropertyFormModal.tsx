@@ -86,7 +86,7 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
                 address: location.address || "",
               },
             }));
-          } catch (error) {
+          } catch (_error) {
             // Silently fail, user can set location manually
           } finally {
             setFetchingLocation(false);

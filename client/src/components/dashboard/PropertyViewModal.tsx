@@ -26,19 +26,17 @@ const PropertyViewModal: React.FC<PropertyViewModalProps> = ({
   onClose,
   property,
 }) => {
-  // Early return before any hooks to avoid Rules of Hooks violation
-  if (!isOpen || !property) return null;
-
+  // All hooks must be called before any conditional returns
   const [carouselIdx, setCarouselIdx] = useState(0);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerImg, setViewerImg] = useState("");
+  const [imageLoading, setImageLoading] = useState<boolean[]>([]);
+  const [imageError, setImageError] = useState<boolean[]>([]);
 
   // Get readable address from coordinates
   const { address: locationAddress, loading: addressLoading } = useGeocoding(
-    property.location?.coordinates
+    property?.location?.coordinates
   );
-  const [imageLoading, setImageLoading] = useState<boolean[]>([]);
-  const [imageError, setImageError] = useState<boolean[]>([]);
 
   // Initialize loading states when images change
   useEffect(() => {
@@ -52,6 +50,23 @@ const PropertyViewModal: React.FC<PropertyViewModalProps> = ({
   useEffect(() => {
     setCarouselIdx(0);
   }, [property?.title]);
+
+  // Add timeout for slow loading images
+  useEffect(() => {
+    const images = property?.images || [];
+    if (images.length > 0 && imageLoading[carouselIdx]) {
+      const timeout = setTimeout(() => {
+        if (imageLoading[carouselIdx]) {
+          handleImageErrorForTimeout(carouselIdx);
+        }
+      }, 10000); // 10 second timeout
+
+      return () => clearTimeout(timeout);
+    }
+  }, [carouselIdx, property?.images, imageLoading]);
+
+  // Conditional return AFTER all hooks are called
+  if (!isOpen || !property) return null;
 
   const images = property.images || [];
   const showPrev = images.length > 1 && carouselIdx > 0;
@@ -78,18 +93,18 @@ const PropertyViewModal: React.FC<PropertyViewModalProps> = ({
     });
   };
 
-  // Add timeout for slow loading images
-  useEffect(() => {
-    if (images.length > 0 && imageLoading[carouselIdx]) {
-      const timeout = setTimeout(() => {
-        if (imageLoading[carouselIdx]) {
-          handleImageError(carouselIdx);
-        }
-      }, 10000); // 10 second timeout
-
-      return () => clearTimeout(timeout);
-    }
-  }, [carouselIdx, imageLoading, images.length]);
+  const handleImageErrorForTimeout = (index: number) => {
+    setImageLoading((prev) => {
+      const newLoading = [...prev];
+      newLoading[index] = false;
+      return newLoading;
+    });
+    setImageError((prev) => {
+      const newError = [...prev];
+      newError[index] = true;
+      return newError;
+    });
+  };
 
   return (
     <div

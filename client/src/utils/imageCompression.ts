@@ -74,7 +74,7 @@ export const smartCompress = async (
       compressionRatio,
       wasCompressed: true,
     };
-  } catch (error) {
+  } catch (_error) {
     // Return original file if compression fails
     return {
       originalFile: file,

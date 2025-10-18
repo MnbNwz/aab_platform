@@ -88,7 +88,14 @@ export const userManagementSlice = createSlice({
     },
     setUsers: (state, action: PayloadAction<UsersResponse>) => {
       state.users = action.payload.users;
-      state.pagination = action.payload.pagination;
+      state.pagination = {
+        currentPage: action.payload.pagination.currentPage,
+        totalPages: action.payload.pagination.totalPages,
+        totalCount: action.payload.pagination.totalItems,
+        hasNextPage: action.payload.pagination.hasNextPage,
+        hasPrevPage: action.payload.pagination.hasPreviousPage,
+        limit: action.payload.pagination.itemsPerPage,
+      };
       state.usersLoading = false;
       state.usersError = null;
     },

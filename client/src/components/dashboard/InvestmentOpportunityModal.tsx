@@ -298,7 +298,7 @@ const InvestmentOpportunityModal: React.FC<InvestmentOpportunityModalProps> = ({
         }
 
         onClose();
-      } catch (error) {
+      } catch (_error) {
         // Error handled by thunk
       } finally {
         setIsSubmitting(false);

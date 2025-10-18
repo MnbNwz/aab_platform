@@ -1,15 +1,4 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-// import {
-//   fetchDashboardThunk,
-//   silentFetchDashboardThunk,
-//   fetchCustomerDashboardThunk,
-//   fetchContractorDashboardThunk,
-//   fetchPlatformDashboardThunk,
-//   silentFetchCustomerDashboardThunk,
-//   silentFetchContractorDashboardThunk,
-//   silentFetchPlatformDashboardThunk,
-// } from "../thunks/dashboardThunks";
-
 import {
   silentFetchPlatformDashboardThunk,
   fetchDashboardThunk,
@@ -22,40 +11,10 @@ import {
 } from "../thunks/dashboardThunks";
 import { submitBidThunk } from "../thunks/contractorBidsThunks";
 import type {
-  CustomerDashboardResponse,
-  ContractorDashboardResponse,
-  PlatformDashboardResponse,
-} from "../../services/dashboardService";
-
-export interface DashboardState {
-  // Unified Dashboard Data (role-based response from single endpoint)
-  data: any | null;
-  loading: boolean;
-  error: string | null;
-  lastFetched: string | null;
-
-  // Legacy role-specific data (for backward compatibility)
-  customerData: CustomerDashboardResponse["data"] | null;
-  customerLoading: boolean;
-  customerError: string | null;
-  customerLastFetched: string | null;
-
-  // Contractor Dashboard Data
-  contractorData: ContractorDashboardResponse["data"] | null;
-  contractorLoading: boolean;
-  contractorError: string | null;
-  contractorLastFetched: string | null;
-
-  // Platform Dashboard Data (Admin)
-  platformData: PlatformDashboardResponse["data"] | null;
-  platformLoading: boolean;
-  platformError: string | null;
-  platformLastFetched: string | null;
-
-  // UI State
-  refreshInterval: number; // in milliseconds
-  autoRefreshEnabled: boolean;
-}
+  DashboardState,
+  LeadStatsUpdate,
+  RecentBidData,
+} from "../../types/dashboard";
 
 const initialState: DashboardState = {
   // Unified Dashboard
@@ -146,11 +105,7 @@ const dashboardSlice = createSlice({
     // Update contractor lead stats after successful bid
     updateContractorLeadStats: (
       state,
-      action: PayloadAction<{
-        leadsUsed: number;
-        remaining: number;
-        leadsLimit: number;
-      }>
+      action: PayloadAction<LeadStatsUpdate>
     ) => {
       if (state.contractorData?.contractor?.leadStats) {
         state.contractorData.contractor.leadStats.used =
@@ -172,16 +127,7 @@ const dashboardSlice = createSlice({
     },
 
     // Add a new bid to recent bids list
-    addRecentBid: (
-      state,
-      action: PayloadAction<{
-        bidId: string;
-        jobTitle: string;
-        service: string;
-        bidAmount: number;
-        status: "pending" | "accepted" | "rejected";
-      }>
-    ) => {
+    addRecentBid: (state, action: PayloadAction<RecentBidData>) => {
       const newBid = {
         _id: action.payload.bidId,
         jobTitle: action.payload.jobTitle,

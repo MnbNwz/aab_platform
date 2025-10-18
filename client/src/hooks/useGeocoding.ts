@@ -277,7 +277,7 @@ export function useMultipleGeocoding(
           try {
             const address = await getAddressFromCoordinates(item.coordinates);
             results.set(item.id, address);
-          } catch (err) {
+          } catch (_err) {
             // Fallback to coordinates for this specific item
             const [lng, lat] = item.coordinates;
             results.set(item.id, `${lat.toFixed(4)}, ${lng.toFixed(4)}`);

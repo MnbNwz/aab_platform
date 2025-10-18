@@ -96,35 +96,16 @@ interface ContractorDashboardCardsProps {
 }
 
 export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
-  memo(({ data, onRefresh }) => {
-    const { contractorData, contractorError } = useSelector(
+  memo(({ data, loading, onRefresh }) => {
+    const { contractorData, contractorError, contractorLoading } = useSelector(
       (state: RootState) => state.dashboard
     );
 
     // Use prop data if available, fallback to Redux state
     const dashboardData = data || contractorData;
-
-    // Dashboard data is loaded by the main Dashboard component
-    // No need to call API here to avoid multiple calls
-
-    if (contractorError) {
-      return (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-700">
-            Error loading dashboard: {contractorError}
-          </p>
-          <button
-            onClick={onRefresh}
-            className="mt-2 text-red-600 hover:text-red-800 font-medium"
-          >
-            Try Again
-          </button>
-        </div>
-      );
-    }
-
     const analytics =
       dashboardData?.contractor || dashboardData?.analytics || dashboardData;
+    const isLoading = loading || contractorLoading;
 
     // Extract specific values for memoization dependencies
     const biddingStats = analytics?.biddingStats;
@@ -181,6 +162,80 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
       [biddingStats, leadStats, earningsStats]
     );
 
+    const renderBidItem = useCallback(
+      (bid: any, index: number) => (
+        <div
+          key={index}
+          className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
+        >
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-900 truncate">
+              {bid.jobTitle}
+            </p>
+            <p className="text-xs text-gray-500 capitalize">{bid.service}</p>
+          </div>
+          <div className="text-right ml-4">
+            <p className="text-sm font-medium text-primary-700">
+              ${((bid.bidAmount || 0) / 100).toLocaleString()}
+            </p>
+            <span
+              className={`inline-flex px-2 py-1 text-xs rounded-full font-semibold ${
+                bid.status === "accepted"
+                  ? "bg-green-100 text-green-800"
+                  : bid.status === "pending"
+                  ? "bg-yellow-100 text-yellow-800"
+                  : "bg-red-100 text-red-800"
+              }`}
+            >
+              {bid.status}
+            </span>
+          </div>
+        </div>
+      ),
+      []
+    );
+
+    const renderWonJobItem = useCallback(
+      (job: any, index: number) => (
+        <div
+          key={index}
+          className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
+        >
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-900 truncate">
+              {job.jobTitle}
+            </p>
+            <p className="text-xs text-gray-500 capitalize">{job.service}</p>
+            <p className="text-xs text-gray-400">
+              Accepted: {new Date(job.acceptedAt).toLocaleDateString()}
+            </p>
+          </div>
+          <div className="text-right ml-4">
+            <p className="text-sm font-semibold text-green-600">
+              ${((job.bidAmount || 0) / 100).toLocaleString()}
+            </p>
+          </div>
+        </div>
+      ),
+      []
+    );
+
+    if (contractorError) {
+      return (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-700">
+            Error loading dashboard: {contractorError}
+          </p>
+          <button
+            onClick={onRefresh}
+            className="mt-2 text-red-600 hover:text-red-800 font-medium"
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-6 md:space-y-8">
         {/* Header */}
@@ -192,11 +247,11 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
           </div>
           <button
             onClick={onRefresh}
-            disabled={false}
+            disabled={isLoading}
             className="flex items-center px-4 py-2 text-sm font-medium text-accent-600 bg-accent-50 border border-accent-200 rounded-lg hover:bg-accent-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <RefreshCw
-              className={`h-4 w-4 mr-2 ${false ? "animate-spin" : ""}`}
+              className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
             />
             Refresh
           </button>
@@ -205,7 +260,7 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
         {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
           {statCards.map((card) => (
-            <StatCard key={card.title} {...card} loading={false} />
+            <StatCard key={card.title} {...card} loading={isLoading} />
           ))}
         </div>
 
@@ -217,40 +272,7 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
             items={analytics?.recentBids ?? []}
             loading={false}
             emptyMessage="No recent bids"
-            renderItem={useCallback(
-              (bid, index) => (
-                <div
-                  key={index}
-                  className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {bid.jobTitle}
-                    </p>
-                    <p className="text-xs text-gray-500 capitalize">
-                      {bid.service}
-                    </p>
-                  </div>
-                  <div className="text-right ml-4">
-                    <p className="text-sm font-medium text-primary-700">
-                      ${((bid.bidAmount || 0) / 100).toLocaleString()}
-                    </p>
-                    <span
-                      className={`inline-flex px-2 py-1 text-xs rounded-full font-semibold ${
-                        bid.status === "accepted"
-                          ? "bg-green-100 text-green-800"
-                          : bid.status === "pending"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {bid.status}
-                    </span>
-                  </div>
-                </div>
-              ),
-              []
-            )}
+            renderItem={renderBidItem}
           />
 
           {/* Recent Won Jobs */}
@@ -259,32 +281,7 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
             items={analytics?.recentWonJobs ?? []}
             loading={false}
             emptyMessage="No won jobs yet"
-            renderItem={useCallback(
-              (job, index) => (
-                <div
-                  key={index}
-                  className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {job.jobTitle}
-                    </p>
-                    <p className="text-xs text-gray-500 capitalize">
-                      {job.service}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      Accepted: {new Date(job.acceptedAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="text-right ml-4">
-                    <p className="text-sm font-semibold text-green-600">
-                      ${((job.bidAmount || 0) / 100).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              ),
-              []
-            )}
+            renderItem={renderWonJobItem}
           />
         </div>
       </div>

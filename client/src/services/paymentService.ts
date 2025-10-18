@@ -1,4 +1,10 @@
-import type { ApiResponse, PaginationInfo } from "../types";
+import type { ApiResponse } from "../types";
+import type {
+  Payment,
+  PaymentFilters,
+  PaymentHistoryApiResponse,
+} from "../types/payment";
+import type { ApiError } from "../types/api";
 import showToast from "../utils/toast";
 
 const API_CONFIG = {
@@ -11,13 +17,6 @@ const ERROR_MESSAGES = {
   GENERIC_ERROR: "Something went wrong. Please try again.",
   UNAUTHORIZED: "Access denied. Please log in again.",
 } as const;
-
-export interface ApiError {
-  name: "ApiError";
-  message: string;
-  status: number;
-  errors?: Record<string, string[]>;
-}
 
 const createApiError = (
   message: string,
@@ -100,76 +99,7 @@ const makeRequest = async <T = any>(
 const get = <T = any>(endpoint: string): Promise<ApiResponse<T>> =>
   makeRequest<T>(endpoint, { method: "GET" });
 
-export interface PaymentMembership {
-  _id: string;
-  userId: string;
-  planId: string;
-  paymentId: string;
-  status: "active" | "inactive" | "cancelled" | "expired";
-  billingPeriod: "monthly" | "yearly";
-  billingType: "recurring" | "one_time";
-  startDate: string;
-  endDate?: string;
-  isAutoRenew: boolean;
-  leadsUsedThisMonth: number;
-  lastLeadResetDate: string;
-  createdAt: string;
-  updatedAt: string;
-  plan: {
-    _id: string;
-    name: string;
-    tier: string;
-  };
-}
-
-export interface PaymentJobDetails {
-  _id: string;
-  title: string;
-  service: string;
-  status: string;
-}
-
-export interface Payment {
-  _id: string;
-  userId: string;
-  email: string;
-  amount: number;
-  currency: string;
-  status: "succeeded" | "pending" | "failed" | "cancelled";
-  stripeCustomerId: string;
-  stripePaymentIntentId: string;
-  stripeSessionId?: string;
-  stripeSubscriptionId?: string;
-  billingPeriod?: "monthly" | "yearly";
-  failureReason?: string;
-  planId?: string;
-  purpose?: string;
-  metadata: Record<string, any>;
-  createdAt: string;
-  updatedAt: string;
-  membership?: PaymentMembership | null;
-  jobDetails?: PaymentJobDetails | null;
-}
-
-export interface PaymentHistoryResponse {
-  data: Payment[];
-  pagination: PaginationInfo;
-}
-
-export interface PaymentHistoryApiResponse {
-  success: boolean;
-  data: Payment[];
-  pagination: PaginationInfo;
-}
-
-export interface PaymentFilters {
-  page?: number;
-  limit?: number;
-  status?: Payment["status"];
-  type?: "membership" | "job";
-  startDate?: string;
-  endDate?: string;
-}
+export type { Payment, PaymentFilters, PaymentHistoryApiResponse };
 
 export const paymentService = {
   getHistory: async (

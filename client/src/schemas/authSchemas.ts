@@ -33,7 +33,7 @@ export const baseUserSchema = z.object({
     .string()
     .min(1, "Phone number is required")
     .regex(
-      /^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,4}[-\s\.]?[0-9]{1,9}$/,
+      /^[+]?[(]?[0-9]{1,4}[)]?[\s.-]?[(]?[0-9]{1,4}[)]?[\s.-]?[0-9]{1,4}[\s.-]?[0-9]{1,9}$/,
       "Please enter a valid phone number (e.g., +1234567890 or (123) 456-7890)"
     )
     .min(10, "Phone number must be at least 10 digits")
@@ -72,7 +72,7 @@ const contractorProfileSchema = z.object({
     .min(2, "Company name must be at least 2 characters")
     .max(100, "Company name must not exceed 100 characters")
     .regex(
-      /^[a-zA-Z0-9\s\-&'.,()]+$/,
+      /^[a-zA-Z0-9\s&'.,()-]+$/,
       "Company name can only contain letters, numbers, spaces, and basic punctuation"
     )
     .transform((val) => val.trim()),
@@ -82,7 +82,7 @@ const contractorProfileSchema = z.object({
     .min(3, "License number must be at least 3 characters")
     .max(50, "License number must not exceed 50 characters")
     .regex(
-      /^[a-zA-Z0-9\-]+$/,
+      /^[a-zA-Z0-9-]+$/,
       "License number can only contain letters, numbers, and hyphens"
     )
     .transform((val) => val.trim().toUpperCase()),
@@ -94,7 +94,7 @@ const contractorProfileSchema = z.object({
     .string()
     .min(1, "Tax ID is required for contractors")
     .regex(
-      /^[a-zA-Z0-9\-]+$/,
+      /^[a-zA-Z0-9-]+$/,
       "Tax ID can only contain letters, numbers, and hyphens"
     )
     .min(5, "Tax ID must be at least 5 characters")
