@@ -507,7 +507,7 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
-// Filter jobs by radius
+// Filter jobs by radius and remove property field in single pass
 export async function filterJobsByRadius(
   jobs: any[],
   contractorLocation: { lat: number; lng: number },
@@ -530,8 +530,10 @@ export async function filterJobsByRadius(
       );
 
       if (distance <= radiusKm) {
+        // Remove property field and add distance in single operation
+        const { property, ...jobWithoutProperty } = job;
         filteredJobs.push({
-          ...job,
+          ...jobWithoutProperty,
           distance: Math.round(distance * 100) / 100, // Round to 2 decimal places
         });
       }
@@ -654,102 +656,85 @@ export async function getJobsForContractor(
       sortOptions.type = -1; // off_market first
     }
 
-    // Execute aggregation pipeline with geospatial filtering
+    // OPTIMIZED: Aggregation pipeline with minimal operations
+    const accessDelay = (effectivePlan.accessDelayHours ?? 24) * 60 * 60 * 1000;
+    const currentTime = new Date();
+
+    // DEBUG: Log query details
+    console.log("🔍 Contractor Jobs Query Debug:");
+    console.log("  User ID:", userId);
+    console.log("  Access Delay Hours:", effectivePlan.accessDelayHours);
+    console.log("  Access Delay MS:", accessDelay);
+    console.log("  Radius KM:", effectivePlan.radiusKm);
+    console.log("  Contractor Services:", contractor?.contractor?.services);
+    console.log("  Base Query:", JSON.stringify(query, null, 2));
+    console.log("  Current Time:", currentTime.toISOString());
+
     const pipeline = [
-      // Start with base query
+      // OPTIMIZATION 1: Initial match with base filters
       { $match: query },
 
-      // Lookup properties first
-      {
-        $lookup: {
-          from: "properties",
-          localField: "property",
-          foreignField: "_id",
-          as: "property",
-          pipeline: [{ $project: { title: 1, address: 1, location: 1 } }],
-        },
-      },
-      {
-        $addFields: {
-          property: { $arrayElemAt: ["$property", 0] },
-        },
-      },
-
-      // OPTIMIZATION 4: Check if contractor already bid on this job
-      {
-        $lookup: {
-          from: "leadaccesses",
-          let: { jobId: "$_id", contractorId: new Types.ObjectId(userId) },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $eq: ["$jobRequest", "$$jobId"] },
-                    { $eq: ["$contractor", "$$contractorId"] },
-                  ],
-                },
-              },
-            },
-            { $limit: 1 }, // Only need one record to check if bid was placed
-            { $project: { accessedAt: 1, membershipTier: 1, bid: 1 } },
-          ],
-          as: "bidHistory",
-        },
-      },
-
-      // Lookup users
-      {
-        $lookup: {
-          from: "users",
-          localField: "createdBy",
-          foreignField: "_id",
-          as: "createdBy",
-          pipeline: [{ $project: { name: 1, email: 1, phone: 1 } }],
-        },
-      },
-
-      // Add computed fields
-      {
-        $addFields: {
-          createdBy: { $arrayElemAt: ["$createdBy", 0] },
-          distance: 0,
-          accessTime: {
-            $add: [
-              "$createdAt",
-              { $multiply: [(effectivePlan.accessDelayHours || 24) * 60 * 60 * 1000] },
-            ],
-          },
-          canAccessNow: {
-            $lte: [
-              {
-                $add: [
-                  "$createdAt",
-                  { $multiply: [(effectivePlan.accessDelayHours || 24) * 60 * 60 * 1000] },
-                ],
-              },
-              new Date(),
-            ],
-          },
-          // ENHANCEMENT: Track if contractor already bid on this job
-          alreadyBid: { $gt: [{ $size: "$bidHistory" }, 0] },
-          bidInfo: { $arrayElemAt: ["$bidHistory", 0] },
-        },
-      },
-
-      // Filter out jobs that are not accessible yet (based on timing delay)
+      // OPTIMIZATION 2: Early time-based filtering (reduces documents early in pipeline)
       {
         $match: {
-          canAccessNow: true,
+          $expr: {
+            $lte: [{ $add: ["$createdAt", accessDelay] }, currentTime],
+          },
         },
       },
 
-      // Radius filtering will be done post-aggregation if needed
+      // OPTIMIZATION 3: Project only essential fields early (reduces document size)
+      {
+        $project: {
+          _id: 1,
+          property: 1, // Needed for radius filtering
+          title: 1,
+          description: 1,
+          service: 1,
+          estimate: 1,
+          type: 1,
+          status: 1,
+          timeline: 1,
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      },
 
-      // Sort
+      // OPTIMIZATION 4: Conditional property lookup (only if radius filtering needed)
+      ...(contractorLocation && effectivePlan.radiusKm !== null
+        ? [
+            {
+              $lookup: {
+                from: "properties",
+                localField: "property",
+                foreignField: "_id",
+                as: "propertyData",
+                pipeline: [{ $project: { location: 1 } }],
+              },
+            },
+            {
+              $addFields: {
+                property: { $arrayElemAt: ["$propertyData", 0] },
+              },
+            },
+            {
+              $project: { propertyData: 0 },
+            },
+          ]
+        : []),
+
+      // Add distance field
+      { $addFields: { distance: 0 } },
+
+      // OPTIMIZATION 5: Remove property field if no radius filtering
+      ...(contractorLocation && effectivePlan.radiusKm !== null
+        ? [] // Property will be removed by filterJobsByRadius
+        : [{ $project: { property: 0 } }]), // Remove property ObjectId
+
+      // OPTIMIZATION 6: Sort before facet for better index usage
       { $sort: sortOptions },
 
-      // Facet for pagination
+      // OPTIMIZATION 7: Facet for single-pass pagination + count
       {
         $facet: {
           data: [{ $skip: skip }, { $limit: limit }],
@@ -760,14 +745,30 @@ export async function getJobsForContractor(
 
     const [result] = await JobRequest.aggregate(pipeline as any);
     let jobs = result.data || [];
-    const total = result.count[0]?.total || 0;
+    let total = result.count[0]?.total || 0;
 
-    // Apply radius filtering post-aggregation if needed
-    if (contractorLocation && effectivePlan.radiusKm !== null) {
-      jobs = await filterJobsByRadius(jobs, contractorLocation, effectivePlan.radiusKm);
+    // DEBUG: Log aggregation results
+    console.log("📊 Aggregation Results:");
+    console.log("  Jobs found:", jobs.length);
+    console.log("  Total count:", total);
+    if (jobs.length > 0) {
+      console.log("  First job:", {
+        _id: jobs[0]._id,
+        title: jobs[0].title,
+        service: jobs[0].service,
+        createdAt: jobs[0].createdAt,
+      });
     }
 
-    // Calculate pagination info
+    // Apply radius filtering post-aggregation if needed
+    // NOTE: filterJobsByRadius also removes property field for performance
+    if (contractorLocation && effectivePlan.radiusKm !== null) {
+      jobs = await filterJobsByRadius(jobs, contractorLocation, effectivePlan.radiusKm);
+      // CRITICAL FIX: Update total count after radius filtering
+      total = jobs.length;
+    }
+
+    // Calculate pagination info based on actual filtered results
     const totalPages = Math.ceil(total / limit);
     const hasNextPage = page < totalPages;
     const hasPrevPage = page > 1;

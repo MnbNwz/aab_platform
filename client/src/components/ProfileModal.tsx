@@ -1,11 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import type { RootState, AppDispatch } from "../store";
+import { getServicesThunk } from "../store/thunks/servicesThunks";
 import ConfirmModal from "./ui/ConfirmModal";
 import { baseUserSchema } from "../schemas/authSchemas";
 import { User, UserRole } from "../types";
-import { MapPin } from "lucide-react";
+import { MapPin, CheckCircle2 } from "lucide-react";
 import LocationSelector from "./LocationSelector";
 import { ProfileFormState } from "../store/slices/userSlice";
 import { useGeocoding } from "../hooks/useGeocoding";
+import Loader from "./ui/Loader";
 
 interface ProfileModalProps {
   user: User;
@@ -30,6 +34,11 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
   onSave,
   showAllFields = false,
 }) => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { services, isLoading: servicesLoading } = useSelector(
+    (state: RootState) => state.services
+  );
+
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [phoneError, setPhoneError] = useState<string>("");
   const [isUpdating, setIsUpdating] = useState(false);
@@ -77,6 +86,13 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
   );
   const [showConfirm, setShowConfirm] = useState(false);
 
+  // Fetch services for contractors
+  useEffect(() => {
+    if (isOpen && user.role === "contractor" && services.length === 0) {
+      dispatch(getServicesThunk());
+    }
+  }, [isOpen, user.role, services.length, dispatch]);
+
   // Get readable address from coordinates
   const { address: locationAddress, loading: addressLoading } = useGeocoding(
     user.role !== "admin" && form.geoHome[0] !== 0 && form.geoHome[1] !== 0
@@ -119,6 +135,12 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       if (form.contractor.license !== (user.contractor.license || ""))
         return true;
       if (form.contractor.taxId !== (user.contractor.taxId || "")) return true;
+
+      // Check services array
+      const originalServices = [...(user.contractor.services || [])].sort();
+      const newServices = [...(form.contractor.services || [])].sort();
+      if (JSON.stringify(originalServices) !== JSON.stringify(newServices))
+        return true;
     }
 
     // Check customer specific fields
@@ -506,19 +528,109 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
                     />
                   </div>
                   <div>
-                    <label className="block text-primary-700 font-medium mb-1 text-sm sm:text-base">
-                      Services
+                    <label className="block text-primary-700 font-medium mb-3 text-sm sm:text-base">
+                      Services *
+                      <span className="ml-2 text-primary-600 text-xs font-normal">
+                        ({form.contractor?.services?.length || 0}/
+                        {services.length} selected)
+                      </span>
                     </label>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {(user.contractor.services ?? []).map((service, idx) => (
-                        <span
-                          key={idx}
-                          className="inline-block bg-accent-100 text-accent-700 text-sm font-medium px-3 py-1 rounded-full border border-accent-200"
-                        >
-                          {service}
+                    {servicesLoading ? (
+                      <div className="flex items-center justify-center py-8 bg-primary-50 rounded-lg">
+                        <Loader size="medium" color="accent" />
+                        <span className="ml-3 text-primary-600 text-sm">
+                          Loading services...
                         </span>
-                      ))}
-                    </div>
+                      </div>
+                    ) : services.length === 0 ? (
+                      <div className="text-center py-8 bg-primary-50 rounded-lg">
+                        <p className="text-primary-500 text-sm">
+                          No services available
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {services.map((service: string) => {
+                          const isSelected = (
+                            form.contractor?.services || []
+                          ).includes(service);
+
+                          return (
+                            <label
+                              key={service}
+                              className={`relative flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
+                                isSelected
+                                  ? "border-primary-500 bg-primary-50 shadow-sm"
+                                  : "border-primary-200 bg-white hover:border-primary-400 hover:bg-primary-50/50 hover:shadow-sm"
+                              }`}
+                            >
+                              <div
+                                className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                                  isSelected
+                                    ? "border-primary-500 bg-primary-500"
+                                    : "border-primary-300 bg-white"
+                                }`}
+                              >
+                                {isSelected && (
+                                  <svg
+                                    className="w-3 h-3 text-white"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth="3"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M5 13l4 4L19 7"
+                                    />
+                                  </svg>
+                                )}
+                              </div>
+
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={(e) => {
+                                  const newServices = e.target.checked
+                                    ? [
+                                        ...(form.contractor?.services || []),
+                                        service,
+                                      ]
+                                    : (form.contractor?.services || []).filter(
+                                        (s) => s !== service
+                                      );
+
+                                  setForm({
+                                    ...form,
+                                    contractor: {
+                                      ...form.contractor!,
+                                      services: newServices,
+                                    },
+                                  });
+                                }}
+                                className="sr-only"
+                              />
+
+                              <span
+                                className={`text-sm font-medium capitalize ${
+                                  isSelected
+                                    ? "text-primary-700"
+                                    : "text-primary-600"
+                                }`}
+                              >
+                                {service}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {form.contractor?.services?.length === 0 && (
+                      <p className="text-red-500 text-xs mt-1">
+                        Please select at least one service
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-primary-700 font-medium mb-1 text-sm sm:text-base">

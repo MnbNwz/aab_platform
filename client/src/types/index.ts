@@ -145,7 +145,6 @@ export interface UserUpdateData {
   approval?: UserApproval;
 }
 
-// Contractor Job Request types
 export interface ContractorJob {
   _id: string;
   title: string;
@@ -156,24 +155,65 @@ export interface ContractorJob {
   status: "open" | "in_progress" | "completed" | "cancelled";
   timeline: number;
   createdAt: string;
-  accessTime: string;
-  canAccessNow: boolean;
+  updatedAt: string;
   distance: number;
-  bidCount: number;
-  alreadyBid?: boolean; // Whether the contractor has already bid on this job
+}
+
+export interface ContractorBid {
+  _id: string;
+  jobRequest: string;
+  contractor: string;
+  bidAmount: number;
+  message?: string;
+  status: "pending" | "accepted" | "rejected";
+  timeline?: {
+    startDate: string;
+    endDate: string;
+  };
+  materials?: {
+    included: boolean;
+    description?: string;
+  };
+  warranty?: {
+    period: number;
+    description?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ContractorJobDetails extends ContractorJob {
+  paymentStatus: "pending" | "paid" | "refunded";
   createdBy: {
     _id: string;
-    email: string;
-    phone: string;
+    name?: string;
+    email?: string;
+    phone?: string;
   };
-  property: {
+  property?: {
     _id: string;
+    userId: string;
     title: string;
+    propertyType: string;
     location: {
       type: "Point";
       coordinates: [number, number];
     };
+    area: number;
+    areaUnit: string;
+    totalRooms: number;
+    bedrooms: number;
+    bathrooms: number;
+    kitchens: number;
+    description?: string;
+    images?: string[];
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
   };
+  self: boolean;
+  myBid: ContractorBid | null;
+  selfBidAccepted: boolean;
 }
 
 export interface MembershipInfo {

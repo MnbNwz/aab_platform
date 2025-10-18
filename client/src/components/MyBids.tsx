@@ -81,7 +81,7 @@ const MyBids: React.FC = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <span className="text-xs font-semibold text-primary-600 uppercase tracking-wide">
-                      Monthly Leads
+                      Available Leads
                     </span>
                     {/* Can Bid Badge - Mobile */}
                     <div
@@ -223,15 +223,12 @@ const MyBids: React.FC = () => {
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Submitted
               </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {loading ? (
               <tr>
-                <td colSpan={6} className="py-12">
+                <td colSpan={5} className="py-12">
                   <div className="flex justify-center items-center w-full h-full">
                     <Loader size="large" color="accent" />
                   </div>
@@ -239,13 +236,17 @@ const MyBids: React.FC = () => {
               </tr>
             ) : bids.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center text-gray-500 py-8">
+                <td colSpan={5} className="text-center text-gray-500 py-8">
                   No bids found.
                 </td>
               </tr>
             ) : (
               bids.map((bid) => (
-                <tr key={bid._id} className="hover:bg-gray-50">
+                <tr
+                  key={bid._id}
+                  onClick={() => setSelectedBid(bid)}
+                  className="hover:bg-gray-50 cursor-pointer transition-colors"
+                >
                   <td className="px-6 py-4">
                     <div
                       className="font-medium text-gray-900 truncate max-w-xs"
@@ -271,14 +272,6 @@ const MyBids: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 text-center text-sm text-gray-600">
                     {new Date(bid.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <button
-                      onClick={() => setSelectedBid(bid)}
-                      className="text-accent-600 hover:text-accent-700 font-medium text-sm hover:underline"
-                    >
-                      View
-                    </button>
                   </td>
                 </tr>
               ))
@@ -551,7 +544,28 @@ const BidDetailsModal: React.FC<{
                   <div className="text-sm font-semibold text-accent-700 mb-2">
                     Materials
                   </div>
-                  <p className="text-gray-700">{bid.materials}</p>
+                  {typeof bid.materials === "object" ? (
+                    <div className="text-gray-700">
+                      <div
+                        className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${
+                          bid.materials.included
+                            ? "bg-green-100 text-green-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {bid.materials.included
+                          ? "✓ Included"
+                          : "✗ Not Included"}
+                      </div>
+                      {bid.materials.description && (
+                        <p className="mt-2 text-gray-700">
+                          {bid.materials.description}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-gray-700">{bid.materials}</p>
+                  )}
                 </div>
               )}
               {bid.warranty && (
@@ -559,7 +573,27 @@ const BidDetailsModal: React.FC<{
                   <div className="text-sm font-semibold text-accent-700 mb-2">
                     Warranty
                   </div>
-                  <p className="text-gray-700">{bid.warranty}</p>
+                  {typeof bid.warranty === "object" ? (
+                    <div className="text-gray-700">
+                      {bid.warranty.period ? (
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                          {bid.warranty.period}{" "}
+                          {bid.warranty.period === 1 ? "year" : "years"}
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                          No warranty period specified
+                        </div>
+                      )}
+                      {bid.warranty.description && (
+                        <p className="mt-2 text-gray-700">
+                          {bid.warranty.description}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-gray-700">{bid.warranty}</p>
+                  )}
                 </div>
               )}
             </div>

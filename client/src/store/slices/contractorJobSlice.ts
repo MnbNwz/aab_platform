@@ -5,6 +5,7 @@ import {
 } from "../thunks/contractorJobThunks";
 import type {
   ContractorJob,
+  ContractorJobDetails,
   MembershipInfo,
   LeadInfo,
   ContractorJobFilters,
@@ -12,7 +13,7 @@ import type {
 
 export interface ContractorJobState {
   jobs: ContractorJob[];
-  currentJob: ContractorJob | null;
+  currentJob: ContractorJobDetails | null; // Full job details when accessing specific job
   loading: boolean; // For jobs list
   jobDetailsLoading: boolean; // For job details modal
   error: string | null;

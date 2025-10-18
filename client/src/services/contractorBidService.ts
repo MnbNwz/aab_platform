@@ -5,13 +5,23 @@ export interface BidTimeline {
   endDate: string;
 }
 
+export interface BidMaterials {
+  included: boolean;
+  description?: string;
+}
+
+export interface BidWarranty {
+  period: number; // in years
+  description?: string;
+}
+
 export interface SubmitBidPayload {
   jobRequestId: string;
   bidAmount: number;
   message: string;
   timeline: BidTimeline;
-  materials?: string;
-  warranty?: string;
+  materials?: BidMaterials;
+  warranty?: BidWarranty;
 }
 
 export interface ContractorBid {
@@ -20,8 +30,8 @@ export interface ContractorBid {
   message: string;
   status: "pending" | "accepted" | "rejected";
   timeline: BidTimeline;
-  materials?: string;
-  warranty?: string;
+  materials?: BidMaterials | string;
+  warranty?: BidWarranty | string;
   jobRequest: {
     _id: string;
     title: string;

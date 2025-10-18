@@ -436,7 +436,7 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = ({
         isOpen={!!confirmStatusChange}
         title="⚠️ Deactivate Property?"
         message="Warning: This action cannot be undone. Once deactivated, you will not be able to reactivate this property. Are you absolutely sure you want to proceed?"
-        confirmText="Yes"
+        confirmText="Confirm"
         cancelText="Cancel"
         loading={statusLoading}
         onCancel={() => setConfirmStatusChange(null)}

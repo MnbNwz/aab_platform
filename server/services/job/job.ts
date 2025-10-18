@@ -362,21 +362,7 @@ export const getJobRequestById = async (id: string) => {
         localField: "property",
         foreignField: "_id",
         as: "property",
-        pipeline: [
-          {
-            $project: {
-              title: 1,
-              location: 1,
-              area: 1,
-              areaUnit: 1,
-              totalRooms: 1,
-              bedrooms: 1,
-              bathrooms: 1,
-              kitchens: 1,
-              description: 1,
-            },
-          },
-        ],
+        // No pipeline = return all fields (full property object)
       },
     },
 

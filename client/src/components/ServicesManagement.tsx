@@ -1,76 +1,63 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Plus, Trash2, Edit2, Check, X, Settings } from "lucide-react";
+import { Plus, Check, Settings } from "lucide-react";
 import { api } from "../services/apiService";
 import { getServicesThunk } from "../store/thunks/servicesThunks";
 import { showToast } from "../utils/toast";
 import ConfirmModal from "./ui/ConfirmModal";
 import type { RootState, AppDispatch } from "../store";
 
-interface ServicesManagementProps {}
-
-const ServicesManagement: React.FC<ServicesManagementProps> = () => {
+const ServicesManagement: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { services, isLoading } = useSelector(
     (state: RootState) => state.services
   );
   const [localServices, setLocalServices] = useState<string[]>([]);
-  const [hasChanges, setHasChanges] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newService, setNewService] = useState("");
-  const [editingService, setEditingService] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<{
-    isOpen: boolean;
-    serviceToDelete: string | null;
-  }>({ isOpen: false, serviceToDelete: null });
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+  const hasChanges = useMemo(() => {
+    return (
+      JSON.stringify([...localServices].sort()) !==
+      JSON.stringify([...services].sort())
+    );
+  }, [localServices, services]);
 
   useEffect(() => {
-    if (!services?.length && !isLoading) {
+    if (services.length === 0 && !isLoading) {
       dispatch(getServicesThunk());
     }
-  }, [dispatch, services?.length, isLoading]);
+  }, [dispatch, isLoading, services.length]);
 
-  // Initialize local services when services are loaded
   useEffect(() => {
-    if (services?.length > 0 && localServices.length === 0) {
-      setLocalServices([...services]);
+    if (services.length > 0 && localServices.length === 0) {
+      setLocalServices(services);
     }
   }, [services, localServices.length]);
 
-  // Check for changes
-  useEffect(() => {
-    const hasLocalChanges =
-      JSON.stringify([...localServices].sort()) !==
-      JSON.stringify([...services].sort());
-    setHasChanges(hasLocalChanges);
-  }, [localServices, services]);
+  const validateService = useCallback(
+    (service: string): string | null => {
+      if (!service.trim()) {
+        return "Service name is required";
+      }
+      if (service.trim().length < 2) {
+        return "Service name must be at least 2 characters";
+      }
+      if (service.trim().length > 50) {
+        return "Service name must be less than 50 characters";
+      }
+      const trimmedService = service.trim().toLowerCase();
+      if (localServices.includes(trimmedService)) {
+        return "Service already exists";
+      }
+      return null;
+    },
+    [localServices]
+  );
 
-  const validateService = (
-    service: string,
-    excludeService?: string
-  ): string | null => {
-    if (!service.trim()) {
-      return "Service name is required";
-    }
-    if (service.trim().length < 2) {
-      return "Service name must be at least 2 characters";
-    }
-    if (service.trim().length > 50) {
-      return "Service name must be less than 50 characters";
-    }
-    const trimmedService = service.trim().toLowerCase();
-    if (
-      localServices.includes(trimmedService) &&
-      trimmedService !== excludeService?.toLowerCase()
-    ) {
-      return "Service already exists";
-    }
-    return null;
-  };
-
-  const handleCreateService = () => {
+  const handleCreateService = useCallback(() => {
     const validationError = validateService(newService);
     if (validationError) {
       setError(validationError);
@@ -80,56 +67,31 @@ const ServicesManagement: React.FC<ServicesManagementProps> = () => {
     setError(null);
     setLocalServices((prev) => [...prev, newService.trim().toLowerCase()]);
     setNewService("");
-  };
+  }, [newService, validateService]);
 
-  const handleUpdateService = (oldService: string) => {
-    const validationError = validateService(editValue, oldService);
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setNewService(e.target.value);
+      setError(null);
+    },
+    []
+  );
 
-    setError(null);
-    setLocalServices((prev) =>
-      prev.map((service) =>
-        service === oldService ? editValue.trim().toLowerCase() : service
-      )
-    );
-    setEditingService(null);
-    setEditValue("");
-  };
+  const handleKeyPress = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter") {
+        handleCreateService();
+      }
+    },
+    [handleCreateService]
+  );
 
-  const handleDeleteService = (serviceToDelete: string) => {
-    setConfirmDelete({ isOpen: true, serviceToDelete });
-  };
+  const handleSaveClick = useCallback(() => {
+    setShowConfirmModal(true);
+  }, []);
 
-  const confirmDeleteService = () => {
-    if (!confirmDelete.serviceToDelete) return;
-
-    setError(null);
-    setLocalServices((prev) =>
-      prev.filter((service) => service !== confirmDelete.serviceToDelete)
-    );
-    setConfirmDelete({ isOpen: false, serviceToDelete: null });
-  };
-
-  const cancelDeleteService = () => {
-    setConfirmDelete({ isOpen: false, serviceToDelete: null });
-  };
-
-  const startEditing = (service: string) => {
-    setEditingService(service);
-    setEditValue(service);
-    setError(null);
-  };
-
-  const cancelEditing = () => {
-    setEditingService(null);
-    setEditValue("");
-    setError(null);
-  };
-
-  const handleSubmit = async () => {
+  const confirmSave = useCallback(async () => {
+    setShowConfirmModal(false);
     setIsSubmitting(true);
     setError(null);
 
@@ -137,25 +99,28 @@ const ServicesManagement: React.FC<ServicesManagementProps> = () => {
       await api.services.createServices(localServices);
       await dispatch(getServicesThunk());
       showToast.success("Services updated successfully!");
-    } catch (error: any) {
-      setError(error.message || "Failed to update services");
-      showToast.error("Failed to update services");
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to update services";
+      setError(errorMessage);
+      showToast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [localServices, dispatch]);
 
-  const handleCancel = () => {
-    setLocalServices([...services]);
+  const cancelSave = useCallback(() => {
+    setShowConfirmModal(false);
+  }, []);
+
+  const handleCancel = useCallback(() => {
+    setLocalServices(services);
     setError(null);
-    setEditingService(null);
-    setEditValue("");
     setNewService("");
-  };
+  }, [services]);
 
   return (
     <div className="space-y-6">
-      {/* Add New Service */}
       <div className="bg-primary-50 rounded-lg p-4">
         <h4 className="text-sm font-medium text-primary-900 mb-3">
           Add New Service
@@ -165,16 +130,14 @@ const ServicesManagement: React.FC<ServicesManagementProps> = () => {
             <input
               type="text"
               value={newService}
-              onChange={(e) => {
-                setNewService(e.target.value);
-                setError(null);
-              }}
-              onKeyPress={(e) => e.key === "Enter" && handleCreateService()}
+              onChange={handleInputChange}
+              onKeyPress={handleKeyPress}
               placeholder="Enter service name (e.g., Plumbing, Electrical)"
               className="w-full px-3 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 text-sm"
             />
           </div>
           <button
+            type="button"
             onClick={handleCreateService}
             disabled={!newService.trim()}
             className="px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 flex items-center space-x-2"
@@ -186,7 +149,6 @@ const ServicesManagement: React.FC<ServicesManagementProps> = () => {
         {error && <p className="text-red-500 text-xs mt-2">{error}</p>}
       </div>
 
-      {/* Services List */}
       <div className="bg-white border border-primary-200 rounded-lg">
         <div className="px-4 py-3 border-b border-primary-200">
           <h4 className="text-sm font-medium text-primary-900">
@@ -207,73 +169,22 @@ const ServicesManagement: React.FC<ServicesManagementProps> = () => {
           </div>
         ) : (
           <div className="divide-y divide-primary-200">
-            {localServices.map((service, index) => (
+            {localServices.map((service) => (
               <div
-                key={index}
-                className="px-4 py-3 flex items-center justify-between hover:bg-primary-50"
+                key={service}
+                className="px-4 py-3 flex items-center justify-between"
               >
-                {editingService === service ? (
-                  <div className="flex-1 flex items-center space-x-3">
-                    <input
-                      type="text"
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onKeyPress={(e) => {
-                        if (e.key === "Enter") handleUpdateService(service);
-                        if (e.key === "Escape") cancelEditing();
-                      }}
-                      className="flex-1 px-3 py-1 border border-primary-300 rounded focus:ring-2 focus:ring-accent-500 focus:border-accent-500 text-sm"
-                      autoFocus
-                    />
-                    <button
-                      onClick={() => handleUpdateService(service)}
-                      disabled={false}
-                      className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
-                    >
-                      <Check className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={cancelEditing}
-                      disabled={false}
-                      className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex-1">
-                      <span className="text-sm font-medium text-primary-900 capitalize">
-                        {service}
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => startEditing(service)}
-                        disabled={false}
-                        className="p-1 text-primary-400 hover:text-accent-600 disabled:opacity-50 transition-colors duration-200"
-                        title="Edit service"
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteService(service)}
-                        disabled={false}
-                        className="p-1 text-primary-400 hover:text-red-600 disabled:opacity-50 transition-colors duration-200"
-                        title="Delete service"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </>
-                )}
+                <div className="flex-1">
+                  <span className="text-sm font-medium text-primary-900 capitalize">
+                    {service}
+                  </span>
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-start space-x-2">
           <div className="text-blue-600 mt-0.5">
@@ -284,17 +195,16 @@ const ServicesManagement: React.FC<ServicesManagementProps> = () => {
               About Services
             </h4>
             <p className="text-sm text-blue-700 mt-1">
-              Services are used by contractors to categorize their skills and by
-              customers to find relevant contractors. Changes will be reflected
-              immediately for all users.
+              Services can only be added, not modified or removed. Once added,
+              they will be available for contractors to categorize their skills
+              and for customers to find relevant contractors.
             </p>
           </div>
         </div>
       </div>
-
-      {/* Action Buttons - Always visible, Cancel always enabled, Save enabled when changes exist */}
       <div className="flex items-center justify-end space-x-3 pt-4 border-t border-primary-200">
         <button
+          type="button"
           onClick={handleCancel}
           disabled={isSubmitting}
           className="px-4 py-2 text-primary-600 hover:text-primary-800 hover:bg-primary-100 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -302,13 +212,14 @@ const ServicesManagement: React.FC<ServicesManagementProps> = () => {
           Cancel
         </button>
         <button
-          onClick={handleSubmit}
+          type="button"
+          onClick={handleSaveClick}
           disabled={!hasChanges || isSubmitting}
           className="flex items-center space-x-2 px-6 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? (
             <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
               <span>Updating...</span>
             </>
           ) : (
@@ -320,15 +231,14 @@ const ServicesManagement: React.FC<ServicesManagementProps> = () => {
         </button>
       </div>
 
-      {/* Delete Confirmation Modal */}
       <ConfirmModal
-        isOpen={confirmDelete.isOpen}
-        title="Delete Service"
-        message={`Are you sure you want to delete "${confirmDelete.serviceToDelete}"? This action cannot be undone.`}
-        confirmText="Delete"
+        isOpen={showConfirmModal}
+        title="Confirm Service Addition"
+        message="Once saved, these services cannot be undone. Are you sure you want to add them permanently?"
+        confirmText="Confirm"
         cancelText="Cancel"
-        onConfirm={confirmDeleteService}
-        onCancel={cancelDeleteService}
+        onConfirm={confirmSave}
+        onCancel={cancelSave}
       />
     </div>
   );

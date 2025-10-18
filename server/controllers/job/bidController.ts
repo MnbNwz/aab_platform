@@ -176,7 +176,7 @@ export const getJobBids = async (req: Request, res: Response) => {
     const bids = await Bid.find({ jobRequest: jobRequestId })
       .populate(
         "contractor",
-        `${FIELD_CONSTANTS.NAME} ${FIELD_CONSTANTS.EMAIL} ${FIELD_CONSTANTS.PHONE}`,
+        `firstName lastName ${FIELD_CONSTANTS.EMAIL} ${FIELD_CONSTANTS.PHONE} profileImage role status approval geoHome contractor`,
       )
       .sort({ createdAt: -1 });
 

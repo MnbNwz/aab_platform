@@ -20,6 +20,7 @@ import {
   silentFetchCustomerDashboardThunk,
   silentFetchContractorDashboardThunk,
 } from "../thunks/dashboardThunks";
+import { submitBidThunk } from "../thunks/contractorBidsThunks";
 import type {
   CustomerDashboardResponse,
   ContractorDashboardResponse,
@@ -140,6 +141,76 @@ const dashboardSlice = createSlice({
     },
     clearPlatformError: (state) => {
       state.platformError = null;
+    },
+
+    // Update contractor lead stats after successful bid
+    updateContractorLeadStats: (
+      state,
+      action: PayloadAction<{
+        leadsUsed: number;
+        remaining: number;
+        leadsLimit: number;
+      }>
+    ) => {
+      if (state.contractorData?.contractor?.leadStats) {
+        state.contractorData.contractor.leadStats.used =
+          action.payload.leadsUsed;
+        state.contractorData.contractor.leadStats.remaining =
+          action.payload.remaining;
+        state.contractorData.contractor.leadStats.limit =
+          action.payload.leadsLimit;
+        state.contractorData.contractor.leadStats.canBid =
+          action.payload.remaining > 0;
+      }
+      // Also update unified data if it exists
+      if (state.data?.leadStats) {
+        state.data.leadStats.used = action.payload.leadsUsed;
+        state.data.leadStats.remaining = action.payload.remaining;
+        state.data.leadStats.limit = action.payload.leadsLimit;
+        state.data.leadStats.canBid = action.payload.remaining > 0;
+      }
+    },
+
+    // Add a new bid to recent bids list
+    addRecentBid: (
+      state,
+      action: PayloadAction<{
+        bidId: string;
+        jobTitle: string;
+        service: string;
+        bidAmount: number;
+        status: "pending" | "accepted" | "rejected";
+      }>
+    ) => {
+      const newBid = {
+        _id: action.payload.bidId,
+        jobTitle: action.payload.jobTitle,
+        service: action.payload.service,
+        bidAmount: action.payload.bidAmount,
+        status: action.payload.status as "pending" | "accepted" | "rejected",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Add to contractor data recent bids
+      if (state.contractorData?.contractor?.recentBids) {
+        state.contractorData.contractor.recentBids = [
+          newBid,
+          ...state.contractorData.contractor.recentBids.slice(0, 9), // Keep only 10 most recent
+        ];
+      } else if (state.contractorData?.contractor) {
+        state.contractorData.contractor.recentBids = [newBid];
+      }
+
+      // Add to unified data recent bids
+      if (state.data?.recentBids) {
+        state.data.recentBids = [
+          newBid,
+          ...state.data.recentBids.slice(0, 9), // Keep only 10 most recent
+        ];
+      } else if (state.data) {
+        state.data.recentBids = [newBid];
+      }
     },
   },
   extraReducers: (builder) => {
@@ -301,7 +372,42 @@ const dashboardSlice = createSlice({
         (_state, _action) => {
           // Don't update error state for silent refresh failures
         }
-      );
+      )
+
+      // Cross-slice: Listen to bid submission to update lead stats and bid counts
+      .addCase(submitBidThunk.fulfilled, (state, action) => {
+        const leadInfo = action.payload?.leadInfo;
+
+        if (!leadInfo) return;
+
+        // Helper to update lead stats in a given object
+        const updateLeadStats = (target: any) => {
+          if (!target?.leadStats) return;
+          target.leadStats.used = leadInfo.leadsUsed;
+          target.leadStats.remaining = leadInfo.remaining ?? 0;
+          target.leadStats.limit = leadInfo.leadsLimit;
+          target.leadStats.canBid = leadInfo.canAccess;
+        };
+
+        // Helper to update bidding stats in a given object
+        const updateBiddingStats = (target: any) => {
+          if (!target?.biddingStats) return;
+          const stats = target.biddingStats;
+          stats.totalBids = (stats.totalBids || 0) + 1;
+          stats.totalBidsThisMonth = (stats.totalBidsThisMonth || 0) + 1;
+
+          // Recalculate win rate
+          const acceptedBids = stats.acceptedBids || 0;
+          const totalBids = stats.totalBids;
+          stats.winRate = totalBids > 0 ? (acceptedBids / totalBids) * 100 : 0;
+        };
+
+        // Update both data structures (contractor dashboard and unified data)
+        updateLeadStats(state.contractorData?.contractor);
+        updateLeadStats(state.data);
+        updateBiddingStats(state.contractorData?.contractor);
+        updateBiddingStats(state.data);
+      });
   },
 });
 
@@ -315,6 +421,8 @@ export const {
   clearCustomerError,
   clearContractorError,
   clearPlatformError,
+  updateContractorLeadStats,
+  addRecentBid,
 } = dashboardSlice.actions;
 
 export default dashboardSlice.reducer;

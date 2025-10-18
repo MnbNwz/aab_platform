@@ -79,18 +79,35 @@ export const getContractorJobById = async (req: Request, res: Response) => {
       });
     }
 
-    // Check if contractor already bid on this job
-    const existingBid = await LeadAccess.findOne({
+    // Check if contractor already bid on this job and get bid details
+    const leadAccess = await LeadAccess.findOne({
       contractor: userId,
       jobRequest: jobId,
     }).populate("bid");
 
+    const self = !!leadAccess;
+    const myBid = leadAccess?.bid ? (leadAccess.bid as any) : null;
+    const selfBidAccepted = myBid?.status === "accepted";
+
+    // SECURITY: Only show customer contact info if contractor's bid was accepted
+    let responseData: any = {
+      ...job,
+      self, // NEW: true if contractor has bid on this job
+      myBid, // NEW: contractor's bid details (or null)
+      selfBidAccepted, // NEW: true if contractor's bid was accepted
+    };
+
+    if (!selfBidAccepted && responseData.createdBy) {
+      // Hide customer contact information if bid not accepted
+      responseData.createdBy = {
+        _id: responseData.createdBy._id,
+        // Hide email, phone, and name for security
+      };
+    }
+
     res.json({
       success: true,
-      data: {
-        ...job,
-        alreadyBid: !!existingBid, // True if contractor already placed a bid
-      },
+      data: responseData,
     });
   } catch (error) {
     console.error("Error getting contractor job by ID:", error);

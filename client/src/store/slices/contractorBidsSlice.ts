@@ -89,6 +89,10 @@ const contractorBidsSlice = createSlice({
       .addCase(submitBidThunk.fulfilled, (state) => {
         state.submitting = false;
         state.error = null;
+        // Note: We don't add the bid to the list here because the backend
+        // returns unpopulated bid data. The dashboard stats are updated
+        // via cross-slice listener in dashboardSlice. User can refresh
+        // the My Bids page to see the new bid with full details.
       })
       .addCase(submitBidThunk.rejected, (state, action) => {
         state.submitting = false;

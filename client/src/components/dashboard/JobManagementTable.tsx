@@ -31,6 +31,7 @@ const JobManagementTable: React.FC = () => {
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [noPropertyConfirmOpen, setNoPropertyConfirmOpen] = useState(false);
   const [editFromDetailView, setEditFromDetailView] = useState(false);
+  const [shouldRefetchBids, setShouldRefetchBids] = useState(true);
 
   // Fetch jobs on mount and when filters change
   useEffect(() => {
@@ -62,6 +63,7 @@ const JobManagementTable: React.FC = () => {
   // Handle job details with bids
   const handleViewJobDetails = (job: any) => {
     setSelectedJob(job);
+    setShouldRefetchBids(true); // Always refetch when opening fresh
     setJobDetailViewOpen(true);
   };
 
@@ -79,16 +81,41 @@ const JobManagementTable: React.FC = () => {
     }
   };
 
-  const handleCloseEditModal = () => {
+  const handleCloseEditModal = async (wasSaved?: boolean) => {
     setEditModalOpen(false);
-    // Refresh jobs after edit
-    dispatch(getJobsThunk(filters));
-    // Reopen detail view modal if we came from it
-    if (editFromDetailView && selectedJob) {
-      setJobDetailViewOpen(true);
-      setEditFromDetailView(false);
+
+    // Only refresh jobs if changes were actually saved
+    if (wasSaved) {
+      const result = await dispatch(getJobsThunk(filters));
+
+      // Reopen detail view modal if we came from it
+      if (editFromDetailView && selectedJob) {
+        // Find the updated job in the refreshed list
+        if (getJobsThunk.fulfilled.match(result)) {
+          const updatedJob = result.payload.jobs?.find(
+            (j: any) => j._id === selectedJob._id
+          );
+
+          if (updatedJob) {
+            setSelectedJob(updatedJob);
+            setShouldRefetchBids(true); // Refetch bids since job was updated
+            setJobDetailViewOpen(true);
+          }
+        }
+        setEditFromDetailView(false);
+      } else {
+        setSelectedJob(null);
+      }
     } else {
-      setSelectedJob(null);
+      // If no changes were saved, just clean up state
+      if (editFromDetailView && selectedJob) {
+        // Reopen detail view modal with the original job data
+        setShouldRefetchBids(false); // Don't refetch bids since nothing changed
+        setJobDetailViewOpen(true);
+        setEditFromDetailView(false);
+      } else {
+        setSelectedJob(null);
+      }
     }
   };
 
@@ -533,6 +560,7 @@ const JobManagementTable: React.FC = () => {
           job={selectedJob}
           onRefreshJobs={handleRefreshJobs}
           onEditJob={handleEditJobFromDetail}
+          shouldRefetch={shouldRefetchBids}
         />
       )}
 

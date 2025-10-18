@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState, AppDispatch } from "../../store";
-import type { ContractorJob } from "../../types";
+import type { ContractorJob, ContractorJobDetails } from "../../types";
 import {
   getContractorJobsThunk,
   getContractorJobByIdThunk,
@@ -25,9 +25,10 @@ const ContractorJobRequestsTable: React.FC = () => {
   } = useSelector((state: RootState) => state.contractorJob);
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedJob, setSelectedJob] = useState<ContractorJob | null>(null);
+  const [selectedJob, setSelectedJob] = useState<ContractorJobDetails | null>(
+    null
+  );
   const [selectedJobLeadInfo, setSelectedJobLeadInfo] = useState<any>(null);
-  const [selectedJobBidInfo, setSelectedJobBidInfo] = useState<any>(null);
   const [showJobDetails, setShowJobDetails] = useState(false);
 
   // Fetch jobs on mount and when filters change
@@ -52,37 +53,18 @@ const ContractorJobRequestsTable: React.FC = () => {
 
   // Handle job view (consumes a lead)
   const handleViewJob = async (job: ContractorJob) => {
-    // Skip lead check if leadInfo is not available (backend no longer provides it)
-    // if (!leadInfo?.canAccess) {
-    //   showToast.error(
-    //     "You have reached your monthly lead limit. Please upgrade your membership."
-    //   );
-    //   return;
-    // }
-
-    if (!job.canAccessNow) {
-      showToast.error(
-        `This job will be available at ${new Date(
-          job.accessTime
-        ).toLocaleString()}`
-      );
-      return;
-    }
-
-    // Open modal immediately with loader
-    setSelectedJob(job);
+    // Open modal immediately with loader (set to null, details will load)
+    setSelectedJob(null);
     setSelectedJobLeadInfo(null);
-    setSelectedJobBidInfo(null);
     setShowJobDetails(true);
 
     try {
       const result = await dispatch(getContractorJobByIdThunk(job._id));
       if (getContractorJobByIdThunk.fulfilled.match(result)) {
         // New API response: job data is directly in payload (no nested .job)
-        setSelectedJob(result.payload);
-        // No leadInfo or bidInfo in new response
+        setSelectedJob(result.payload as ContractorJobDetails);
+        // No leadInfo in new response
         setSelectedJobLeadInfo(null);
-        setSelectedJobBidInfo(null);
       }
     } catch (error) {
       showToast.error("Failed to load job details");
@@ -95,7 +77,6 @@ const ContractorJobRequestsTable: React.FC = () => {
     setShowJobDetails(false);
     setSelectedJob(null);
     setSelectedJobLeadInfo(null);
-    setSelectedJobBidInfo(null);
   };
 
   const handleBidSubmitted = () => {
@@ -115,6 +96,27 @@ const ContractorJobRequestsTable: React.FC = () => {
       default:
         return "bg-gray-100 text-gray-800";
     }
+  };
+
+  // Format date as "X days ago" or full date
+  const formatPostedDate = (dateString: string) => {
+    const postedDate = new Date(dateString);
+    const now = new Date();
+    const diffInMs = now.getTime() - postedDate.getTime();
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+    const diffInMonths = Math.floor(diffInDays / 30);
+
+    if (diffInMonths < 1) {
+      if (diffInDays === 0) return "Today";
+      if (diffInDays === 1) return "1 day ago";
+      return `${diffInDays} days ago`;
+    }
+
+    return postedDate.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
   };
 
   return (
@@ -234,10 +236,8 @@ const ContractorJobRequestsTable: React.FC = () => {
             {jobs.map((job: ContractorJob) => (
               <div
                 key={job._id}
-                onClick={() => job.canAccessNow && handleViewJob(job)}
-                className={`bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow w-full ${
-                  job.canAccessNow ? "cursor-pointer" : "cursor-not-allowed"
-                }`}
+                onClick={() => handleViewJob(job)}
+                className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow w-full cursor-pointer"
               >
                 <h3
                   className="font-semibold text-gray-900 text-base mb-3 truncate"
@@ -271,7 +271,7 @@ const ContractorJobRequestsTable: React.FC = () => {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Posted:</span>
                     <span className="text-gray-900">
-                      {new Date(job.createdAt).toLocaleDateString()}
+                      {formatPostedDate(job.createdAt)}
                     </span>
                   </div>
                 </div>
@@ -327,10 +327,8 @@ const ContractorJobRequestsTable: React.FC = () => {
               jobs.map((job: ContractorJob) => (
                 <tr
                   key={job._id}
-                  onClick={() => job.canAccessNow && handleViewJob(job)}
-                  className={`hover:bg-gray-50 ${
-                    job.canAccessNow ? "cursor-pointer" : "cursor-not-allowed"
-                  }`}
+                  onClick={() => handleViewJob(job)}
+                  className="hover:bg-gray-50 cursor-pointer"
                 >
                   <td className="px-6 py-4">
                     <div
@@ -350,7 +348,7 @@ const ContractorJobRequestsTable: React.FC = () => {
                     {job.timeline} days
                   </td>
                   <td className="px-6 py-4 text-center text-sm text-gray-600">
-                    {new Date(job.createdAt).toLocaleDateString()}
+                    {formatPostedDate(job.createdAt)}
                   </td>
                 </tr>
               ))
@@ -444,7 +442,6 @@ const ContractorJobRequestsTable: React.FC = () => {
         onClose={handleCloseJobDetails}
         loading={jobDetailsLoading}
         leadInfo={selectedJobLeadInfo}
-        bidInfo={selectedJobBidInfo}
         onBidSubmitted={handleBidSubmitted}
       />
     </div>

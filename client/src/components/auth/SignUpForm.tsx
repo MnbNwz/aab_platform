@@ -694,7 +694,7 @@ const SignUpForm: React.FC = () => {
                     Service Types (Select all that apply) *
                     {watchedServices && watchedServices.length > 0 && (
                       <span className="ml-2 text-accent-400 text-xs">
-                        ({watchedServices.length}/10 selected)
+                        ({watchedServices.length}/{services.length} selected)
                       </span>
                     )}
                   </label>

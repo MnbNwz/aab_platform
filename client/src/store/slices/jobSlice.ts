@@ -46,11 +46,41 @@ export interface Bid {
   updatedAt: string;
 }
 
+// Property Interface (for job details)
+export interface PropertyInJob {
+  _id: string;
+  userId: string;
+  title: string;
+  propertyType: "apartment" | "house" | "villa";
+  location: {
+    type: string;
+    coordinates: [number, number]; // [longitude, latitude]
+  };
+  area: number;
+  areaUnit: "sqft" | "sqm";
+  totalRooms: number;
+  bedrooms: number;
+  bathrooms: number;
+  kitchens: number;
+  description?: string;
+  images?: string[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Created By Interface (for job details)
+export interface CreatedBy {
+  _id: string;
+  email: string;
+  phone?: string;
+}
+
 // Job Interface
 export interface Job {
   _id: string;
-  createdBy: string;
-  property: string;
+  createdBy: string | CreatedBy;
+  property?: string | PropertyInJob;
   title: string;
   description: string;
   category: string;

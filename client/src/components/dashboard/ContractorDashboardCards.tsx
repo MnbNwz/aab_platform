@@ -1,4 +1,4 @@
-import React, { memo, useMemo } from "react";
+import React, { memo, useMemo, useCallback } from "react";
 import { useSelector } from "react-redux";
 import {
   Target,
@@ -126,22 +126,25 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
     const analytics =
       dashboardData?.contractor || dashboardData?.analytics || dashboardData;
 
+    // Extract specific values for memoization dependencies
+    const biddingStats = analytics?.biddingStats;
+    const leadStats = analytics?.leadStats;
+    const earningsStats = analytics?.earningsStats;
+
     const statCards = useMemo(
       () => [
         {
           title: "Total Bids",
-          value: analytics?.biddingStats?.totalBids ?? 0,
+          value: biddingStats?.totalBids ?? 0,
           icon: Target,
           color: "bg-primary-500",
           textColor: "text-primary-600",
           bgColor: "bg-primary-50",
-          subtitle: `${
-            analytics?.biddingStats?.totalBidsThisMonth ?? 0
-          } this month`,
+          subtitle: `${biddingStats?.totalBidsThisMonth ?? 0} this month`,
         },
         {
           title: "Won Bids",
-          value: analytics?.biddingStats?.acceptedBids ?? 0,
+          value: biddingStats?.acceptedBids ?? 0,
           icon: CheckCircle,
           color: "bg-green-500",
           textColor: "text-green-600",
@@ -149,7 +152,7 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
         },
         {
           title: "Win Rate",
-          value: `${(analytics?.biddingStats?.winRate ?? 0).toFixed(1)}%`,
+          value: `${(biddingStats?.winRate ?? 0).toFixed(1)}%`,
           icon: TrendingUp,
           color: "bg-purple-500",
           textColor: "text-purple-600",
@@ -158,7 +161,7 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
         {
           title: "Total Earnings",
           value: `$${(
-            (analytics?.earningsStats?.totalEarnings ?? 0) / 100
+            (earningsStats?.totalEarnings ?? 0) / 100
           ).toLocaleString()}`,
           icon: DollarSign,
           color: "bg-emerald-500",
@@ -167,17 +170,15 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
         },
         {
           title: "Leads Used",
-          value: `${analytics?.leadStats?.used ?? 0}/${
-            analytics?.leadStats?.limit ?? 0
-          }`,
+          value: `${leadStats?.used ?? 0}/${leadStats?.limit ?? 0}`,
           icon: Users,
           color: "bg-cyan-500",
           textColor: "text-cyan-600",
           bgColor: "bg-cyan-50",
-          subtitle: `${analytics?.leadStats?.remaining ?? 0} remaining`,
+          subtitle: `${leadStats?.remaining ?? 0} remaining`,
         },
       ],
-      [analytics]
+      [biddingStats, leadStats, earningsStats]
     );
 
     return (
@@ -216,36 +217,39 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
             items={analytics?.recentBids ?? []}
             loading={false}
             emptyMessage="No recent bids"
-            renderItem={(bid, index) => (
-              <div
-                key={index}
-                className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
-                    {bid.jobTitle}
-                  </p>
-                  <p className="text-xs text-gray-500 capitalize">
-                    {bid.service}
-                  </p>
+            renderItem={useCallback(
+              (bid, index) => (
+                <div
+                  key={index}
+                  className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {bid.jobTitle}
+                    </p>
+                    <p className="text-xs text-gray-500 capitalize">
+                      {bid.service}
+                    </p>
+                  </div>
+                  <div className="text-right ml-4">
+                    <p className="text-sm font-medium text-primary-700">
+                      ${((bid.bidAmount || 0) / 100).toLocaleString()}
+                    </p>
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs rounded-full font-semibold ${
+                        bid.status === "accepted"
+                          ? "bg-green-100 text-green-800"
+                          : bid.status === "pending"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {bid.status}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-right ml-4">
-                  <p className="text-sm font-medium text-primary-700">
-                    ${((bid.bidAmount || 0) / 100).toLocaleString()}
-                  </p>
-                  <span
-                    className={`inline-flex px-2 py-1 text-xs rounded-full font-semibold ${
-                      bid.status === "accepted"
-                        ? "bg-green-100 text-green-800"
-                        : bid.status === "pending"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
-                  >
-                    {bid.status}
-                  </span>
-                </div>
-              </div>
+              ),
+              []
             )}
           />
 
@@ -255,28 +259,31 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
             items={analytics?.recentWonJobs ?? []}
             loading={false}
             emptyMessage="No won jobs yet"
-            renderItem={(job, index) => (
-              <div
-                key={index}
-                className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
-                    {job.jobTitle}
-                  </p>
-                  <p className="text-xs text-gray-500 capitalize">
-                    {job.service}
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    Accepted: {new Date(job.acceptedAt).toLocaleDateString()}
-                  </p>
+            renderItem={useCallback(
+              (job, index) => (
+                <div
+                  key={index}
+                  className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {job.jobTitle}
+                    </p>
+                    <p className="text-xs text-gray-500 capitalize">
+                      {job.service}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      Accepted: {new Date(job.acceptedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="text-right ml-4">
+                    <p className="text-sm font-semibold text-green-600">
+                      ${((job.bidAmount || 0) / 100).toLocaleString()}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right ml-4">
-                  <p className="text-sm font-semibold text-green-600">
-                    ${((job.bidAmount || 0) / 100).toLocaleString()}
-                  </p>
-                </div>
-              </div>
+              ),
+              []
             )}
           />
         </div>
