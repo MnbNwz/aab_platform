@@ -12,12 +12,25 @@ import analyticsRoutes from "@routes/analytics";
 import { authenticate } from "@middlewares/auth";
 import serviceRoutes from "@routes/admin/service";
 import favoriteRoutes from "@routes/user/favorites";
+import { generateApiStatusPage } from "@utils/core/apiStatus";
 
 const router = Router();
 
-//default route
+// Root route - simple API info
 router.get("/", (req: Request, res: Response) => {
-  res.json({ message: "API Root" });
+  res.status(200).json({
+    success: true,
+    message: "AAS Platform API",
+    version: "1.0.0",
+    status: "running",
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Health check route - detailed status page
+router.get("/health", (req: Request, res: Response) => {
+  const html = generateApiStatusPage();
+  res.status(200).send(html);
 });
 
 // Mount webhook routes FIRST (before authentication middleware)

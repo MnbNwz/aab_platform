@@ -2,3 +2,4 @@
 export * from "./date";
 export * from "./logger";
 export * from "./objectId";
+export * from "./apiStatus";
