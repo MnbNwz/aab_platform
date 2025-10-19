@@ -93,7 +93,7 @@ export const getPlatformDashboardController = async (req: AuthenticatedRequest, 
     res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       success: false,
       message: CONTROLLER_ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
-      error: process.env.NODE_ENV === "development" ? (error as any)?.message : undefined,
+      error: (error as any)?.message,
     });
   }
 };

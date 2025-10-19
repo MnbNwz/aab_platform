@@ -15,6 +15,11 @@ import favoriteRoutes from "@routes/user/favorites";
 
 const router = Router();
 
+//default route
+router.get("/", (req: Request, res: Response) => {
+  res.json({ message: "API Root" });
+});
+
 // Mount webhook routes FIRST (before authentication middleware)
 // Webhooks need to be accessible without authentication
 router.use("/payment", paymentRoutes);
@@ -57,10 +62,5 @@ router.use("/property", propertyRoutes);
 router.use("/investment", investmentRoutes); // Investment opportunities with role-based access
 router.use("/dashboard", dashboardRoutes); // Quick health check dashboard
 router.use("/analytics", analyticsRoutes); // Comprehensive business analytics (admin only)
-
-// Example route
-router.get("/", (req: Request, res: Response) => {
-  res.json({ message: "API Root" });
-});
 
 export default router;

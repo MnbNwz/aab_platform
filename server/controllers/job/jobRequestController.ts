@@ -62,7 +62,7 @@ export const createJobRequest = async (req: Request & { files?: any[] }, res: Re
     res.status(500).json({
       success: false,
       message: CONTROLLER_ERROR_MESSAGES.JOB_CREATION_FAILED,
-      error: process.env.NODE_ENV === "development" ? (error as any)?.message : undefined,
+      error: (error as any)?.message,
     });
   }
 };

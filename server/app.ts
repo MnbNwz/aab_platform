@@ -15,6 +15,14 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Rate Limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Logger setup (using Pino from utils/logger)
 
 // Middlewares
@@ -33,14 +41,7 @@ app.use(
   }),
 );
 
-// Rate Limiting
-// const limiter = rateLimit({
-//   windowMs: 15 * 60 * 1000, // 15 minutes
-//   max: 100, // limit each IP to 100 requests per windowMs
-//   standardHeaders: true,
-//   legacyHeaders: false,
-// });
-// app.use(limiter);
+app.use(limiter);
 
 // MongoDB connection (singleton)
 connectDB().catch((err: Error) => logErrorWithContext(err, { operation: "database_connection" }));
