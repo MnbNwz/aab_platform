@@ -1,12 +1,13 @@
 import mongoose from "mongoose";
 import { logErrorWithContext } from "@utils/core";
+import { ENV_CONFIG } from "./env";
 
 let dbInstance: typeof mongoose | null = null;
 
 export const connectDB = async () => {
   if (dbInstance) return dbInstance;
   try {
-    dbInstance = await mongoose.connect(process.env.MONGO_URI as string, {
+    dbInstance = await mongoose.connect(ENV_CONFIG.MONGO_URI, {
       serverSelectionTimeoutMS: 5000, // polling timeout
     });
     console.log("MongoDB connected successfully");

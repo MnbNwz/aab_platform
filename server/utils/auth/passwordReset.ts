@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { ENV_CONFIG } from "@config/env";
 
 /**
  * Generate a secure password reset token
@@ -86,5 +87,5 @@ export function clearPasswordResetData() {
  * Generate password reset URL for email templates
  */
 export function generatePasswordResetUrl(resetToken: string): string {
-  return `${process.env.FRONTEND_URL || "http://localhost:3000"}/reset-password?token=${resetToken}`;
+  return `${ENV_CONFIG.FRONTEND_URL}/reset-password?token=${resetToken}`;
 }

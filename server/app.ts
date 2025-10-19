@@ -5,15 +5,15 @@ import compression from "compression";
 import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
-import dotenv from "dotenv";
-import { connectDB, disconnectDB } from "@config/db";
+import { connectDB, disconnectDB, ENV_CONFIG, validateConfig } from "@config/index";
 import apiRoutes from "@routes/index";
 import { appLogger, logErrorWithContext } from "@utils/core";
 
-dotenv.config();
+// Validate environment configuration on startup
+validateConfig();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = ENV_CONFIG.PORT;
 
 // Rate Limiting
 const limiter = rateLimit({
@@ -28,7 +28,7 @@ const limiter = rateLimit({
 // Middlewares
 app.use(helmet());
 app.use(compression());
-app.use(cors({ origin: true, credentials: true }));
+app.use(cors({ origin: ENV_CONFIG.FRONTEND_URL || true, credentials: true }));
 
 // Special handling for Stripe webhooks - must be before express.json()
 app.use("/api/payment/webhook/stripe", express.raw({ type: "application/json" }));

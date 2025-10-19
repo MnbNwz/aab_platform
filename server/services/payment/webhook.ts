@@ -7,6 +7,7 @@ import { MembershipPlan } from "@models/membership";
 import { sendPaymentReceipt, sendPaymentFailedNotification } from "@utils/email";
 import { getMembershipEndDate, getDaysRemaining } from "@utils/core/date";
 import { stripe } from "@config/stripe";
+import { ENV_CONFIG } from "@config/env";
 import { validateUpgrade, calculateEffectiveBenefits } from "@services/membership/upgrade";
 
 // ==================== MEMBERSHIP UPGRADE ====================
@@ -537,7 +538,7 @@ export const handlePaymentFailure = async (paymentIntent: Stripe.PaymentIntent) 
     data.payment.amount,
     failureReason,
     undefined,
-    `${process.env.FRONTEND_URL}/retry-payment/${data.payment._id}`,
+    `${ENV_CONFIG.FRONTEND_URL}/retry-payment/${data.payment._id}`,
   );
 
   return {

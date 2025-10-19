@@ -5,6 +5,7 @@ import { User } from "@models/user";
 import { UserMembership } from "@models/user";
 import { MembershipPlan } from "@models/membership";
 import { sendPaymentReceipt } from "@utils/email";
+import { ENV_CONFIG } from "@config/env";
 import {
   getOrCreateCustomer,
   createJobPaymentIntent,
@@ -137,8 +138,8 @@ export const createOneTimeMembershipCheckout = async (
         },
       ],
       mode: "payment", // One-time payment
-      success_url: `${process.env.FRONTEND_URL}/membership/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL}/membership/cancel`,
+      success_url: `${ENV_CONFIG.FRONTEND_URL}/membership/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${ENV_CONFIG.FRONTEND_URL}/membership/cancel`,
       metadata: {
         userId,
         planId,

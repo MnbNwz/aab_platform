@@ -1,3 +1,5 @@
+import { ENV_CONFIG } from "@config/env";
+
 /**
  * Generates HTML for the API status page
  * @returns HTML string for the API landing page
@@ -117,7 +119,7 @@ export const generateApiStatusPage = (): string => {
     <div class="info-grid">
       <div class="info-item">
         <span class="info-label">Environment</span>
-        <span class="info-value">${process.env.NODE_ENV || "development"}</span>
+        <span class="info-value">${ENV_CONFIG.NODE_ENV}</span>
       </div>
       <div class="info-item">
         <span class="info-label">Uptime</span>

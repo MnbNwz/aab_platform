@@ -1,9 +1,9 @@
-import "dotenv/config";
 import Stripe from "stripe";
 import { SERVICE_ERROR_MESSAGES, SERVICE_CONSTANTS } from "@services/constants";
 import { User } from "@models/user";
 import { UserMembership } from "@models/user";
 import { JobPayment } from "@models/payment";
+import { ENV_CONFIG } from "@config/env";
 import { getCurrentMembership } from "@services/membership/membership";
 import {
   calculateDepositAmount,
@@ -333,8 +333,8 @@ export async function setupContractorConnect(
     // Create account link for onboarding
     const accountLink = await stripe.accountLinks.create({
       account: account.id,
-      refresh_url: `${process.env.FRONTEND_URL}/contractor/connect/refresh`,
-      return_url: `${process.env.FRONTEND_URL}/contractor/connect/success`,
+      refresh_url: `${ENV_CONFIG.FRONTEND_URL}/contractor/connect/refresh`,
+      return_url: `${ENV_CONFIG.FRONTEND_URL}/contractor/connect/success`,
       type: SERVICE_CONSTANTS.ACCOUNT_ONBOARDING,
     });
 

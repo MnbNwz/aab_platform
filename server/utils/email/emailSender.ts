@@ -4,33 +4,33 @@ import { emailTemplates, type TemplateType } from "@utils/email/email-templates"
 import type { EmailResult, SMTPConfig } from "@utils/types/email";
 import { validateEmail } from "@utils/validation/validation";
 import { VALIDATION_CONSTANTS } from "@utils/constants/validation";
-import "dotenv/config";
+import { ENV_CONFIG } from "@config/env";
 
 // Destructure environment variables once for better performance
 
 // Initialize SMTP transporter with enhanced configuration
 const createTransporter = (): nodemailer.Transporter => {
   const smtpConfig: SMTPConfig = {
-    host: process.env.SMTP_HOST!,
-    port: parseInt(process.env.SMTP_PORT || "465"),
-    secure: process.env.SMTP_SECURE === "true", // true for 465, false for other ports
+    host: ENV_CONFIG.SMTP.HOST,
+    port: ENV_CONFIG.SMTP.PORT,
+    secure: ENV_CONFIG.SMTP.SECURE,
     auth: {
-      user: process.env.SMTP_USER!,
-      pass: process.env.SMTP_PASS!,
+      user: ENV_CONFIG.SMTP.USER,
+      pass: ENV_CONFIG.SMTP.PASS,
     },
     tls: {
-      rejectUnauthorized: process.env.SMTP_TLS_REJECT_UNAUTHORIZED !== "false",
+      rejectUnauthorized: ENV_CONFIG.SMTP.TLS_REJECT_UNAUTHORIZED,
     },
     // Enhanced connection settings for better reliability
-    connectionTimeout: parseInt(process.env.SMTP_CONNECTION_TIMEOUT || "60000"), // 60 seconds
-    greetingTimeout: parseInt(process.env.SMTP_GREETING_TIMEOUT || "30000"), // 30 seconds
-    socketTimeout: parseInt(process.env.SMTP_SOCKET_TIMEOUT || "60000"), // 60 seconds
+    connectionTimeout: ENV_CONFIG.SMTP.CONNECTION_TIMEOUT,
+    greetingTimeout: ENV_CONFIG.SMTP.GREETING_TIMEOUT,
+    socketTimeout: ENV_CONFIG.SMTP.SOCKET_TIMEOUT,
     // Retry configuration
-    pool: process.env.SMTP_POOL === "true",
-    maxConnections: parseInt(process.env.SMTP_MAX_CONNECTIONS || "5"),
-    maxMessages: parseInt(process.env.SMTP_MAX_MESSAGES || "100"),
-    rateDelta: parseInt(process.env.SMTP_RATE_DELTA || "1000"),
-    rateLimit: parseInt(process.env.SMTP_RATE_LIMIT || "5"),
+    pool: ENV_CONFIG.SMTP.POOL,
+    maxConnections: ENV_CONFIG.SMTP.MAX_CONNECTIONS,
+    maxMessages: ENV_CONFIG.SMTP.MAX_MESSAGES,
+    rateDelta: ENV_CONFIG.SMTP.RATE_DELTA,
+    rateLimit: ENV_CONFIG.SMTP.RATE_LIMIT,
   };
 
   return nodemailer.createTransport(smtpConfig);
@@ -85,8 +85,8 @@ export const sendEmail = async (
   data: Record<string, any>,
   retryCount: number = 0,
 ): Promise<EmailResult> => {
-  const maxRetries = parseInt(process.env.SMTP_MAX_RETRIES || "3");
-  const retryDelay = parseInt(process.env.SMTP_RETRY_DELAY || "2000");
+  const maxRetries = ENV_CONFIG.SMTP.MAX_RETRIES;
+  const retryDelay = ENV_CONFIG.SMTP.RETRY_DELAY;
 
   try {
     // 1. Email validation
@@ -117,19 +117,19 @@ export const sendEmail = async (
 
     const mailOptions = {
       from: {
-        name: process.env.SMTP_FROM_NAME,
-        address: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER,
+        name: ENV_CONFIG.SMTP.FROM_NAME,
+        address: ENV_CONFIG.SMTP.FROM_EMAIL,
       },
       to: to,
-      replyTo: process.env.SMTP_REPLY_TO || process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER,
+      replyTo: ENV_CONFIG.SMTP.REPLY_TO,
       subject: emailContent.subject,
       html: emailContent.html,
       // Add DKIM signing if configured
-      dkim: process.env.SMTP_DKIM_PRIVATE_KEY
+      dkim: ENV_CONFIG.SMTP.DKIM.PRIVATE_KEY
         ? {
-            domainName: process.env.SMTP_DKIM_DOMAIN,
-            keySelector: process.env.SMTP_DKIM_KEY_SELECTOR,
-            privateKey: process.env.SMTP_DKIM_PRIVATE_KEY,
+            domainName: ENV_CONFIG.SMTP.DKIM.DOMAIN!,
+            keySelector: ENV_CONFIG.SMTP.DKIM.KEY_SELECTOR!,
+            privateKey: ENV_CONFIG.SMTP.DKIM.PRIVATE_KEY,
           }
         : undefined,
     };
@@ -243,7 +243,7 @@ export const sendOTPEmail = async (
     const result = await sendEmail(userEmail, "", "otp_verification", {
       otpCode,
       firstName,
-      verificationUrl: `${process.env.FRONTEND_URL}/verify-email`,
+      verificationUrl: `${ENV_CONFIG.FRONTEND_URL}/verify-email`,
     });
 
     if (result.success) {
@@ -319,7 +319,7 @@ export const sendBidAcceptedNotification = async (
       jobTitle,
       bidAmount,
       jobId: "job-id-placeholder",
-      viewBidUrl: `${process.env.FRONTEND_URL}/contractor/bids`,
+      viewBidUrl: `${ENV_CONFIG.FRONTEND_URL}/contractor/bids`,
     });
 
     if (result.success) {
@@ -350,7 +350,7 @@ export const sendPasswordResetEmail = async (
   try {
     const result = await sendEmail(userEmail, "", "password_reset", {
       firstName,
-      resetUrl: `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`,
+      resetUrl: `${ENV_CONFIG.FRONTEND_URL}/reset-password?token=${resetToken}`,
       expiryHours: 1, // Password reset expires in 1 hour
     });
 
@@ -385,7 +385,7 @@ export const sendPaymentFailedNotification = async (
       amount,
       failureReason,
       planName,
-      retryUrl: retryUrl || `${process.env.FRONTEND_URL}/update-payment`,
+      retryUrl: retryUrl || `${ENV_CONFIG.FRONTEND_URL}/update-payment`,
     });
 
     if (result.success) {

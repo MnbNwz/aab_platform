@@ -61,10 +61,8 @@ export const AUTHORIZATION_CONSTANTS = {
 
 // Environment and cookie constants
 export const ENVIRONMENT_CONSTANTS = {
-  PRODUCTION: "production",
   REVOKE_STATUS: "revoke",
-  STRICT_SAMESITE: "strict",
-  STRING_TYPE: "string",
+  COOKIE_SAMESITE: "none", // "none" for cross-subdomain cookies with secure flag
 } as const;
 
 // HTTP status codes

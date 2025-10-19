@@ -1,4 +1,5 @@
 import pino from "pino";
+import { ENV_CONFIG } from "@config/env";
 
 /**
  * Comprehensive logging utility using Pino
@@ -7,7 +8,7 @@ import pino from "pino";
 
 // Create Pino logger instance
 const logger = pino({
-  level: process.env.LOG_LEVEL || "info",
+  level: ENV_CONFIG.LOG_LEVEL,
   formatters: {
     level: (label: string) => {
       return { level: label };

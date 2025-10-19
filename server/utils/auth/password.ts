@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { validatePassword as validatePasswordLib } from "@utils/validation/validation";
+import { ENV_CONFIG } from "@config/env";
 
 /**
  * Hash password using SHA-256
@@ -39,12 +40,7 @@ export function generateAccessToken(userId: string, role: string): string {
     jti: crypto.randomUUID(), // Unique token ID for tracking/revocation
   };
 
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    throw new Error("JWT_SECRET environment variable is not set");
-  }
-
-  return jwt.sign(payload, secret, {
+  return jwt.sign(payload, ENV_CONFIG.JWT_SECRET, {
     algorithm: "HS256",
     issuer: "aas-platform",
     audience: "aas-users",
@@ -68,12 +64,7 @@ export function generateRefreshToken(userId: string): string {
     jti: crypto.randomUUID(),
   };
 
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    throw new Error("JWT_SECRET environment variable is not set");
-  }
-
-  return jwt.sign(payload, secret, {
+  return jwt.sign(payload, ENV_CONFIG.JWT_SECRET, {
     algorithm: "HS256",
     issuer: "aas-platform",
     audience: "aas-users",
@@ -97,12 +88,7 @@ export function verifyAccessToken(
   token: string,
 ): { userId: string; role: string; type: string; iat: number; exp: number; jti: string } | null {
   try {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      throw new Error("JWT_SECRET environment variable is not set");
-    }
-
-    const decoded = jwt.verify(token, secret, {
+    const decoded = jwt.verify(token, ENV_CONFIG.JWT_SECRET, {
       algorithms: ["HS256"],
       issuer: "aas-platform",
       audience: "aas-users",
@@ -134,12 +120,7 @@ export function verifyRefreshToken(
   token: string,
 ): { userId: string; type: string; iat: number; exp: number; jti: string } | null {
   try {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      throw new Error("JWT_SECRET environment variable is not set");
-    }
-
-    const decoded = jwt.verify(token, secret, {
+    const decoded = jwt.verify(token, ENV_CONFIG.JWT_SECRET, {
       algorithms: ["HS256"],
       issuer: "aas-platform",
       audience: "aas-users",

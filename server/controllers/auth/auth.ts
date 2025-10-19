@@ -11,6 +11,7 @@ import {
 import S3Upload from "@utils/storage";
 import { AUTHORIZATION_CONSTANTS, ENVIRONMENT_CONSTANTS } from "@middlewares/constants";
 import { CONTROLLER_CONSTANTS, FIELD_CONSTANTS } from "@controllers/constants";
+import { ENV_CONFIG } from "@config/env";
 
 export const signupController = async (req: Request & { files?: any[] }, res: Response) => {
   try {
@@ -33,14 +34,16 @@ export const signupController = async (req: Request & { files?: any[] }, res: Re
     // Set tokens in HTTP-only cookies
     res.cookie(AUTHORIZATION_CONSTANTS.ACCESS_TOKEN_COOKIE, result.accessToken, {
       httpOnly: true,
-      secure: process.env.SECURE_COOKIES === "true", // Use SECURE_COOKIES flag
-      sameSite: ENVIRONMENT_CONSTANTS.STRICT_SAMESITE,
+      secure: ENV_CONFIG.SECURE_COOKIES,
+      sameSite: ENVIRONMENT_CONSTANTS.COOKIE_SAMESITE,
+      domain: ENV_CONFIG.COOKIE_DOMAIN,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
     res.cookie(AUTHORIZATION_CONSTANTS.REFRESH_TOKEN_COOKIE, result.refreshToken, {
       httpOnly: true,
-      secure: process.env.SECURE_COOKIES === "true", // Use SECURE_COOKIES flag
-      sameSite: ENVIRONMENT_CONSTANTS.STRICT_SAMESITE,
+      secure: ENV_CONFIG.SECURE_COOKIES,
+      sameSite: ENVIRONMENT_CONSTANTS.COOKIE_SAMESITE,
+      domain: ENV_CONFIG.COOKIE_DOMAIN,
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
     res.status(201).json({
@@ -63,15 +66,17 @@ export const signinController = async (req: Request, res: Response) => {
     // Set tokens in HTTP-only cookies
     res.cookie(AUTHORIZATION_CONSTANTS.ACCESS_TOKEN_COOKIE, result.accessToken, {
       httpOnly: true,
-      secure: process.env.SECURE_COOKIES === "true", // Use SECURE_COOKIES flag
-      sameSite: ENVIRONMENT_CONSTANTS.STRICT_SAMESITE,
+      secure: ENV_CONFIG.SECURE_COOKIES,
+      sameSite: ENVIRONMENT_CONSTANTS.COOKIE_SAMESITE,
+      domain: ENV_CONFIG.COOKIE_DOMAIN,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
     res.cookie(AUTHORIZATION_CONSTANTS.REFRESH_TOKEN_COOKIE, result.refreshToken, {
       httpOnly: true,
-      secure: process.env.SECURE_COOKIES === "true", // Use SECURE_COOKIES flag
-      sameSite: ENVIRONMENT_CONSTANTS.STRICT_SAMESITE,
+      secure: ENV_CONFIG.SECURE_COOKIES,
+      sameSite: ENVIRONMENT_CONSTANTS.COOKIE_SAMESITE,
+      domain: ENV_CONFIG.COOKIE_DOMAIN,
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
 
@@ -91,14 +96,16 @@ export const logout = async (req: Request, res: Response) => {
   // Clear the authentication cookies
   res.clearCookie(AUTHORIZATION_CONSTANTS.ACCESS_TOKEN_COOKIE, {
     httpOnly: true,
-    secure: process.env.SECURE_COOKIES === "true", // Use SECURE_COOKIES flag
-    sameSite: ENVIRONMENT_CONSTANTS.STRICT_SAMESITE,
+    secure: ENV_CONFIG.SECURE_COOKIES,
+    sameSite: ENVIRONMENT_CONSTANTS.COOKIE_SAMESITE,
+    domain: ENV_CONFIG.COOKIE_DOMAIN,
   });
 
   res.clearCookie(AUTHORIZATION_CONSTANTS.REFRESH_TOKEN_COOKIE, {
     httpOnly: true,
-    secure: process.env.SECURE_COOKIES === "true", // Use SECURE_COOKIES flag
-    sameSite: ENVIRONMENT_CONSTANTS.STRICT_SAMESITE,
+    secure: ENV_CONFIG.SECURE_COOKIES,
+    sameSite: ENVIRONMENT_CONSTANTS.COOKIE_SAMESITE,
+    domain: ENV_CONFIG.COOKIE_DOMAIN,
   });
 
   res.status(200).json({

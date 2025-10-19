@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { verifyAccessToken, verifyRefreshToken, generateAccessToken } from "@utils/auth";
 import { User } from "@models/user";
 import { AUTHORIZATION_CONSTANTS, ENVIRONMENT_CONSTANTS } from "@middlewares/constants";
+import { ENV_CONFIG } from "@config/env";
 
 /**
  * Middleware that automatically handles token refresh when access token expires
@@ -63,8 +64,9 @@ export const autoRefreshToken = async (req: any, res: Response, next: NextFuncti
       // Set new access token in cookie
       res.cookie(AUTHORIZATION_CONSTANTS.ACCESS_TOKEN_COOKIE, newAccessToken, {
         httpOnly: true,
-        secure: process.env.SECURE_COOKIES === "true", // Use SECURE_COOKIES flag
-        sameSite: ENVIRONMENT_CONSTANTS.STRICT_SAMESITE,
+        secure: ENV_CONFIG.SECURE_COOKIES,
+        sameSite: ENVIRONMENT_CONSTANTS.COOKIE_SAMESITE,
+        domain: ENV_CONFIG.COOKIE_DOMAIN,
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
