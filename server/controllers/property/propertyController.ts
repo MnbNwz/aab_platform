@@ -1,8 +1,6 @@
 import { Response } from "express";
 import { AuthenticatedRequest } from "@middlewares/types";
 import * as propertyService from "@services/property/property";
-import { Types } from "@models/types";
-import S3Upload from "@utils/storage";
 import { toObjectId } from "@utils/core";
 
 // Create new property

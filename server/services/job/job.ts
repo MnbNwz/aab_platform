@@ -1,4 +1,3 @@
-import mongoose from "mongoose";
 import { JobRequest } from "@models/job";
 import { ContractorServices } from "@models/system";
 import { FilterQuery } from "mongoose";

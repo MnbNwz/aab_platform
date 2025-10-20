@@ -1,7 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import mongoose from "mongoose";
 import { ContractorServices } from "@models/system";
 import { connectDB } from "@config/db";
 import { User } from "@models/user";

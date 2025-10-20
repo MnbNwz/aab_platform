@@ -1,7 +1,6 @@
-import { MembershipPlan, IMembershipPlan } from "@models/membership";
+import { IMembershipPlan } from "@models/membership";
 import { UserMembership, IUserMembership } from "@models/user";
 import { Types } from "@models/types";
-import { getCurrentMembership } from "./membership";
 
 // Tier hierarchy for reference (not used for validation anymore)
 const TIER_HIERARCHY = {
@@ -45,16 +44,6 @@ function maxWithNull(a: number | null | undefined, b: number | null | undefined)
   if (a === null || a === undefined) return null; // Unlimited
   if (b === null || b === undefined) return null; // Unlimited
   return Math.max(a, b);
-}
-
-/**
- * Helper: Get minimum value, treating null as unlimited (for when lower is NOT better)
- */
-function minValue(a: number | null | undefined, b: number | null | undefined): number {
-  const valA = a ?? Number.MAX_SAFE_INTEGER;
-  const valB = b ?? Number.MAX_SAFE_INTEGER;
-  const result = Math.min(valA, valB);
-  return result === Number.MAX_SAFE_INTEGER ? 0 : result;
 }
 
 /**
@@ -163,7 +152,6 @@ export function calculateEffectiveBenefits(
   newPlan: IMembershipPlan,
   billingPeriod: "monthly" | "yearly",
 ) {
-  const now = new Date();
   const remainingDays = getDaysRemaining(currentMembership.endDate);
 
   // Calculate new plan duration based on billing period

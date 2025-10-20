@@ -1,6 +1,5 @@
 import { Response, NextFunction } from "express";
 import { User } from "@models/user";
-import { MIDDLEWARE_ERROR_MESSAGES, HTTP_STATUS } from "@middlewares/constants";
 
 // Admin authorization middleware (enhanced version with database check)
 export const requireAdminEnhanced = async (req: any, res: Response, next: NextFunction) => {
@@ -36,7 +35,7 @@ export const requireAdminEnhanced = async (req: any, res: Response, next: NextFu
     }
 
     next();
-  } catch (error: any) {
+  } catch {
     res.status(500).json({
       error: "Authorization failed",
     });
@@ -75,7 +74,7 @@ export const requireAdminOrSelf = async (req: any, res: Response, next: NextFunc
     return res.status(403).json({
       error: "Access denied",
     });
-  } catch (error: any) {
+  } catch {
     res.status(500).json({
       error: "Authorization failed",
     });

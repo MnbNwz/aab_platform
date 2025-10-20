@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 import { verifyAccessToken, verifyRefreshToken, generateAccessToken } from "@utils/auth";
 import { User } from "@models/user";
 import { AUTHORIZATION_CONSTANTS, ENVIRONMENT_CONSTANTS } from "@middlewares/constants";

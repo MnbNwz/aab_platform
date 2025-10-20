@@ -1,6 +1,5 @@
-import { Request, Response, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 import { AuthenticatedRequest } from "@middlewares/types";
-import { User } from "@models/user";
 import { MembershipPlan } from "@models/membership";
 import { UserMembership } from "@models/user";
 import rateLimit from "express-rate-limit";

@@ -11,7 +11,6 @@ import { stripe, webhookSecret } from "@config/stripe";
 const endpointSecret = webhookSecret;
 
 const processedEventIds = new Set<string>();
-const DEDUPE_TTL_MS = 10 * 60 * 1000;
 let lastCleanup = Date.now();
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -120,7 +119,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       return;
     }
 
-    const result = await webhookService.createNewMembership(
+    await webhookService.createNewMembership(
       session,
       userId,
       planId,

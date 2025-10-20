@@ -11,7 +11,6 @@ interface PaymentFailedData {
 
 export const paymentFailedTemplate = (data: PaymentFailedData) => {
   const {
-    firstName,
     amount,
     failureReason,
     planName,

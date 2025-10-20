@@ -51,7 +51,7 @@ export const validatePhone = (
     }
 
     return { isValid: true };
-  } catch (error) {
+  } catch {
     return { isValid: false, message: "Invalid phone number format" };
   }
 };

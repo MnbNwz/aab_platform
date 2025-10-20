@@ -1,8 +1,7 @@
 import "dotenv/config";
 import { Request, Response } from "express";
-import Stripe from "stripe";
 import { AuthenticatedRequest } from "@middlewares/types";
-import { getPlanById, getCurrentMembership } from "@services/membership/membership";
+import { getPlanById } from "@services/membership/membership";
 import { validateUpgrade, getUpgradePaymentAmount } from "@services/membership/upgrade";
 import { CONTROLLER_ERROR_MESSAGES, HTTP_STATUS } from "@controllers/constants";
 import { ALLOWED_STRIPE_DOMAINS } from "@controllers/constants/validation";
@@ -42,7 +41,7 @@ export const createStripeSession = async (req: Request, res: Response) => {
       if (!allowedDomains.some((domain) => parsedUrl.hostname.endsWith(domain))) {
         return res.status(400).json({ success: false, message: "URL domain not allowed" });
       }
-    } catch (e) {
+    } catch {
       return res.status(400).json({ success: false, message: "Invalid url format" });
     }
 
@@ -121,7 +120,7 @@ export const createUpgradeStripeSession = async (req: Request, res: Response) =>
       if (!allowedDomains.some((domain) => parsedUrl.hostname.endsWith(domain))) {
         return res.status(400).json({ success: false, message: "URL domain not allowed" });
       }
-    } catch (e) {
+    } catch {
       return res.status(400).json({ success: false, message: "Invalid url format" });
     }
 
@@ -134,9 +133,6 @@ export const createUpgradeStripeSession = async (req: Request, res: Response) =>
     // Determine the billing period to use (allow changing billing period during upgrade)
     const targetBillingPeriod =
       (newBillingPeriod as "monthly" | "yearly") || currentMembership.billingPeriod;
-
-    // Calculate upgrade payment amount (full price of new plan with new billing period)
-    const paymentAmount = getUpgradePaymentAmount(newPlan, targetBillingPeriod);
 
     // Determine Stripe price ID based on target billing period
     let stripePriceId: string | undefined;

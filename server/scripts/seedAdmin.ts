@@ -1,5 +1,4 @@
 import dotenv from "dotenv";
-import mongoose from "mongoose";
 import { User } from "@models/user";
 import { connectDB } from "@config/db";
 import { hashPassword, validatePassword, validateEmail } from "@utils/auth";

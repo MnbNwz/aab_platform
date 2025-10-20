@@ -40,11 +40,11 @@ export const updateUser = async (req: Request & { file?: any }, res: Response) =
     // Handle other data - check if it's in userData field (JSON string) or individual fields
     if (req.body.userData) {
       // Mixed approach: userData is JSON string
-      const userData = JSON.parse(req.body.userData);
-      updateData = { ...updateData, ...userData };
+      const parsedUserData = JSON.parse(req.body.userData);
+      updateData = { ...updateData, ...parsedUserData };
     } else {
       // FormData approach: individual fields
-      const { userData, ...otherFields } = req.body;
+      const otherFields = req.body;
       updateData = { ...updateData, ...otherFields };
 
       // Parse JSON fields if they exist

@@ -161,7 +161,6 @@ const getUserAnalytics = async () => {
   const { _id, ...cleanResult } = result;
 
   // Ensure all three roles are present (admin, customer, contractor)
-  const existingRoles = new Set(cleanResult.roles.map((r: any) => r.role));
   const allRoles = [
     { role: "admin", count: 0, approved: 0, pending: 0, rejected: 0 },
     { role: "customer", count: 0, approved: 0, pending: 0, rejected: 0 },
@@ -277,7 +276,7 @@ const calculatePlatformHealth = (analytics: any): number => {
       userApprovalRate * 0.4; // 40% weight on user approval
 
     return Math.round(healthScore * 100) / 100; // Round to 2 decimal places
-  } catch (error) {
+  } catch {
     return 0;
   }
 };

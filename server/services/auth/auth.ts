@@ -5,8 +5,6 @@ import {
   generateRefreshToken,
   verifyAccessToken as utilVerifyAccessToken,
   verifyToken as utilVerifyToken,
-  validateEmail,
-  validatePhone,
   sanitizeUser,
   isOTPExpired,
 } from "@utils/auth";

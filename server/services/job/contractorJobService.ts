@@ -1,9 +1,7 @@
 import { Types } from "mongoose";
 import { JobRequest } from "@models/job/jobRequest";
 import { UserMembership } from "@models/user/userMembership";
-import { MembershipPlan } from "@models/membership/membershipPlan";
 import { User } from "@models/user/user";
-import { Property } from "@models/property/property";
 import { LeadAccess } from "@models/job/leadAccess";
 import { IUserMembership, IMembershipPlan } from "@models/types/membership";
 
@@ -235,22 +233,13 @@ export async function checkLeadLimit(userId: string): Promise<{
   // ===========================
   // MONTHLY BILLING: MONTHLY RESET
   // ===========================
-  const shouldResetMonthly = shouldResetLeadLimits(
-    now,
-    membershipStartDate,
-    lastReset,
-    billingPeriod,
-  );
+  const shouldResetMonthly = shouldResetLeadLimits(now, membershipStartDate, lastReset);
 
   let leadsUsed = effectivePlan.leadsUsedThisMonth || 0;
 
   // Reset monthly counter if month has passed
   if (shouldResetMonthly && membership) {
-    const billingPeriodDates = getBillingPeriodForLeadCount(
-      now,
-      membershipStartDate,
-      billingPeriod,
-    );
+    const billingPeriodDates = getBillingPeriodForLeadCount(now, membershipStartDate);
 
     // Verify with LeadAccess count for the month
     const actualCount = await LeadAccess.countDocuments({
@@ -271,7 +260,7 @@ export async function checkLeadLimit(userId: string): Promise<{
   }
 
   // Calculate next monthly reset date
-  const resetDate = getNextBillingResetDate(now, membershipStartDate, billingPeriod);
+  const resetDate = getNextBillingResetDate(now, membershipStartDate);
 
   // PRIORITY 1: Use accumulated leads if available (from upgrades)
   // PRIORITY 2: Use monthly leads from plan
@@ -315,15 +304,9 @@ export async function checkLeadLimit(userId: string): Promise<{
 // OPTIMIZED: Determine if lead limits should reset (ultra-precise and fast)
 // CRITICAL: Lead limits ALWAYS reset monthly, regardless of billing period
 // "leadsPerMonth" means leads per month, not per billing period
-function shouldResetLeadLimits(
-  now: Date,
-  membershipStartDate: Date,
-  lastReset: Date,
-  billingPeriod: string,
-): boolean {
+function shouldResetLeadLimits(now: Date, membershipStartDate: Date, lastReset: Date): boolean {
   // OPTIMIZATION 1: Normalize all dates to UTC milliseconds for precise comparison
   const nowMs = now.getTime();
-  const startMs = membershipStartDate.getTime();
   const lastResetMs = lastReset.getTime();
 
   // OPTIMIZATION 2: Extract time components once and cache
@@ -380,7 +363,6 @@ function getMonthlyAnniversaryMs(dateMs: number, startTime: TimeComponents): num
 function getBillingPeriodForLeadCount(
   now: Date,
   membershipStartDate: Date,
-  billingPeriod: string,
 ): { start: Date; end: Date } {
   // OPTIMIZATION 1: Cache time components once
   const startTime = {
@@ -434,11 +416,7 @@ function getBillingPeriodForLeadCount(
 
 // OPTIMIZED: Calculate next lead reset date with ultra-precision (fast)
 // CRITICAL: Lead resets are ALWAYS monthly, regardless of payment billing period
-function getNextBillingResetDate(
-  now: Date,
-  membershipStartDate: Date,
-  billingPeriod: string,
-): Date {
+function getNextBillingResetDate(now: Date, membershipStartDate: Date): Date {
   // OPTIMIZATION 1: Cache time components once
   const startTime = {
     month: membershipStartDate.getUTCMonth(),
@@ -531,7 +509,7 @@ export async function filterJobsByRadius(
 
       if (distance <= radiusKm) {
         // Remove property field and add distance in single operation
-        const { property, ...jobWithoutProperty } = job;
+        const { property: _property, ...jobWithoutProperty } = job;
         filteredJobs.push({
           ...jobWithoutProperty,
           distance: Math.round(distance * 100) / 100, // Round to 2 decimal places

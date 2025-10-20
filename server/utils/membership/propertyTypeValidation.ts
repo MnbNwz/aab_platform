@@ -47,23 +47,3 @@ export function getPropertyTypeDisplayName(propertyType: PropertyType): string {
       return "Unknown property type";
   }
 }
-
-/**
- * Check if a membership plan allows multiple properties
- * @param maxProperties - Maximum properties allowed (null = unlimited)
- * @param propertyType - The property type access level
- * @returns boolean - Whether multiple properties are allowed
- */
-export function allowsMultipleProperties(
-  maxProperties: number | null,
-  propertyType: PropertyType,
-): boolean {
-  // If maxProperties is null, unlimited properties are allowed
-  if (maxProperties === null) return true;
-
-  // If maxProperties is 1, only single property is allowed
-  if (maxProperties === 1) return false;
-
-  // If maxProperties > 1, multiple properties are allowed
-  return maxProperties > 1;
-}

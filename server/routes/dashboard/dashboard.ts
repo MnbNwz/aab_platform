@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { authenticate } from "@middlewares/auth";
-import { requireRole } from "@middlewares/authorization";
 import { getPlatformDashboardController } from "@controllers/dashboard";
 
 const router = Router();

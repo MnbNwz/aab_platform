@@ -80,7 +80,7 @@ function addCommonMiddleware(schema: Schema): void {
   });
 
   // Post-save middleware for logging
-  schema.post("save", function (doc) {
+  schema.post("save", function () {
     // Add any common post-save logic here
     // For example: logging, notifications, etc.
   });

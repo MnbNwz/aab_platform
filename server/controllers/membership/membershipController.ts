@@ -1,19 +1,20 @@
 import { Request, Response } from "express";
 import { AuthenticatedRequest } from "@middlewares/types";
 import { ALLOWED_USER_TYPES } from "@controllers/constants/validation";
-import { Types } from "@models/types";
 import { toObjectId } from "@utils/core";
 import {
   getAllPlans,
   getPlansByUserType,
   getCurrentMembership,
 } from "@services/membership/membership";
+import { UserMembership } from "@models/user";
+
 // Get all available plans
 export async function getAllPlansController(req: Request, res: Response) {
   try {
     const plans = await getAllPlans();
     res.json({ success: true, data: plans });
-  } catch (error) {
+  } catch {
     res.status(500).json({ success: false, message: "Failed to fetch plans" });
   }
 }
@@ -26,13 +27,10 @@ export async function getCurrentMembershipController(req: AuthenticatedRequest, 
   try {
     const membership = await getCurrentMembership(req.user._id);
     res.json({ success: true, data: membership });
-  } catch (error) {
+  } catch {
     res.status(500).json({ success: false, message: "Failed to fetch current membership" });
   }
 }
-
-import { UserMembership } from "@models/user";
-import { Payment } from "@models/payment";
 
 export async function getMembershipHistoryController(req: AuthenticatedRequest, res: Response) {
   if (!req.user) {
@@ -44,7 +42,7 @@ export async function getMembershipHistoryController(req: AuthenticatedRequest, 
       .populate("planId")
       .lean();
     res.json({ success: true, data: history });
-  } catch (error) {
+  } catch {
     res.status(500).json({ success: false, message: "Failed to fetch membership history" });
   }
 }
@@ -80,7 +78,7 @@ export async function getMembershipStatsController(req: AuthenticatedRequest, re
       success: true,
       data: result,
     });
-  } catch (error) {
+  } catch {
     res.status(500).json({ success: false, message: "Failed to fetch stats" });
   }
 }
@@ -100,7 +98,7 @@ export async function getPlansByUserTypeController(req: Request, res: Response) 
   try {
     const plans = await getPlansByUserType(userType);
     res.json({ success: true, data: plans });
-  } catch (error) {
+  } catch {
     res.status(500).json({ success: false, message: "Failed to fetch plans for user type" });
   }
 }

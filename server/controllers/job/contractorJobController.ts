@@ -1,12 +1,6 @@
 import { Request, Response } from "express";
 import { AuthenticatedRequest } from "@middlewares/types";
-import {
-  getJobsForContractor,
-  canAccessJob,
-  checkLeadLimit,
-  incrementLeadUsage,
-  getContractorMembership,
-} from "@services/job/contractorJobService";
+import { getJobsForContractor } from "@services/job/contractorJobService";
 import { getJobRequestById } from "@services/job/job";
 import { LeadAccess } from "@models/job/leadAccess";
 import { CONTROLLER_ERROR_MESSAGES, HTTP_STATUS } from "@controllers/constants/validation";

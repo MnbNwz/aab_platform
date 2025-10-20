@@ -1,12 +1,5 @@
 import { Schema } from "@models/types";
-import {
-  IUser,
-  GeoHome,
-  Contractor,
-  ApprovalStatus,
-  PropertyType,
-  Customer,
-} from "@models/types/user";
+import { IUser, GeoHome, Contractor, Customer } from "@models/types/user";
 import { createModel } from "@models/utils/modelCreator";
 import {
   USER_ROLES,

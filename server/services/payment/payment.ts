@@ -1,10 +1,8 @@
-import Stripe from "stripe";
 import { Payment } from "@models/payment";
 import { JobPayment } from "@models/payment";
 import { User } from "@models/user";
 import { UserMembership } from "@models/user";
 import { MembershipPlan } from "@models/membership";
-import { sendPaymentReceipt } from "@utils/email";
 import { ENV_CONFIG } from "@config/env";
 import {
   getOrCreateCustomer,
@@ -18,12 +16,8 @@ import {
   getContractorDashboard,
 } from "./stripe";
 import { getStripePriceId } from "@services/membership/membership";
-import {
-  calculateYearlyDiscount,
-  calculatePrepaidRebate,
-  calculateCancellationFee,
-} from "@utils/financial";
-import { getMembershipEndDate, getDaysRemaining } from "@utils/core";
+import { calculateYearlyDiscount, calculatePrepaidRebate } from "@utils/financial";
+import { getMembershipEndDate } from "@utils/core";
 import { Types } from "@models/types";
 import mongoose from "mongoose";
 import { stripe } from "@config/stripe";

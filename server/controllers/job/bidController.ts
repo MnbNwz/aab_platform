@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import { Bid } from "@models/job";
 import { JobRequest } from "@models/job";
 import { LeadAccess } from "@models/job/leadAccess";
-import mongoose from "mongoose";
 import { toObjectId } from "@utils/core";
 import {
   CONTROLLER_ERROR_MESSAGES,
