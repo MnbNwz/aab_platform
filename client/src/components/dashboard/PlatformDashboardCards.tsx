@@ -190,13 +190,6 @@ export const PlatformDashboardCards = React.memo<PlatformDashboardCardsProps>(
               <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
                 Platform Analytics
               </h2>
-              <div className="flex items-center px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
-                <Calendar className="h-3 w-3 mr-1" />
-                {new Date().toLocaleDateString("en-US", {
-                  month: "long",
-                  year: "numeric",
-                })}
-              </div>
             </div>
             {dashboardState.platformLastFetched && (
               <p className="text-xs sm:text-sm text-gray-500">
@@ -380,7 +373,7 @@ export const PlatformDashboardCards = React.memo<PlatformDashboardCardsProps>(
             {platform.memberships.membershipBreakdown &&
               platform.memberships.membershipBreakdown.length > 0 && (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {platform.memberships.membershipBreakdown.map(
                       (membership: any) => {
                         // Define membership types with specific colors and icons
@@ -428,40 +421,46 @@ export const PlatformDashboardCards = React.memo<PlatformDashboardCardsProps>(
                         return (
                           <div
                             key={membership.status}
-                            className={`bg-gradient-to-br ${config.bg} border ${config.border} rounded-lg p-4 hover:shadow-md transition-all duration-200 hover:scale-105`}
+                            className={`bg-gradient-to-br ${config.bg} border ${config.border} rounded-lg p-4 sm:p-5 lg:p-6 hover:shadow-md transition-all duration-200 flex items-center space-x-3 sm:space-x-4 lg:space-x-6`}
                           >
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center">
-                                <IconComponent
-                                  className={`h-5 w-5 ${config.icon} mr-2`}
-                                />
-                                <h4
-                                  className={`font-semibold ${config.text} capitalize text-sm sm:text-base`}
+                            <div
+                              className={`p-2 sm:p-3 lg:p-4 rounded-xl ${config.bgDot} bg-opacity-20 flex-shrink-0`}
+                            >
+                              <IconComponent
+                                className={`h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 ${config.icon}`}
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4
+                                className={`font-semibold ${config.text} capitalize text-base sm:text-lg mb-1 sm:mb-2`}
+                              >
+                                {membership.status}
+                              </h4>
+                              <div className="flex items-baseline space-x-1 sm:space-x-2">
+                                <span
+                                  className={`text-2xl sm:text-3xl font-bold ${config.text}`}
                                 >
-                                  {membership.status}
-                                </h4>
+                                  {membership.count}
+                                </span>
+                                <span className="text-gray-500 text-xs sm:text-sm">
+                                  members
+                                </span>
                               </div>
+                            </div>
+                            <div className="text-right flex-shrink-0">
                               <div
                                 className={`text-xl sm:text-2xl font-bold ${config.text}`}
                               >
-                                {membership.count}
+                                {(
+                                  (membership.count /
+                                    platform.memberships.totalMemberships) *
+                                  100
+                                ).toFixed(1)}
+                                %
                               </div>
-                            </div>
-                            <div className="flex items-center justify-between text-xs sm:text-sm">
-                              <span className="text-gray-600">Members</span>
-                              <div className="flex items-center">
-                                <div
-                                  className={`w-2 h-2 rounded-full ${config.bgDot} mr-2`}
-                                ></div>
-                                <span className="font-medium text-gray-700">
-                                  {(
-                                    (membership.count /
-                                      platform.memberships.totalMemberships) *
-                                    100
-                                  ).toFixed(1)}
-                                  %
-                                </span>
-                              </div>
+                              <span className="text-xs text-gray-500">
+                                share
+                              </span>
                             </div>
                           </div>
                         );
