@@ -214,25 +214,34 @@ const getMembershipAnalytics = async () => {
   return cleanResult;
 };
 
-// Calculate platform health score
+// Calculate platform health score based on user status distribution
 const calculatePlatformHealth = (analytics: any): number => {
   try {
-    const jobCompletionRate =
-      analytics.jobs.totalJobs > 0
-        ? (analytics.jobs.completedJobs / analytics.jobs.totalJobs) * 100
-        : 0;
+    const { totalUsers, totalApproved, totalPending, totalRejected } = analytics.users;
 
-    const userApprovalRate =
-      analytics.users.totalUsers > 0
-        ? (analytics.users.totalApproved / analytics.users.totalUsers) * 100
-        : 0;
+    // If no users, return 0
+    if (totalUsers === 0) {
+      return 0;
+    }
 
-    // Calculate weighted health score based on job completion and user approval
+    // Calculate user status ratios with graceful weighting
+    const approvedRatio = totalApproved / totalUsers;
+    const pendingRatio = totalPending / totalUsers;
+    const rejectedRatio = totalRejected / totalUsers;
+
+    // Graceful scoring system:
+    // - Approved users: Full points (1.0)
+    // - Pending users: Partial points (0.5) - they're in process
+    // - Rejected users: Negative points (-0.2) - but not too harsh
     const healthScore =
-      jobCompletionRate * 0.6 + // 60% weight on job completion
-      userApprovalRate * 0.4; // 40% weight on user approval
+      approvedRatio * 1.0 + // Approved users get full credit
+      pendingRatio * 0.5 + // Pending users get half credit
+      rejectedRatio * -0.2; // Rejected users get small penalty
 
-    return Math.round(healthScore * 100) / 100; // Round to 2 decimal places
+    // Convert to percentage and ensure it's between 0-100
+    const percentageScore = Math.max(0, Math.min(100, healthScore * 100));
+
+    return Math.round(percentageScore * 100) / 100; // Round to 2 decimal places
   } catch {
     return 0;
   }
