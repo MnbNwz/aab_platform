@@ -14,7 +14,6 @@ import LoginForm from "./components/auth/LoginForm";
 import SignUpForm from "./components/auth/SignUpForm";
 import ForgotPassword from "./components/auth/ForgotPassword";
 import ResetPassword from "./components/auth/ResetPassword";
-import OTPVerification from "./components/auth/OTPVerification";
 import OTPVerificationGuard from "./components/auth/OTPVerificationGuard";
 import AuthGuard from "./components/auth/AuthGuard";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
@@ -61,26 +60,10 @@ const AppContent: React.FC = () => {
           }
         />
         <Route
-          path="/register"
-          element={
-            <AuthGuard>
-              <SignUpForm />
-            </AuthGuard>
-          }
-        />
-        <Route
           path="/signup"
           element={
             <AuthGuard>
               <SignUpForm />
-            </AuthGuard>
-          }
-        />
-        <Route
-          path="/otp-verification"
-          element={
-            <AuthGuard>
-              <OTPVerification />
             </AuthGuard>
           }
         />
