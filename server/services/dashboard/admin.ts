@@ -224,22 +224,19 @@ const calculatePlatformHealth = (analytics: any): number => {
       return 0;
     }
 
-    // Calculate user status ratios with graceful weighting
-    const approvedRatio = totalApproved / totalUsers;
-    const pendingRatio = totalPending / totalUsers;
-    const rejectedRatio = totalRejected / totalUsers;
+    // Calculate health score based on approved and pending users (ignore rejected)
+    // Ratio: (Approved + Partial Credit for Pending) / Total Users
+    const approvedCount = totalApproved;
+    const pendingCount = totalPending;
+    
+    // Pending users get 40% credit since they're still in process
+    const effectiveApprovedCount = approvedCount + (pendingCount * 0.4);
+    
+    // Health score is the ratio of effectively approved users to total users
+    const healthScore = effectiveApprovedCount / totalUsers;
 
-    // Graceful scoring system:
-    // - Approved users: Full points (1.0)
-    // - Pending users: Partial points (0.5) - they're in process
-    // - Rejected users: Negative points (-0.2) - but not too harsh
-    const healthScore =
-      approvedRatio * 1.0 + // Approved users get full credit
-      pendingRatio * 0.5 + // Pending users get half credit
-      rejectedRatio * -0.2; // Rejected users get small penalty
-
-    // Convert to percentage and ensure it's between 0-100
-    const percentageScore = Math.max(0, Math.min(100, healthScore * 100));
+    // Convert to percentage (0-100)
+    const percentageScore = healthScore * 100;
 
     return Math.round(percentageScore * 100) / 100; // Round to 2 decimal places
   } catch {
