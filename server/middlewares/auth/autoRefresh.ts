@@ -1,7 +1,11 @@
 import { Response, NextFunction } from "express";
 import { verifyAccessToken, verifyRefreshToken, generateAccessToken } from "@utils/auth";
 import { User } from "@models/user";
-import { AUTHORIZATION_CONSTANTS, ENVIRONMENT_CONSTANTS } from "@middlewares/constants";
+import {
+  AUTHORIZATION_CONSTANTS,
+  getCookieConfig,
+  ENVIRONMENT_CONSTANTS,
+} from "@middlewares/constants";
 import { ENV_CONFIG } from "@config/env";
 
 /**
@@ -61,12 +65,10 @@ export const autoRefreshToken = async (req: any, res: Response, next: NextFuncti
       // Generate new access token
       const newAccessToken = generateAccessToken(user._id.toString(), user.role);
 
-      // Set new access token in cookie
+      // Set new access token in cookie with smart configuration
+      const cookieConfig = getCookieConfig(ENV_CONFIG.SECURE_COOKIES);
       res.cookie(AUTHORIZATION_CONSTANTS.ACCESS_TOKEN_COOKIE, newAccessToken, {
-        httpOnly: true,
-        secure: ENV_CONFIG.SECURE_COOKIES,
-        sameSite: ENVIRONMENT_CONSTANTS.COOKIE_SAMESITE,
-        domain: ENV_CONFIG.COOKIE_DOMAIN,
+        ...cookieConfig,
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 

@@ -89,7 +89,9 @@ const RenovationCalculator: React.FC<RenovationCalculatorProps> = ({
     },
   });
 
-  const baseRate = parseFloat(import.meta.env.RENOVATION_BASE_RATE || "50");
+  const baseRate = parseFloat(
+    import.meta.env.VITE_BASE_RENOVATION_RATE || "50"
+  );
 
   const totalSteps = 3; // Room Type, Dimensions, Review
 

@@ -6,7 +6,6 @@ import {
   Briefcase,
   Activity,
   RefreshCw,
-  Calendar,
   Shield,
   Building2,
   CheckCircle,

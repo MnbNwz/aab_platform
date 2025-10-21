@@ -65,6 +65,16 @@ export const ENVIRONMENT_CONSTANTS = {
   COOKIE_SAMESITE: "none", // "none" for cross-subdomain cookies with secure flag
 } as const;
 
+// Smart cookie configuration based on environment
+export const getCookieConfig = (secure: boolean) => {
+  return {
+    httpOnly: true,
+    secure: secure,
+    sameSite: secure ? "none" : ("strict" as "none" | "lax" | "strict"),
+    ...(secure && { domain: process.env.COOKIE_DOMAIN }),
+  };
+};
+
 // HTTP status codes
 export const HTTP_STATUS = {
   UNAUTHORIZED: 401,

@@ -9,7 +9,11 @@ import {
   resetPassword,
 } from "@services/auth";
 import S3Upload from "@utils/storage";
-import { AUTHORIZATION_CONSTANTS, ENVIRONMENT_CONSTANTS } from "@middlewares/constants";
+import {
+  AUTHORIZATION_CONSTANTS,
+  getCookieConfig,
+  ENVIRONMENT_CONSTANTS,
+} from "@middlewares/constants";
 import { CONTROLLER_CONSTANTS, FIELD_CONSTANTS } from "@controllers/constants";
 import { ENV_CONFIG } from "@config/env";
 
@@ -31,19 +35,14 @@ export const signupController = async (req: Request & { files?: any[] }, res: Re
       signupData.contractor.docs = docUrls;
     }
     const result = await signup(signupData);
-    // Set tokens in HTTP-only cookies
+    // Set tokens in HTTP-only cookies with smart configuration
+    const cookieConfig = getCookieConfig(ENV_CONFIG.SECURE_COOKIES);
     res.cookie(AUTHORIZATION_CONSTANTS.ACCESS_TOKEN_COOKIE, result.accessToken, {
-      httpOnly: true,
-      secure: ENV_CONFIG.SECURE_COOKIES,
-      sameSite: ENVIRONMENT_CONSTANTS.COOKIE_SAMESITE,
-      domain: ENV_CONFIG.COOKIE_DOMAIN,
+      ...cookieConfig,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
     res.cookie(AUTHORIZATION_CONSTANTS.REFRESH_TOKEN_COOKIE, result.refreshToken, {
-      httpOnly: true,
-      secure: ENV_CONFIG.SECURE_COOKIES,
-      sameSite: ENVIRONMENT_CONSTANTS.COOKIE_SAMESITE,
-      domain: ENV_CONFIG.COOKIE_DOMAIN,
+      ...cookieConfig,
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
     res.status(201).json({
@@ -63,20 +62,15 @@ export const signinController = async (req: Request, res: Response) => {
   try {
     const result = await signin(req.body);
 
-    // Set tokens in HTTP-only cookies
+    // Set tokens in HTTP-only cookies with smart configuration
+    const cookieConfig = getCookieConfig(ENV_CONFIG.SECURE_COOKIES);
     res.cookie(AUTHORIZATION_CONSTANTS.ACCESS_TOKEN_COOKIE, result.accessToken, {
-      httpOnly: true,
-      secure: ENV_CONFIG.SECURE_COOKIES,
-      sameSite: ENVIRONMENT_CONSTANTS.COOKIE_SAMESITE,
-      domain: ENV_CONFIG.COOKIE_DOMAIN,
+      ...cookieConfig,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
     res.cookie(AUTHORIZATION_CONSTANTS.REFRESH_TOKEN_COOKIE, result.refreshToken, {
-      httpOnly: true,
-      secure: ENV_CONFIG.SECURE_COOKIES,
-      sameSite: ENVIRONMENT_CONSTANTS.COOKIE_SAMESITE,
-      domain: ENV_CONFIG.COOKIE_DOMAIN,
+      ...cookieConfig,
       maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     });
 
