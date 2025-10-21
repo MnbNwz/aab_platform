@@ -11,8 +11,8 @@ const seedAdmin = async () => {
     // Connect to database
     await connectDB();
 
-    const adminEmail = "admin@aasplatform.com";
-    const adminPassword = "Admin@2025!Secure";
+    const adminEmail = "admin@aasquebec.com";
+    const adminPassword = "Velvet!Coffee_2027-StarLamp";
 
     // Validate admin credentials
     if (!validateEmail(adminEmail)) {
