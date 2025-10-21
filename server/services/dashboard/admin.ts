@@ -228,10 +228,8 @@ const calculatePlatformHealth = (analytics: any): number => {
     // Ratio: (Approved + Partial Credit for Pending) / Total Users
     const approvedCount = totalApproved;
     const pendingCount = totalPending;
-    
     // Pending users get 40% credit since they're still in process
-    const effectiveApprovedCount = approvedCount + (pendingCount * 0.4);
-    
+    const effectiveApprovedCount = approvedCount + pendingCount * 0.4;
     // Health score is the ratio of effectively approved users to total users
     const healthScore = effectiveApprovedCount / totalUsers;
 
