@@ -87,20 +87,11 @@ export const signinController = async (req: Request, res: Response) => {
 };
 
 export const logout = async (req: Request, res: Response) => {
-  // Clear the authentication cookies
-  res.clearCookie(AUTHORIZATION_CONSTANTS.ACCESS_TOKEN_COOKIE, {
-    httpOnly: true,
-    secure: ENV_CONFIG.SECURE_COOKIES,
-    sameSite: ENVIRONMENT_CONSTANTS.COOKIE_SAMESITE,
-    domain: ENV_CONFIG.COOKIE_DOMAIN,
-  });
+  // Clear the authentication cookies with smart configuration
+  const cookieConfig = getCookieConfig(ENV_CONFIG.SECURE_COOKIES);
 
-  res.clearCookie(AUTHORIZATION_CONSTANTS.REFRESH_TOKEN_COOKIE, {
-    httpOnly: true,
-    secure: ENV_CONFIG.SECURE_COOKIES,
-    sameSite: ENVIRONMENT_CONSTANTS.COOKIE_SAMESITE,
-    domain: ENV_CONFIG.COOKIE_DOMAIN,
-  });
+  res.clearCookie(AUTHORIZATION_CONSTANTS.ACCESS_TOKEN_COOKIE, cookieConfig);
+  res.clearCookie(AUTHORIZATION_CONSTANTS.REFRESH_TOKEN_COOKIE, cookieConfig);
 
   res.status(200).json({
     message: "Logout successful",

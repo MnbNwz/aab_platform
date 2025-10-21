@@ -48,8 +48,9 @@ export const autoRefreshToken = async (req: any, res: Response, next: NextFuncti
       const refreshDecoded = verifyRefreshToken(refreshToken);
       if (!refreshDecoded) {
         // Refresh token is also invalid - clear cookies and let auth fail
-        res.clearCookie(AUTHORIZATION_CONSTANTS.ACCESS_TOKEN_COOKIE);
-        res.clearCookie(AUTHORIZATION_CONSTANTS.REFRESH_TOKEN_COOKIE);
+        const cookieConfig = getCookieConfig(ENV_CONFIG.SECURE_COOKIES);
+        res.clearCookie(AUTHORIZATION_CONSTANTS.ACCESS_TOKEN_COOKIE, cookieConfig);
+        res.clearCookie(AUTHORIZATION_CONSTANTS.REFRESH_TOKEN_COOKIE, cookieConfig);
         return next();
       }
 
@@ -57,8 +58,9 @@ export const autoRefreshToken = async (req: any, res: Response, next: NextFuncti
       const user = await User.findById(refreshDecoded.userId);
       if (!user || user.status === ENVIRONMENT_CONSTANTS.REVOKE_STATUS) {
         // User doesn't exist or is revoked - clear cookies and let auth fail
-        res.clearCookie(AUTHORIZATION_CONSTANTS.ACCESS_TOKEN_COOKIE);
-        res.clearCookie(AUTHORIZATION_CONSTANTS.REFRESH_TOKEN_COOKIE);
+        const cookieConfig = getCookieConfig(ENV_CONFIG.SECURE_COOKIES);
+        res.clearCookie(AUTHORIZATION_CONSTANTS.ACCESS_TOKEN_COOKIE, cookieConfig);
+        res.clearCookie(AUTHORIZATION_CONSTANTS.REFRESH_TOKEN_COOKIE, cookieConfig);
         return next();
       }
 
