@@ -46,14 +46,14 @@ const seedAdmin = async () => {
       lastName: "Administrator",
       email: adminEmail,
       passwordHash: hashedPassword,
-      phone: "+1234567000",
+      phone: "+14385270160",
       role: "admin",
       status: "active", // Admin is immediately active
       approval: "approved", // Admin is immediately approved
       profileImage: null, // Initialize profile image as null
       geoHome: {
         type: "Point",
-        coordinates: [-74.006, 40.7128], // NYC coordinates as default
+        coordinates: [45.62691653668659, -73.83036296017089], // Montreal coordinates as default
       },
       // Admin is pre-verified (no OTP needed)
       userVerification: {
