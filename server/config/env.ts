@@ -45,8 +45,6 @@ const getNumberEnv = (key: string, defaultValue: number): number => {
  * Application Configuration
  */
 export const ENV_CONFIG = {
-  // Application
-  NODE_ENV: getOptionalEnv("NODE_ENV", "development"),
   PORT: getNumberEnv("PORT", 5000),
   LOG_LEVEL: getOptionalEnv("LOG_LEVEL", "info"),
 
@@ -110,11 +108,6 @@ export const ENV_CONFIG = {
     },
   },
 } as const;
-
-// Type-safe helper to check if we're in production
-export const isProduction = () => ENV_CONFIG.NODE_ENV === "production";
-export const isDevelopment = () => ENV_CONFIG.NODE_ENV === "development";
-export const isTest = () => ENV_CONFIG.NODE_ENV === "test";
 
 // Validate critical configuration on startup
 export const validateConfig = (): void => {

@@ -118,10 +118,6 @@ export const generateApiStatusPage = (): string => {
     
     <div class="info-grid">
       <div class="info-item">
-        <span class="info-label">Environment</span>
-        <span class="info-value">${ENV_CONFIG.NODE_ENV}</span>
-      </div>
-      <div class="info-item">
         <span class="info-label">Uptime</span>
         <span class="info-value">${hours}h ${minutes}m ${seconds}s</span>
       </div>
