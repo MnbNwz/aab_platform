@@ -380,6 +380,7 @@ export interface MembershipCheckoutPayload {
   planId: string;
   billingPeriod: "monthly" | "yearly";
   url: string;
+  isAutoRenew?: boolean;
 }
 
 // Checkout response

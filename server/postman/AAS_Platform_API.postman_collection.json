@@ -658,14 +658,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"planId\": \"PLAN_ID_HERE\",\n  \"billingPeriod\": \"monthly\"\n}\n\n// billingPeriod: \"monthly\" or \"yearly\"\n// All memberships start as one-time payments\n// Auto-renewal can be toggled later via /api/membership/toggle-auto-renewal"
+              "raw": "{\n  \"planId\": \"PLAN_ID_HERE\",\n  \"billingPeriod\": \"monthly\",\n  \"url\": \"{{baseUrl}}/membership/success\",\n  \"isAutoRenew\": false\n}\n\n// Required: planId, billingPeriod, url\n// Optional: isAutoRenew (default: false)\n// billingPeriod: \"monthly\" or \"yearly\"\n// isAutoRenew: true = subscription (auto-renew), false = one-time payment"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/membership/checkout",
+              "raw": "{{baseUrl}}/api/payment/create-stripe-session",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "membership", "checkout"]
+              "path": ["api", "payment", "create-stripe-session"]
             },
-            "description": "Create Stripe checkout session for membership purchase (simplified - always one-time initially)"
+            "description": "Create Stripe checkout session with optional auto-renewal. Set isAutoRenew to true for subscriptions."
           }
         },
         {
@@ -688,28 +688,6 @@
               "path": ["api", "membership", "upgrade", "checkout"]
             },
             "description": "Create Stripe checkout session for membership upgrade with prorated charges"
-          }
-        },
-        {
-          "name": "Toggle Auto-Renewal",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"isAutoRenew\": true\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/membership/toggle-auto-renewal",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "membership", "toggle-auto-renewal"]
-            },
-            "description": "Toggle auto-renewal for current active membership"
           }
         },
         {

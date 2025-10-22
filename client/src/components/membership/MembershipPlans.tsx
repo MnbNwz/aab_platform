@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import UserDropdown from "../ui/UserDropdown";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../../store";
 import { logoutThunk } from "../../store/thunks/authThunks";
 import ProfileModal from "../ProfileModal";
 import { membershipService } from "../../services/membershipService";
+import ConfirmModal from "../ui/ConfirmModal";
 import type { User, CurrentMembership } from "../../types";
 
 const MembershipPlans: React.FC = () => {
@@ -17,36 +18,73 @@ const MembershipPlans: React.FC = () => {
   const [hoveredId] = useState<string | null>(null);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [loading, setLoading] = useState<string | null>(null);
+  const [isAutoRenewEnabled, setIsAutoRenewEnabled] = useState<boolean>(false);
+  const [showAutoRenewConfirm, setShowAutoRenewConfirm] = useState(false);
+  const [pendingCheckout, setPendingCheckout] = useState<{
+    planId: string;
+    billingPeriod: "monthly" | "yearly";
+  } | null>(null);
 
-  const handleCheckout = async (
-    planId: string,
-    billingPeriod: "monthly" | "yearly"
-  ) => {
-    const loadingKey = `${planId}-${billingPeriod}`;
-    setLoading(loadingKey);
-
-    try {
-      const checkoutPayload = {
-        planId,
-        billingPeriod,
-        url: `${window.location.origin}/membership/success`,
-      };
-
-      const response = await membershipService.checkout(checkoutPayload);
-
-      if (response.success && response.data?.url) {
-        // Redirect to Stripe checkout
-        window.location.href = response.data.url;
-      } else {
-        throw new Error("No checkout URL received");
-      }
-    } catch (error) {
-      console.error("Checkout error:", error);
-      // Error is already handled by the service with toast
-    } finally {
-      setLoading(null);
+  // Sync auto-renew state with current membership
+  useEffect(() => {
+    if (currentMembership?.isAutoRenew !== undefined) {
+      setIsAutoRenewEnabled(currentMembership.isAutoRenew);
     }
-  };
+  }, [currentMembership?.isAutoRenew]);
+
+  const handleCheckout = useCallback(
+    async (planId: string, billingPeriod: "monthly" | "yearly") => {
+      const loadingKey = `${planId}-${billingPeriod}`;
+      setLoading(loadingKey);
+
+      try {
+        const checkoutPayload = {
+          planId,
+          billingPeriod,
+          url: `${window.location.origin}/membership/success`,
+          isAutoRenew: isAutoRenewEnabled,
+        };
+
+        const response = await membershipService.checkout(checkoutPayload);
+
+        if (response.success && response.data?.url) {
+          window.location.href = response.data.url;
+        } else {
+          throw new Error("No checkout URL received");
+        }
+      } catch (error) {
+        console.error("Checkout error:", error);
+      } finally {
+        setLoading(null);
+      }
+    },
+    [isAutoRenewEnabled]
+  );
+
+  const handleCheckoutClick = useCallback(
+    (planId: string, billingPeriod: "monthly" | "yearly") => {
+      if (isAutoRenewEnabled) {
+        setPendingCheckout({ planId, billingPeriod });
+        setShowAutoRenewConfirm(true);
+      } else {
+        handleCheckout(planId, billingPeriod);
+      }
+    },
+    [isAutoRenewEnabled, handleCheckout]
+  );
+
+  const handleAutoRenewConfirm = useCallback(() => {
+    setShowAutoRenewConfirm(false);
+    if (pendingCheckout) {
+      handleCheckout(pendingCheckout.planId, pendingCheckout.billingPeriod);
+      setPendingCheckout(null);
+    }
+  }, [pendingCheckout, handleCheckout]);
+
+  const handleAutoRenewCancel = useCallback(() => {
+    setShowAutoRenewConfirm(false);
+    setPendingCheckout(null);
+  }, []);
 
   const getCardClass = (idx: number) => {
     if ((idx + 1) % 3 === 0 && idx === plans.length - 1) {
@@ -235,6 +273,28 @@ const MembershipPlans: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Auto-Renewal Checkbox */}
+              <div className="px-3 xs:px-4 sm:px-5 py-2 xs:py-3 bg-blue-50 border-t border-blue-100">
+                <label className="flex items-start space-x-2 xs:space-x-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={isAutoRenewEnabled}
+                    onChange={(e) => setIsAutoRenewEnabled(e.target.checked)}
+                    className="w-4 h-4 xs:w-5 xs:h-5 text-accent-500 border-gray-300 rounded focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 mt-0.5 flex-shrink-0 transition-colors"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs xs:text-sm sm:text-base text-primary-800 font-semibold group-hover:text-accent-600 transition-colors">
+                      Enable automatic renewal
+                    </p>
+                    <p className="text-xs sm:text-sm text-primary-600 mt-0.5 leading-relaxed">
+                      Your membership will automatically renew when it expires.
+                      You can change this anytime in Settings.
+                    </p>
+                  </div>
+                </label>
+              </div>
+
               <div className="flex gap-1 xs:gap-2 p-2 xs:p-3 sm:p-4 lg:p-5">
                 <button
                   className={`flex-1 py-2 xs:py-2.5 sm:py-3 px-1 xs:px-2 sm:px-4 text-xs xs:text-xs sm:text-sm font-semibold rounded-lg transition-all duration-200
@@ -251,7 +311,7 @@ const MembershipPlans: React.FC = () => {
                     animate-fadein`}
                   onClick={() => {
                     if (!isSelected && loading !== `${plan._id}-monthly`) {
-                      handleCheckout(plan._id, "monthly");
+                      handleCheckoutClick(plan._id, "monthly");
                     }
                   }}
                   disabled={isSelected || loading === `${plan._id}-monthly`}
@@ -273,7 +333,7 @@ const MembershipPlans: React.FC = () => {
                     animate-fadein`}
                   onClick={() => {
                     if (!isSelected && loading !== `${plan._id}-yearly`) {
-                      handleCheckout(plan._id, "yearly");
+                      handleCheckoutClick(plan._id, "yearly");
                     }
                   }}
                   disabled={isSelected || loading === `${plan._id}-yearly`}
@@ -299,6 +359,17 @@ const MembershipPlans: React.FC = () => {
         isOpen={profileModalOpen}
         onClose={() => setProfileModalOpen(false)}
         onSave={() => {}}
+      />
+
+      {/* Auto-Renew Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showAutoRenewConfirm}
+        title="Enable Auto-Renewal?"
+        message="Your membership will automatically renew when it expires. You can disable this anytime from Settings. Do you want to continue with auto-renewal enabled?"
+        confirmText="Yes, Continue"
+        cancelText="Cancel"
+        onConfirm={handleAutoRenewConfirm}
+        onCancel={handleAutoRenewCancel}
       />
     </div>
   );

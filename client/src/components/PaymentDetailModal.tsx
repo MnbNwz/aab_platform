@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { X, CreditCard, DollarSign, User, Tag } from "lucide-react";
+import { X, CreditCard, DollarSign, User as UserIcon, Tag } from "lucide-react";
 import { RootState, AppDispatch } from "../store";
 import {
   fetchPaymentDetail,
@@ -275,7 +275,7 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
 
                 <div className="bg-white border border-gray-200 rounded-lg p-4">
                   <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
-                    <User className="h-4 w-4 mr-2" />
+                    <UserIcon className="h-4 w-4 mr-2" />
                     User Information
                   </h4>
                   <div className="space-y-2 text-sm">

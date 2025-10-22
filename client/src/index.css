@@ -28,6 +28,59 @@
     font-size: 16px;
   }
 
+  /* Fix browser autofill and paste styling issues - clean approach */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-text-fill-color: white !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    transition: background-color 5000s ease-in-out 0s !important;
+  }
+
+  /* Fix paste styling for all input types */
+  input[type="text"]:not([readonly]):not([disabled]),
+  input[type="email"]:not([readonly]):not([disabled]),
+  input[type="password"]:not([readonly]):not([disabled]),
+  input[type="tel"]:not([readonly]):not([disabled]),
+  input[type="url"]:not([readonly]):not([disabled]),
+  input[type="search"]:not([readonly]):not([disabled]),
+  textarea:not([readonly]):not([disabled]) {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+  }
+
+  /* Specific fix for dark themed forms (auth forms) - clean bg-white/10 */
+  .bg-white\/10 input:-webkit-autofill,
+  .bg-white\/10 input:-webkit-autofill:hover,
+  .bg-white\/10 input:-webkit-autofill:focus,
+  .bg-white\/10 input:-webkit-autofill:active {
+    -webkit-text-fill-color: white !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  /* Specific fix for light themed forms - clean bg-white */
+  .bg-white input:-webkit-autofill,
+  .bg-white input:-webkit-autofill:hover,
+  .bg-white input:-webkit-autofill:focus,
+  .bg-white input:-webkit-autofill:active {
+    -webkit-text-fill-color: inherit !important;
+    background-color: white !important;
+  }
+
+  /* Firefox autofill fix */
+  input:-moz-autofill {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+  }
+
+  /* Additional paste styling fixes */
+  input:focus,
+  textarea:focus {
+    outline: none;
+  }
+
   /* Ensure sidebar maintains full height */
   .sidebar-container {
     height: 100vh !important;
@@ -98,6 +151,14 @@
 
   .aas-input {
     @apply w-full px-4 py-3 rounded-lg border border-neutral-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-colors duration-200 bg-white;
+  }
+
+  .aas-input-dark {
+    @apply w-full px-4 py-3 rounded-lg border border-white/20 bg-white/10 text-white placeholder-white/60 focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20 transition-colors;
+  }
+
+  .aas-input-light {
+    @apply w-full px-4 py-3 rounded-lg border border-neutral-300 bg-white text-gray-900 placeholder-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 transition-colors;
   }
 
   .aas-hero-bg {

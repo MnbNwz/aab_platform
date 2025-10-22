@@ -11,6 +11,7 @@ interface PaymentReceiptData {
   // Membership-specific fields
   isUpgrade?: boolean;
   isNew?: boolean;
+  isRenewal?: boolean;
   fromPlan?: string;
   billingPeriod?: string;
   // Upgrade benefit details
@@ -27,7 +28,9 @@ export const paymentReceiptTemplate = (data: PaymentReceiptData) => ({
     ? `🎉 Membership Upgraded - ${data.planName} - $${(data.amount / 100).toFixed(2)}`
     : data.isNew
       ? `🎊 Welcome to AAS Platform - ${data.planName} - $${(data.amount / 100).toFixed(2)}`
-      : `💳 Payment Receipt - $${(data.amount / 100).toFixed(2)} - AAS Platform`,
+      : data.isRenewal
+        ? `✅ Membership Renewed - ${data.planName} - $${(data.amount / 100).toFixed(2)}`
+        : `💳 Payment Receipt - $${(data.amount / 100).toFixed(2)} - AAS Platform`,
   html: `
     <!DOCTYPE html>
     <html>
@@ -154,17 +157,22 @@ export const paymentReceiptTemplate = (data: PaymentReceiptData) => ({
           <p style="font-size: 18px; color: ${emailColors.successColor}; font-weight: 600;">
             🎉 Congratulations! Your membership has been upgraded!
           </p>
-          <p>You've upgraded from <strong>${data.fromPlan || "your previous plan"}</strong> to <strong>${data.planName}</strong>. 
-          Your existing benefits have been preserved and enhanced with the new plan benefits.</p>
           `
-              : data.isNew
+              : data.isRenewal
                 ? `
+          <p style="font-size: 18px; color: ${emailColors.successColor}; font-weight: 600;">
+            ✅ Your membership has been automatically renewed!
+          </p>
+          <p>Your <strong>${data.planName}</strong> subscription has been renewed for another ${data.billingPeriod === "monthly" ? "month" : "year"}. Enjoy continued access to all features.</p>
+          `
+                : data.isNew
+                  ? `
           <p style="font-size: 18px; color: ${emailColors.successColor}; font-weight: 600;">
             🎊 Welcome to AAS Platform Membership!
           </p>
           <p>Thank you for subscribing to <strong>${data.planName}</strong>. Your membership is now active.</p>
           `
-                : `
+                  : `
           <p>Thank you for your payment. Here are the details of your successful transaction:</p>
           `
           }

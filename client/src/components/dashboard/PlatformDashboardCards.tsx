@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, memo } from "react";
 import { useSelector } from "react-redux";
 import { createSelector } from "@reduxjs/toolkit";
 import {
@@ -28,7 +28,7 @@ interface StatCardProps {
   loading?: boolean;
 }
 
-const StatCard = React.memo<StatCardProps>(
+const StatCard = memo<StatCardProps>(
   ({
     title,
     value,
@@ -51,7 +51,7 @@ const StatCard = React.memo<StatCardProps>(
         {loading ? (
           <Loader size="small" color="gray" />
         ) : typeof value === "number" ? (
-          formatCurrency(value)
+          value.toLocaleString()
         ) : (
           value
         )}
@@ -100,7 +100,7 @@ const selectDashboardData = createSelector(
   })
 );
 
-export const PlatformDashboardCards = React.memo<PlatformDashboardCardsProps>(
+export const PlatformDashboardCards = memo<PlatformDashboardCardsProps>(
   ({ data, onRefresh }) => {
     const dashboardState = useSelector(selectDashboardData);
 

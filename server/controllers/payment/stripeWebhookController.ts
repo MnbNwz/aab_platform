@@ -1,8 +1,6 @@
 import "dotenv/config";
 import { Request, Response } from "express";
 import Stripe from "stripe";
-import { AuthenticatedRequest } from "@middlewares/types";
-import { CONTROLLER_ERROR_MESSAGES, HTTP_STATUS } from "@controllers/constants";
 import { UserMembership } from "@models/user";
 import { getPlanById } from "@services/membership/membership";
 import * as webhookService from "@services/payment/webhook";
@@ -55,6 +53,23 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
 
       case "payment_intent.payment_failed":
         await handlePaymentIntentFailed(event.data.object as Stripe.PaymentIntent);
+        break;
+
+      // Subscription renewal events
+      case "invoice.paid":
+        await handleInvoicePaid(event.data.object as Stripe.Invoice);
+        break;
+
+      case "invoice.payment_failed":
+        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
+        break;
+
+      case "customer.subscription.deleted":
+        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+        break;
+
+      case "customer.subscription.updated":
+        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
         break;
 
       default:
@@ -146,53 +161,220 @@ async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
   }
 }
 
-export const toggleAutoRenewal = async (req: AuthenticatedRequest, res: Response) => {
+// ==================== SUBSCRIPTION RENEWAL HANDLERS ====================
+
+async function handleInvoicePaid(invoice: Stripe.Invoice) {
   try {
-    const { isAutoRenew } = req.body;
-    const userId = req.user?._id;
+    const subscriptionId = (invoice as any).subscription as string;
 
-    if (!userId) {
-      return res
-        .status(HTTP_STATUS.UNAUTHORIZED)
-        .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
+    if (!subscriptionId) {
+      console.log("⚠️ Invoice paid but no subscription ID found");
+      return;
     }
 
-    if (typeof isAutoRenew !== "boolean") {
-      return res.status(400).json({
-        success: false,
-        message: "isAutoRenew must be a boolean value",
-      });
+    // Skip the first invoice (it's handled by checkout.session.completed)
+    if (invoice.billing_reason === "subscription_create") {
+      console.log("🔵 Skipping subscription_create invoice (handled by checkout)");
+      return;
     }
 
+    console.log(`🔄 Processing subscription renewal for: ${subscriptionId}`);
+
+    // Find membership by subscription ID
     const membership = await UserMembership.findOne({
-      userId,
-      status: "active",
-      endDate: { $gt: new Date() },
+      stripeSubscriptionId: subscriptionId,
+    }).populate("planId");
+
+    if (!membership) {
+      console.error(`❌ No membership found for subscription: ${subscriptionId}`);
+      return;
+    }
+
+    // Calculate new end date based on billing period
+    const daysToAdd = membership.billingPeriod === "monthly" ? 30 : 365;
+    const newEndDate = new Date(membership.endDate.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
+
+    // Update membership
+    membership.endDate = newEndDate;
+    membership.status = "active";
+    await membership.save();
+
+    console.log(`✅ Membership renewed until: ${newEndDate.toISOString()}`);
+
+    // Create payment record for the renewal
+    const { Payment } = await import("@models/payment");
+    const payment = new Payment({
+      userId: membership.userId,
+      email: invoice.customer_email || "",
+      amount: invoice.amount_paid || 0,
+      currency: invoice.currency || "usd",
+      status: "succeeded",
+      stripeCustomerId: invoice.customer as string,
+      stripeInvoiceId: invoice.id,
+      stripePaymentIntentId: (invoice as any).payment_intent as string,
+      billingPeriod: membership.billingPeriod,
+    });
+    await payment.save();
+
+    console.log(`✅ Payment record created for renewal: ${payment._id}`);
+
+    // Send renewal success email
+    const { User } = await import("@models/user");
+    const { sendPaymentReceipt } = await import("@utils/email");
+    const user = await User.findById(membership.userId).select("firstName email").lean();
+
+    if (user && invoice.customer_email) {
+      const planDetails = membership.planId as any;
+      await sendPaymentReceipt(
+        invoice.customer_email,
+        "membership",
+        invoice.amount_paid || 0,
+        payment._id.toString(),
+        {
+          firstName: user.firstName,
+          planName: planDetails?.name || "Membership",
+          billingPeriod: membership.billingPeriod,
+          isRenewal: true,
+        },
+      );
+      console.log(`✅ Renewal receipt sent to ${invoice.customer_email}`);
+    }
+  } catch (error) {
+    console.error("❌ Error handling invoice paid:", error);
+  }
+}
+
+async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
+  try {
+    const subscriptionId = (invoice as any).subscription as string;
+
+    if (!subscriptionId) {
+      console.log("⚠️ Invoice payment failed but no subscription ID found");
+      return;
+    }
+
+    console.log(`⚠️ Subscription payment failed for: ${subscriptionId}`);
+
+    // Find membership by subscription ID
+    const membership = await UserMembership.findOne({
+      stripeSubscriptionId: subscriptionId,
     });
 
     if (!membership) {
-      return res.status(404).json({
-        success: false,
-        message: "No active membership found",
-      });
+      console.error(`❌ No membership found for subscription: ${subscriptionId}`);
+      return;
     }
 
-    membership.isAutoRenew = isAutoRenew;
+    // Mark membership as having payment issues (but don't expire immediately)
+    // Stripe will retry automatically, so we just log for now
+    console.log(
+      `⚠️ Payment failed for membership: ${membership._id}. Stripe will retry automatically.`,
+    );
+
+    // Send payment failure email
+    const { User } = await import("@models/user");
+    const { sendPaymentFailedNotification } = await import("@utils/email");
+    const { ENV_CONFIG } = await import("@config/env");
+
+    const user = await User.findById(membership.userId).select("firstName email").lean();
+    const planDetails = membership.planId as any;
+
+    if (user) {
+      await sendPaymentFailedNotification(
+        user.email,
+        invoice.amount_due || 0,
+        "Subscription renewal payment failed. Stripe will retry automatically.",
+        planDetails?.name || "Membership",
+        `${ENV_CONFIG.FRONTEND_URL}/membership/update-payment`,
+      );
+      console.log(`✅ Payment failure notification sent to ${user.email}`);
+    }
+
+    // TODO: After X failed attempts, consider suspending the membership
+  } catch (error) {
+    console.error("❌ Error handling invoice payment failed:", error);
+  }
+}
+
+async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+  try {
+    const subscriptionId = subscription.id;
+
+    console.log(`🔴 Subscription deleted: ${subscriptionId}`);
+
+    // Find membership by subscription ID
+    const membership = await UserMembership.findOne({
+      stripeSubscriptionId: subscriptionId,
+    });
+
+    if (!membership) {
+      console.error(`❌ No membership found for subscription: ${subscriptionId}`);
+      return;
+    }
+
+    // Turn off auto-renewal (subscription is cancelled)
+    membership.isAutoRenew = false;
+    membership.stripeSubscriptionId = undefined;
     await membership.save();
 
-    res.json({
-      success: true,
-      message: `Auto-renewal ${isAutoRenew ? "enabled" : "disabled"}`,
-      data: {
-        membershipId: membership._id,
-        isAutoRenew: membership.isAutoRenew,
-      },
-    });
+    console.log(`✅ Auto-renewal disabled for membership: ${membership._id}`);
+    console.log(`ℹ️ Membership will expire on: ${membership.endDate.toISOString()}`);
+
+    // Send cancellation notification email
+    const { User } = await import("@models/user");
+    const { sendSubscriptionCancelledNotification } = await import("@utils/email");
+    const user = await User.findById(membership.userId).select("firstName email").lean();
+    const planDetails = await getPlanById(membership.planId.toString());
+
+    if (user && planDetails) {
+      await sendSubscriptionCancelledNotification(
+        user.email,
+        user.firstName,
+        membership.endDate,
+        planDetails.name,
+      );
+    }
   } catch (error) {
-    console.error("Error toggling auto-renewal:", error);
-    res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : "Internal server error",
-    });
+    console.error("❌ Error handling subscription deleted:", error);
   }
-};
+}
+
+async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+  try {
+    const subscriptionId = subscription.id;
+
+    console.log(`🔄 Subscription updated: ${subscriptionId}`);
+
+    // Find membership by subscription ID
+    const membership = await UserMembership.findOne({
+      stripeSubscriptionId: subscriptionId,
+    });
+
+    if (!membership) {
+      console.log(`⚠️ No membership found for subscription: ${subscriptionId}`);
+      return;
+    }
+
+    // Check if subscription was set to cancel at period end
+    if (subscription.cancel_at_period_end) {
+      const periodEnd = new Date(
+        ((subscription as any).current_period_end || 0) * 1000,
+      ).toISOString();
+      console.log(`🔴 Subscription will cancel at period end: ${periodEnd}`);
+      // We don't need to do anything - let it expire naturally
+    }
+
+    // Check if subscription was reactivated
+    if (
+      !subscription.cancel_at_period_end &&
+      membership.isAutoRenew === false &&
+      subscription.status === "active"
+    ) {
+      console.log(`🟢 Subscription reactivated`);
+      membership.isAutoRenew = true;
+      await membership.save();
+    }
+  } catch (error) {
+    console.error("❌ Error handling subscription updated:", error);
+  }
+}

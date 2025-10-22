@@ -4,4 +4,4 @@ export * from "./stripeController";
 export * from "./stripeWebhookController";
 
 // Re-export specific functions to avoid conflicts
-export { handleStripeWebhook, toggleAutoRenewal } from "./stripeWebhookController";
+export { handleStripeWebhook } from "./stripeWebhookController";

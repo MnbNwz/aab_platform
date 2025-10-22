@@ -1,5 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import {
   UserCheck,
@@ -33,138 +32,118 @@ import { setFilters } from "../../store/slices/userManagementSlice";
 import Loader from "../ui/Loader";
 import ConfirmModal from "../ui/ConfirmModal";
 import ProfileModal from "../ProfileModal";
+import ActionDropdown, { ActionItem } from "../ui/ActionDropdown";
 
-// User Actions Dropdown Modal Component
+// User Actions Dropdown Component using generic ActionDropdown
 interface UserActionsDropdownProps {
   user: any;
-  isOpen: boolean;
-  onClose: () => void;
   onApprove: () => void;
   onReject: () => void;
   onRevoke: () => void;
   onUnrevoke: () => void;
   onEditProfile: () => void;
   isUpdating: boolean;
-  triggerElement: HTMLButtonElement | null;
 }
 
-const UserActionsDropdown: React.FC<UserActionsDropdownProps> = ({
-  user,
-  isOpen,
-  onClose,
-  onApprove,
-  onReject,
-  onRevoke,
-  onUnrevoke,
-  onEditProfile,
-  isUpdating,
-  triggerElement,
-}) => {
-  if (!isOpen) return null;
+const UserActionsDropdown = memo<UserActionsDropdownProps>(
+  ({
+    user,
+    onApprove,
+    onReject,
+    onRevoke,
+    onUnrevoke,
+    onEditProfile,
+    isUpdating,
+  }) => {
+    const canApprove = user.approval === "pending";
+    const canReject = user.approval === "pending";
+    const canRevoke = user.role !== "admin" && user.status !== "revoke";
+    const canUnrevoke = user.role !== "admin" && user.status === "revoke";
 
-  // If no trigger element yet, don't render (will render on next cycle when ref is set)
-  if (!triggerElement) {
-    return null;
-  }
+    const actionItems: ActionItem[] = useMemo(
+      () => [
+        ...(canApprove
+          ? [
+              {
+                id: "approve",
+                label: "Approve User",
+                icon: <UserCheck />,
+                onClick: onApprove,
+                disabled: isUpdating,
+                variant: "success" as const,
+              },
+            ]
+          : []),
+        {
+          id: "edit",
+          label: "Edit Profile",
+          icon: <Edit />,
+          onClick: onEditProfile,
+          disabled: isUpdating,
+          variant: "info" as const,
+        },
+        ...(canReject
+          ? [
+              {
+                id: "reject",
+                label: "Reject User",
+                icon: <UserX />,
+                onClick: onReject,
+                disabled: isUpdating,
+                variant: "danger" as const,
+              },
+            ]
+          : []),
+        ...(canRevoke
+          ? [
+              {
+                id: "revoke",
+                label: "Revoke Access",
+                icon: <RotateCcw />,
+                onClick: onRevoke,
+                disabled: isUpdating,
+                variant: "warning" as const,
+              },
+            ]
+          : []),
+        ...(canUnrevoke
+          ? [
+              {
+                id: "unrevoke",
+                label: "Restore Access",
+                icon: <CheckCircle />,
+                onClick: onUnrevoke,
+                disabled: isUpdating,
+                variant: "success" as const,
+              },
+            ]
+          : []),
+      ],
+      [
+        canApprove,
+        canReject,
+        canRevoke,
+        canUnrevoke,
+        onApprove,
+        onReject,
+        onRevoke,
+        onUnrevoke,
+        onEditProfile,
+        isUpdating,
+      ]
+    );
 
-  const canApprove = user.approval === "pending";
-  const canReject = user.approval === "pending";
-  const canRevoke = user.role !== "admin" && user.status !== "revoke";
-  const canUnrevoke = user.role !== "admin" && user.status === "revoke";
-
-  // Get position of trigger button
-  const triggerRect = triggerElement.getBoundingClientRect();
-
-  const dropdownPosition = {
-    top: triggerRect.bottom + window.scrollY + 4,
-    right: window.innerWidth - triggerRect.right - window.scrollX,
-  };
-
-  const dropdown = (
-    <div
-      className="fixed w-48 bg-white rounded-lg shadow-2xl border border-gray-200 py-2 z-[9999]"
-      style={{
-        top: `${dropdownPosition.top}px`,
-        right: `${dropdownPosition.right}px`,
-      }}
-      onClick={(e) => e.stopPropagation()}
-      data-dropdown-content
-    >
-      {canApprove && (
-        <button
-          onClick={() => {
-            onApprove();
-            onClose();
-          }}
-          disabled={isUpdating}
-          className="w-full flex items-center px-4 py-2 text-sm text-green-700 hover:bg-green-50 disabled:opacity-50 transition-colors"
-        >
-          <UserCheck className="h-4 w-4 mr-3" />
-          Approve User
-        </button>
-      )}
-      <button
-        onClick={() => {
-          onEditProfile();
-          onClose();
-        }}
+    return (
+      <ActionDropdown
+        items={actionItems}
         disabled={isUpdating}
-        className="w-full flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 disabled:opacity-50 transition-colors"
-      >
-        <Edit className="h-4 w-4 mr-3" />
-        Edit Profile
-      </button>
-      {canReject && (
-        <button
-          onClick={() => {
-            onReject();
-            onClose();
-          }}
-          disabled={isUpdating}
-          className="w-full flex items-center px-4 py-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50 transition-colors"
-        >
-          <UserX className="h-4 w-4 mr-3" />
-          Reject User
-        </button>
-      )}
-      {canRevoke && (
-        <button
-          onClick={() => {
-            onRevoke();
-            onClose();
-          }}
-          disabled={isUpdating}
-          className="w-full flex items-center px-4 py-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50 transition-colors"
-        >
-          <Trash2 className="h-4 w-4 mr-3" />
-          Delete User
-        </button>
-      )}
-      {canUnrevoke && (
-        <button
-          onClick={() => {
-            onUnrevoke();
-            onClose();
-          }}
-          disabled={isUpdating}
-          className="w-full flex items-center px-4 py-2 text-sm text-green-700 hover:bg-green-50 disabled:opacity-50 transition-colors"
-        >
-          <RotateCcw className="h-4 w-4 mr-3" />
-          Restore User
-        </button>
-      )}
-      {!canApprove && !canReject && !canRevoke && !canUnrevoke && (
-        <div className="px-4 py-2 text-sm text-gray-500">
-          No actions available
-        </div>
-      )}
-    </div>
-  );
+        trigger={<MoreVertical className="h-4 w-4" />}
+      />
+    );
+  }
+);
 
-  return createPortal(dropdown, document.body);
-};
-
-const UserManagementTable: React.FC = () => {
+const UserManagementTable = memo(() => {
   const dispatch = useDispatch<AppDispatch>();
   const {
     users,
@@ -184,85 +163,52 @@ const UserManagementTable: React.FC = () => {
     action: null | "approve" | "reject" | "revoke" | "unrevoke";
   }>({ open: false, userId: null, action: null });
 
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const dropdownRefs = React.useRef<{
-    [key: string]: HTMLButtonElement | null;
-  }>({});
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [selectedUserForProfile, setSelectedUserForProfile] =
     useState<any>(null);
-
-  // Force re-render when dropdown is opened to ensure refs are ready
-  const [dropdownRenderKey, setDropdownRenderKey] = useState(0);
-
-  const handleToggleDropdown = useCallback((userId: string) => {
-    setOpenDropdown((prev) => {
-      const newValue = prev === userId ? null : userId;
-      if (newValue !== null) {
-        // When opening, force a re-render after a tick to ensure refs are set
-        setTimeout(() => setDropdownRenderKey((k) => k + 1), 0);
-      }
-      return newValue;
-    });
-  }, []);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (openDropdown) {
-        const target = event.target as Element;
-        // Check if click is outside both the trigger button and the dropdown
-        const isTriggerClick =
-          dropdownRefs.current[openDropdown]?.contains(target);
-        const isDropdownClick = target.closest("[data-dropdown-content]");
-
-        if (!isTriggerClick && !isDropdownClick) {
-          setOpenDropdown(null);
-        }
-      }
-    };
-
-    if (openDropdown) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () =>
-        document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [openDropdown, dropdownRefs]);
 
   useEffect(() => {
     dispatch(fetchUsersThunk(filters));
   }, [dispatch, filters]);
 
-  const handleSearch = () => {
+  const handleSearch = useCallback(() => {
     dispatch(setFilters({ ...filters, search: searchTerm, page: 1 }));
-  };
+  }, [dispatch, filters, searchTerm]);
 
-  const handleFilterChange = (newFilters: Partial<UserFilters>) => {
-    dispatch(setFilters({ ...filters, ...newFilters, page: 1 }));
-  };
+  const handleFilterChange = useCallback(
+    (newFilters: Partial<UserFilters>) => {
+      dispatch(setFilters({ ...filters, ...newFilters, page: 1 }));
+    },
+    [dispatch, filters]
+  );
 
-  const handlePageChange = (page: number) => {
-    dispatch(setFilters({ ...filters, page }));
-  };
+  const handlePageChange = useCallback(
+    (page: number) => {
+      dispatch(setFilters({ ...filters, page }));
+    },
+    [dispatch, filters]
+  );
 
-  const handleApproveUser = (userId: string) => {
+  const handleApproveUser = useCallback((userId: string) => {
     setConfirmModal({ open: true, userId, action: "approve" });
-  };
-  const handleRejectUser = (userId: string) => {
-    setConfirmModal({ open: true, userId, action: "reject" });
-  };
-  const handleRevokeUser = (userId: string) => {
-    setConfirmModal({ open: true, userId, action: "revoke" });
-  };
-  const handleUnrevokeUser = (userId: string) => {
-    setConfirmModal({ open: true, userId, action: "unrevoke" });
-  };
+  }, []);
 
-  const handleEditProfile = (user: any) => {
+  const handleRejectUser = useCallback((userId: string) => {
+    setConfirmModal({ open: true, userId, action: "reject" });
+  }, []);
+
+  const handleRevokeUser = useCallback((userId: string) => {
+    setConfirmModal({ open: true, userId, action: "revoke" });
+  }, []);
+
+  const handleUnrevokeUser = useCallback((userId: string) => {
+    setConfirmModal({ open: true, userId, action: "unrevoke" });
+  }, []);
+
+  const handleEditProfile = useCallback((user: any) => {
     setSelectedUserForProfile(user);
     setProfileModalOpen(true);
-    setOpenDropdown(null);
-  };
+  }, []);
 
   const handleProfileSave = useCallback(
     async (updated: Partial<any>) => {
@@ -312,10 +258,9 @@ const UserManagementTable: React.FC = () => {
     }
 
     setConfirmModal({ open: false, userId: null, action: null });
-    setOpenDropdown(null); // Close any open dropdowns
   };
 
-  const getStatusBadge = (status: string, approval: string) => {
+  const getStatusBadge = useCallback((status: string, approval: string) => {
     if (status === "revoke") {
       return "bg-red-100 text-red-800";
     }
@@ -329,9 +274,9 @@ const UserManagementTable: React.FC = () => {
       return "bg-red-100 text-red-800";
     }
     return "bg-gray-100 text-gray-800";
-  };
+  }, []);
 
-  const getRoleBadge = (role: string) => {
+  const getRoleBadge = useCallback((role: string) => {
     switch (role) {
       case "admin":
         return "bg-purple-100 text-purple-800";
@@ -342,9 +287,9 @@ const UserManagementTable: React.FC = () => {
       default:
         return "bg-gray-100 text-gray-800";
     }
-  };
+  }, []);
 
-  const getRoleIcon = (role: string) => {
+  const getRoleIcon = useCallback((role: string) => {
     switch (role) {
       case "admin":
         return "👑";
@@ -355,7 +300,51 @@ const UserManagementTable: React.FC = () => {
       default:
         return "👤";
     }
-  };
+  }, []);
+
+  // Memoized values for expensive calculations
+  const paginationInfo = useMemo(() => {
+    if (!pagination) return null;
+    return {
+      startItem: (pagination.currentPage - 1) * pagination.limit + 1,
+      endItem: Math.min(
+        pagination.currentPage * pagination.limit,
+        pagination.totalCount
+      ),
+      totalCount: pagination.totalCount,
+    };
+  }, [pagination]);
+
+  const confirmModalConfig = useMemo(() => {
+    if (!confirmModal.action) return null;
+
+    const configs = {
+      approve: {
+        title: "Approve User",
+        message: "Are you sure you want to approve this user?",
+        confirmText: "Yes, Approve",
+      },
+      reject: {
+        title: "Reject User",
+        message: "Are you sure you want to reject this user?",
+        confirmText: "Yes, Reject",
+      },
+      revoke: {
+        title: "Delete User",
+        message:
+          "Are you sure you want to delete this user? This action cannot be undone.",
+        confirmText: "Yes, Delete",
+      },
+      unrevoke: {
+        title: "Restore User",
+        message:
+          "Are you sure you want to restore this user? This will reactivate their account.",
+        confirmText: "Yes, Restore",
+      },
+    };
+
+    return configs[confirmModal.action];
+  }, [confirmModal.action]);
 
   if (usersError) {
     return (
@@ -604,32 +593,14 @@ const UserManagementTable: React.FC = () => {
                         </div>
                       ) : (
                         <div className="flex items-center justify-center relative">
-                          <button
-                            ref={(el) => {
-                              dropdownRefs.current[user._id] = el;
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleToggleDropdown(user._id);
-                            }}
-                            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
-                            title="More actions"
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </button>
-
                           <UserActionsDropdown
-                            key={`${user._id}-${dropdownRenderKey}`}
                             user={user}
-                            isOpen={openDropdown === user._id}
-                            onClose={() => setOpenDropdown(null)}
                             onApprove={() => handleApproveUser(user._id)}
                             onReject={() => handleRejectUser(user._id)}
                             onRevoke={() => handleRevokeUser(user._id)}
                             onUnrevoke={() => handleUnrevokeUser(user._id)}
                             onEditProfile={() => handleEditProfile(user)}
                             isUpdating={updatingUsers[user._id]}
-                            triggerElement={dropdownRefs.current[user._id]}
                           />
                         </div>
                       )}
@@ -727,32 +698,14 @@ const UserManagementTable: React.FC = () => {
                         </div>
                       ) : (
                         <div className="flex items-center justify-center relative">
-                          <button
-                            ref={(el) => {
-                              dropdownRefs.current[user._id] = el;
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleToggleDropdown(user._id);
-                            }}
-                            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
-                            title="More actions"
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </button>
-
                           <UserActionsDropdown
-                            key={`${user._id}-${dropdownRenderKey}`}
                             user={user}
-                            isOpen={openDropdown === user._id}
-                            onClose={() => setOpenDropdown(null)}
                             onApprove={() => handleApproveUser(user._id)}
                             onReject={() => handleRejectUser(user._id)}
                             onRevoke={() => handleRevokeUser(user._id)}
                             onUnrevoke={() => handleUnrevokeUser(user._id)}
                             onEditProfile={() => handleEditProfile(user)}
                             isUpdating={updatingUsers[user._id]}
-                            triggerElement={dropdownRefs.current[user._id]}
                           />
                         </div>
                       )}
@@ -887,39 +840,12 @@ const UserManagementTable: React.FC = () => {
       {/* Generic Confirm Modal for all actions */}
       <ConfirmModal
         isOpen={confirmModal.open}
-        title={
-          confirmModal.action === "approve"
-            ? "Approve User"
-            : confirmModal.action === "reject"
-            ? "Reject User"
-            : confirmModal.action === "revoke"
-            ? "Delete User"
-            : confirmModal.action === "unrevoke"
-            ? "Restore User"
-            : "Confirm Action"
-        }
+        title={confirmModalConfig?.title || "Confirm Action"}
         message={
-          confirmModal.action === "approve"
-            ? "Are you sure you want to approve this user?"
-            : confirmModal.action === "reject"
-            ? "Are you sure you want to reject this user?"
-            : confirmModal.action === "revoke"
-            ? "Are you sure you want to delete this user? This action cannot be undone."
-            : confirmModal.action === "unrevoke"
-            ? "Are you sure you want to restore this user? This will reactivate their account."
-            : "Are you sure you want to perform this action?"
+          confirmModalConfig?.message ||
+          "Are you sure you want to perform this action?"
         }
-        confirmText={
-          confirmModal.action === "approve"
-            ? "Yes, Approve"
-            : confirmModal.action === "reject"
-            ? "Yes, Reject"
-            : confirmModal.action === "revoke"
-            ? "Yes, Delete"
-            : confirmModal.action === "unrevoke"
-            ? "Yes, Restore"
-            : "Yes"
-        }
+        confirmText={confirmModalConfig?.confirmText || "Yes"}
         cancelText="Cancel"
         onConfirm={handleConfirmAction}
         onCancel={() =>
@@ -931,30 +857,30 @@ const UserManagementTable: React.FC = () => {
       />
 
       {/* Pagination */}
-      {pagination && pagination.totalCount > 0 && (
+      {paginationInfo && (
         <div className="px-4 sm:px-6 py-3 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-sm text-gray-700">
-            Showing {(pagination.currentPage - 1) * pagination.limit + 1} to{" "}
-            {Math.min(
-              pagination.currentPage * pagination.limit,
-              pagination.totalCount
-            )}{" "}
-            of {pagination.totalCount} users
+            Showing {paginationInfo.startItem} to {paginationInfo.endItem} of{" "}
+            {paginationInfo.totalCount} users
           </div>
           <div className="flex items-center space-x-2">
             <button
-              onClick={() => handlePageChange(pagination.currentPage - 1)}
-              disabled={!pagination.hasPrevPage || usersLoading}
+              onClick={() =>
+                pagination && handlePageChange(pagination.currentPage - 1)
+              }
+              disabled={!pagination?.hasPrevPage || usersLoading}
               className="p-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors duration-200"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
             <span className="px-3 py-1 text-sm">
-              Page {pagination.currentPage} of {pagination.totalPages}
+              Page {pagination?.currentPage} of {pagination?.totalPages}
             </span>
             <button
-              onClick={() => handlePageChange(pagination.currentPage + 1)}
-              disabled={!pagination.hasNextPage || usersLoading}
+              onClick={() =>
+                pagination && handlePageChange(pagination.currentPage + 1)
+              }
+              disabled={!pagination?.hasNextPage || usersLoading}
               className="p-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors duration-200"
             >
               <ChevronRight className="h-4 w-4" />
@@ -975,6 +901,6 @@ const UserManagementTable: React.FC = () => {
       )}
     </div>
   );
-};
+});
 
 export default UserManagementTable;

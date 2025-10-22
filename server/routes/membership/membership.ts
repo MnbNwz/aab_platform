@@ -8,11 +8,7 @@ import {
   getMembershipHistoryController,
   getMembershipStatsController,
 } from "@controllers/membership";
-import {
-  createStripeSession,
-  toggleAutoRenewal,
-  createUpgradeStripeSession,
-} from "@controllers/payment";
+import { createStripeSession, createUpgradeStripeSession } from "@controllers/payment";
 
 const router = express.Router();
 
@@ -24,7 +20,6 @@ router.get("/plans", getAllPlansController);
 router.get("/plans/:userType", getPlansByUserTypeController);
 router.get("/current", getCurrentMembershipController);
 router.post("/checkout", createStripeSession);
-router.post("/toggle-auto-renewal", toggleAutoRenewal);
 router.get("/history", getMembershipHistoryController);
 
 // Upgrade route

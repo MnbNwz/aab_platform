@@ -410,3 +410,37 @@ export const sendPaymentFailedNotification = async (
     return { success: false, error: errorMessage };
   }
 };
+
+// Subscription cancellation notification
+export const sendSubscriptionCancelledNotification = async (
+  userEmail: string,
+  firstName: string,
+  expiryDate: Date,
+  planName: string,
+): Promise<EmailResult> => {
+  try {
+    const result = await sendEmail(userEmail, "", "subscription_cancelled", {
+      firstName,
+      planName,
+      expiryDate,
+    });
+
+    if (result.success) {
+      console.log(`🔄 [SUBSCRIPTION CANCELLED] Notification sent to ${userEmail}`);
+    } else {
+      console.error(
+        `❌ [SUBSCRIPTION CANCELLED] Failed to send to ${userEmail}, Error: ${result.error}`,
+      );
+    }
+
+    return { success: result.success, error: result.error };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logErrorWithContext(error as Error, {
+      operation: "send_subscription_cancelled_notification",
+      userEmail,
+      planName,
+    });
+    return { success: false, error: errorMessage };
+  }
+};

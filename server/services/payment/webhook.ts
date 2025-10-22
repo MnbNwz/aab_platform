@@ -105,6 +105,10 @@ export const upgradeMembership = async (
     // IMPORTANT: Preserve original startDate to maintain full membership history
     const originalStartDate = currentMembership.startDate;
 
+    // Preserve auto-renewal and subscription info during upgrade
+    const isAutoRenew = currentMembership.isAutoRenew || false;
+    const stripeSubscriptionId = currentMembership.stripeSubscriptionId || undefined;
+
     const newMembership = await UserMembership.create(
       [
         {
@@ -115,7 +119,8 @@ export const upgradeMembership = async (
           billingPeriod: newBillingPeriod, // Use new billing period
           startDate: originalStartDate, // Preserve original start date
           endDate: effectiveBenefits.newEndDate,
-          isAutoRenew: false,
+          isAutoRenew: isAutoRenew, // Preserve auto-renewal preference
+          stripeSubscriptionId: stripeSubscriptionId, // Preserve subscription ID
           isUpgraded: true,
           upgradedFromMembershipId: currentMembershipId,
 
@@ -351,6 +356,14 @@ export const createNewMembership = async (
   });
   await payment.save();
 
+  // Get auto-renewal preference from session metadata
+  const isAutoRenew = session.metadata?.isAutoRenew === "true";
+  const stripeSubscriptionId = session.subscription ? (session.subscription as string) : undefined;
+
+  console.log(
+    `🔄 Creating membership with isAutoRenew: ${isAutoRenew}, subscriptionId: ${stripeSubscriptionId || "none"}`,
+  );
+
   // Initialize effective benefits from plan (first purchase)
   const userMembership = new UserMembership({
     userId,
@@ -360,7 +373,8 @@ export const createNewMembership = async (
     billingPeriod,
     startDate: membershipStartDate,
     endDate: membershipEndDate,
-    isAutoRenew: false,
+    isAutoRenew: isAutoRenew,
+    stripeSubscriptionId: stripeSubscriptionId,
 
     // Initialize effective benefits from plan
     // Contractor benefits
@@ -388,6 +402,8 @@ export const createNewMembership = async (
   });
   await userMembership.save();
 
+  // Send welcome email for new membership
+  // Always send "new" email for first purchase (not renewal)
   await sendPaymentReceipt(
     session.customer_email || data.user.email,
     "membership",
@@ -397,7 +413,7 @@ export const createNewMembership = async (
       firstName: data.user.firstName,
       planName: data.name,
       billingPeriod,
-      isNew: true,
+      isNew: true, // Always true for createNewMembership (first purchase via checkout)
     },
   );
 
