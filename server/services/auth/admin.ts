@@ -47,22 +47,19 @@ export async function getAllUsers(filters: UserFilters = {}, pagination: Paginat
   const sortOptions: any = {};
   sortOptions[sortBy] = sortOrder === "asc" ? 1 : -1;
 
-  // Execute optimized aggregation pipeline - only essential fields
   const pipeline = [
     { $match: query },
 
-    // Project only essential fields for admin users list (inclusion projection only)
     {
       $project: {
-        _id: 1,
-        firstName: 1,
-        lastName: 1,
-        email: 1,
-        phone: 1,
-        role: 1,
-        status: 1,
-        approval: 1,
-        createdAt: 1,
+        passwordHash: 0,
+        passwordReset: 0,
+        stripeConnectAccountId: 0,
+        stripeCustomerId: 0,
+        stripeConnectStatus: 0,
+        userVerification: 0,
+        favoriteContractors: 0,
+        updatedAt: 0,
       },
     },
 

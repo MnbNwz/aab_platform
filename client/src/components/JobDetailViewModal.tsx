@@ -148,7 +148,25 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
 
   const handleViewContractorProfile = useCallback(
     (contractor: Bid["contractor"]) => {
-      setSelectedContractor(contractor);
+      // Convert BidContractor to User format for ProfileViewModal
+      const contractorUser: any = {
+        _id: contractor._id,
+        email: contractor.email,
+        firstName: contractor.firstName,
+        lastName: contractor.lastName,
+        phone: contractor.phone,
+        profileImage: contractor.profileImage,
+        role: "contractor" as const,
+        status: "active" as const,
+        approval: "approved" as const,
+        emailVerified: true,
+        contractor: contractor.contractor,
+        // Note: BidContractor doesn't include geoHome, so location won't be shown
+        // This is expected behavior for job bids
+        createdAt: "",
+        updatedAt: "",
+      };
+      setSelectedContractor(contractorUser);
       setProfileViewOpen(true);
     },
     []
@@ -851,7 +869,7 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
       {/* Profile View Modal */}
       {profileViewOpen && selectedContractor && (
         <ProfileViewModal
-          user={selectedContractor as any}
+          user={selectedContractor}
           isOpen={profileViewOpen}
           onClose={handleCloseProfileView}
         />

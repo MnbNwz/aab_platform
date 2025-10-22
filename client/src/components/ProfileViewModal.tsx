@@ -1,24 +1,33 @@
 import React from "react";
 import { User } from "../types";
-import { MapPin, Phone, Mail, Shield, CheckCircle, X } from "lucide-react";
+import {
+  MapPin,
+  Phone,
+  Mail,
+  Shield,
+  CheckCircle,
+  X,
+  Edit,
+} from "lucide-react";
 import { useGeocoding } from "../hooks/useGeocoding";
-import { useSelector } from "react-redux";
-import { RootState } from "../store";
 
 interface ProfileViewModalProps {
   user: User;
   isOpen: boolean;
   onClose: () => void;
+  onEdit?: () => void;
+  isLoading?: boolean;
+  hideEditForAdmin?: boolean; // New prop to hide edit button for admin users
 }
 
 const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
   user,
   isOpen,
   onClose,
+  onEdit,
+  isLoading = false,
+  hideEditForAdmin = false,
 }) => {
-  // Get current user to check if they are admin
-  const currentUser = useSelector((state: RootState) => state.auth.user);
-
   // Get readable address from coordinates
   const { address: locationAddress, loading: addressLoading } = useGeocoding(
     user.geoHome?.coordinates && user.geoHome.coordinates.length === 2
@@ -79,7 +88,19 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-3 xs:p-4 sm:p-6">
+        <div className="flex-1 overflow-y-auto p-3 xs:p-4 sm:p-6 relative">
+          {/* Loading Overlay */}
+          {isLoading && (
+            <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-lg">
+              <div className="flex flex-col items-center space-y-3">
+                <div className="w-8 h-8 border-4 border-accent-500 border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-sm text-gray-600 font-medium">
+                  Loading profile details...
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-4 xs:space-y-6">
             {/* Profile Header */}
             <div className="flex items-center space-x-3 xs:space-x-4 p-3 xs:p-4 bg-gradient-to-r from-primary-50 to-accent-50 rounded-lg">
@@ -164,7 +185,7 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
                   </div>
                 )}
 
-                {user.geoHome?.coordinates && currentUser?.role !== "admin" && (
+                {user.geoHome?.coordinates && (
                   <div className="flex items-center space-x-2 xs:space-x-3 p-2 xs:p-3 bg-gray-50 rounded-lg sm:col-span-2">
                     <MapPin className="h-4 w-4 xs:h-5 xs:w-5 text-primary-500 flex-shrink-0" />
                     <div className="min-w-0 flex-1">
@@ -282,6 +303,34 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
                         </div>
                       </div>
                     )}
+
+                  {user.contractor.docs && user.contractor.docs.length > 0 && (
+                    <div className="p-2 xs:p-3 bg-gray-50 rounded-lg sm:col-span-2">
+                      <p className="text-xs xs:text-sm text-gray-600">
+                        Documents
+                      </p>
+                      <div className="mt-2 space-y-2">
+                        {user.contractor.docs.map((doc: any, index: number) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between bg-white p-2 rounded border"
+                          >
+                            <span className="text-sm text-gray-700 truncate flex-1 mr-2">
+                              Attachment
+                            </span>
+                            <a
+                              href={doc.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary-600 hover:text-primary-800 text-sm font-medium underline"
+                            >
+                              View
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -307,10 +356,19 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
 
         {/* Footer */}
         <div className="p-3 xs:p-4 sm:p-6 border-t border-primary-200">
-          <div className="flex justify-end">
+          <div className="flex justify-end space-x-3">
+            {onEdit && !(hideEditForAdmin && user.role === "admin") && (
+              <button
+                onClick={onEdit}
+                className="px-4 xs:px-6 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors duration-200 text-sm xs:text-base font-medium flex items-center space-x-2"
+              >
+                <Edit className="h-4 w-4" />
+                <span>Edit</span>
+              </button>
+            )}
             <button
               onClick={onClose}
-              className="px-4 xs:px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors duration-200 text-sm xs:text-base"
+              className="px-4 xs:px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors duration-200 text-sm xs:text-base font-medium"
             >
               Close
             </button>

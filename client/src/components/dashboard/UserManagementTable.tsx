@@ -17,12 +17,12 @@ import {
   User,
   MoreVertical,
   RotateCcw,
-  Edit,
 } from "lucide-react";
 import type { RootState, AppDispatch } from "../../store";
 import type { UserFilters } from "../../types";
 import {
   fetchUsersThunk,
+  fetchUserThunk,
   approveUserThunk,
   rejectUserThunk,
   revokeUserThunk,
@@ -32,6 +32,7 @@ import { setFilters } from "../../store/slices/userManagementSlice";
 import Loader from "../ui/Loader";
 import ConfirmModal from "../ui/ConfirmModal";
 import ProfileModal from "../ProfileModal";
+import ProfileViewModal from "../ProfileViewModal";
 import ActionDropdown, { ActionItem } from "../ui/ActionDropdown";
 
 // User Actions Dropdown Component using generic ActionDropdown
@@ -41,7 +42,6 @@ interface UserActionsDropdownProps {
   onReject: () => void;
   onRevoke: () => void;
   onUnrevoke: () => void;
-  onEditProfile: () => void;
   isUpdating: boolean;
   isLastRow?: boolean;
 }
@@ -53,7 +53,6 @@ const UserActionsDropdown = memo<UserActionsDropdownProps>(
     onReject,
     onRevoke,
     onUnrevoke,
-    onEditProfile,
     isUpdating,
     isLastRow = false,
   }) => {
@@ -76,14 +75,6 @@ const UserActionsDropdown = memo<UserActionsDropdownProps>(
               },
             ]
           : []),
-        {
-          id: "edit",
-          label: "Edit Profile",
-          icon: <Edit />,
-          onClick: onEditProfile,
-          disabled: isUpdating,
-          variant: "info" as const,
-        },
         ...(canReject
           ? [
               {
@@ -130,7 +121,6 @@ const UserActionsDropdown = memo<UserActionsDropdownProps>(
         onReject,
         onRevoke,
         onUnrevoke,
-        onEditProfile,
         isUpdating,
       ]
     );
@@ -170,6 +160,10 @@ const UserManagementTable = memo(() => {
   const [selectedUserForProfile, setSelectedUserForProfile] =
     useState<any>(null);
 
+  const [profileViewModalOpen, setProfileViewModalOpen] = useState(false);
+  const [selectedUserForView, setSelectedUserForView] = useState<any>(null);
+  const [loadingUserProfile, setLoadingUserProfile] = useState(false);
+
   useEffect(() => {
     dispatch(fetchUsersThunk(filters));
   }, [dispatch, filters]);
@@ -208,10 +202,40 @@ const UserManagementTable = memo(() => {
     setConfirmModal({ open: true, userId, action: "unrevoke" });
   }, []);
 
-  const handleEditProfile = useCallback((user: any) => {
-    setSelectedUserForProfile(user);
-    setProfileModalOpen(true);
-  }, []);
+  const handleRowClick = useCallback(
+    async (user: any) => {
+      // Open modal immediately with basic user data
+      setSelectedUserForView(user);
+      setProfileViewModalOpen(true);
+
+      try {
+        setLoadingUserProfile(true);
+
+        // Fetch full user data by ID
+        const resultAction = await dispatch(fetchUserThunk(user._id));
+
+        if (fetchUserThunk.fulfilled.match(resultAction)) {
+          const fullUserData = resultAction.payload;
+          setSelectedUserForView(fullUserData);
+        } else {
+          console.warn("Failed to fetch full user data, using list data");
+        }
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+      } finally {
+        setLoadingUserProfile(false);
+      }
+    },
+    [dispatch]
+  );
+
+  const handleSwitchToEdit = useCallback(() => {
+    if (selectedUserForView) {
+      setProfileViewModalOpen(false);
+      setSelectedUserForProfile(selectedUserForView);
+      setProfileModalOpen(true);
+    }
+  }, [selectedUserForView]);
 
   const handleProfileSave = useCallback(
     async (updated: Partial<any>) => {
@@ -530,7 +554,11 @@ const UserManagementTable = memo(() => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {users.map((user, index) => (
-                  <tr key={user._id} className="hover:bg-gray-50 group">
+                  <tr
+                    key={user._id}
+                    className="hover:bg-gray-50 group cursor-pointer"
+                    onClick={() => handleRowClick(user)}
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-gray-900">
@@ -596,16 +624,17 @@ const UserManagementTable = memo(() => {
                         </div>
                       ) : (
                         <div className="flex items-center justify-center relative">
-                          <UserActionsDropdown
-                            user={user}
-                            onApprove={() => handleApproveUser(user._id)}
-                            onReject={() => handleRejectUser(user._id)}
-                            onRevoke={() => handleRevokeUser(user._id)}
-                            onUnrevoke={() => handleUnrevokeUser(user._id)}
-                            onEditProfile={() => handleEditProfile(user)}
-                            isUpdating={updatingUsers[user._id]}
-                            isLastRow={index === users.length - 1}
-                          />
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <UserActionsDropdown
+                              user={user}
+                              onApprove={() => handleApproveUser(user._id)}
+                              onReject={() => handleRejectUser(user._id)}
+                              onRevoke={() => handleRevokeUser(user._id)}
+                              onUnrevoke={() => handleUnrevokeUser(user._id)}
+                              isUpdating={updatingUsers[user._id]}
+                              isLastRow={index === users.length - 1}
+                            />
+                          </div>
                         </div>
                       )}
                     </td>
@@ -639,7 +668,11 @@ const UserManagementTable = memo(() => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {users.map((user, index) => (
-                  <tr key={user._id} className="hover:bg-gray-50 group">
+                  <tr
+                    key={user._id}
+                    className="hover:bg-gray-50 group cursor-pointer"
+                    onClick={() => handleRowClick(user)}
+                  >
                     <td className="px-4 py-4">
                       <div>
                         <div className="text-sm font-medium text-gray-900">
@@ -702,16 +735,17 @@ const UserManagementTable = memo(() => {
                         </div>
                       ) : (
                         <div className="flex items-center justify-center relative">
-                          <UserActionsDropdown
-                            user={user}
-                            onApprove={() => handleApproveUser(user._id)}
-                            onReject={() => handleRejectUser(user._id)}
-                            onRevoke={() => handleRevokeUser(user._id)}
-                            onUnrevoke={() => handleUnrevokeUser(user._id)}
-                            onEditProfile={() => handleEditProfile(user)}
-                            isUpdating={updatingUsers[user._id]}
-                            isLastRow={index === users.length - 1}
-                          />
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <UserActionsDropdown
+                              user={user}
+                              onApprove={() => handleApproveUser(user._id)}
+                              onReject={() => handleRejectUser(user._id)}
+                              onRevoke={() => handleRevokeUser(user._id)}
+                              onUnrevoke={() => handleUnrevokeUser(user._id)}
+                              isUpdating={updatingUsers[user._id]}
+                              isLastRow={index === users.length - 1}
+                            />
+                          </div>
                         </div>
                       )}
                     </td>
@@ -727,7 +761,8 @@ const UserManagementTable = memo(() => {
               {users.map((user) => (
                 <div
                   key={user._id}
-                  className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200"
+                  className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer"
+                  onClick={() => handleRowClick(user)}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
@@ -902,6 +937,21 @@ const UserManagementTable = memo(() => {
           onSave={handleProfileSave}
           user={selectedUserForProfile}
           showAllFields={true}
+        />
+      )}
+
+      {/* Profile View Modal */}
+      {selectedUserForView && (
+        <ProfileViewModal
+          user={selectedUserForView}
+          isOpen={profileViewModalOpen}
+          onClose={() => {
+            setProfileViewModalOpen(false);
+            setSelectedUserForView(null);
+          }}
+          onEdit={handleSwitchToEdit}
+          isLoading={loadingUserProfile}
+          hideEditForAdmin={true}
         />
       )}
     </div>

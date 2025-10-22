@@ -149,6 +149,12 @@ const SignUpForm: React.FC = () => {
 
   // Clear form and errors when role changes
   useEffect(() => {
+    // Don't reset coordinates when role changes, keep current location
+    const currentCoords =
+      selectedLocation.lat !== 0 && selectedLocation.lng !== 0
+        ? { latitude: selectedLocation.lat, longitude: selectedLocation.lng }
+        : { latitude: 40.73061, longitude: -73.935242 };
+
     reset({
       firstName: "",
       lastName: "",
@@ -156,8 +162,7 @@ const SignUpForm: React.FC = () => {
       phone: "",
       password: "",
       confirmPassword: "",
-      latitude: 40.73061,
-      longitude: -73.935242,
+      ...currentCoords,
       ...(selectedRole === "customer" && {
         defaultPropertyType: "domestic",
       }),
@@ -169,7 +174,7 @@ const SignUpForm: React.FC = () => {
       }),
     });
     dispatch(clearError());
-  }, [selectedRole, reset, dispatch]);
+  }, [selectedRole, reset, dispatch, selectedLocation]);
 
   // Handle redirect after successful registration
   useEffect(() => {
@@ -179,9 +184,80 @@ const SignUpForm: React.FC = () => {
     }
   }, [isAuthenticated, user, navigate]);
 
+  // Fix for black text issue in contractor fields on paste/autofill
+  useEffect(() => {
+    if (selectedRole === "contractor") {
+      const fixTextColor = () => {
+        const contractorInputs = document.querySelectorAll(
+          '.bg-white\\/10 input[type="text"]'
+        );
+        contractorInputs.forEach((input: any) => {
+          if (input.style.color !== "white") {
+            input.style.color = "white";
+            input.style.webkitTextFillColor = "white";
+          }
+        });
+      };
+
+      // Fix immediately
+      fixTextColor();
+
+      // Fix on paste events
+      const handlePaste = (e: ClipboardEvent) => {
+        setTimeout(() => {
+          const target = e.target as HTMLInputElement;
+          if (target && target.classList.contains("bg-white\\/10")) {
+            target.style.color = "white";
+            target.style.webkitTextFillColor = "white";
+          }
+        }, 10);
+      };
+
+      // Fix on input events
+      const handleInput = (e: Event) => {
+        const target = e.target as HTMLInputElement;
+        if (target && target.classList.contains("bg-white\\/10")) {
+          target.style.color = "white";
+          target.style.webkitTextFillColor = "white";
+        }
+      };
+
+      // Add event listeners
+      document.addEventListener("paste", handlePaste);
+      document.addEventListener("input", handleInput);
+
+      // Cleanup
+      return () => {
+        document.removeEventListener("paste", handlePaste);
+        document.removeEventListener("input", handleInput);
+      };
+    }
+  }, [selectedRole]);
+
   const onSubmit = useCallback(
     async (data: any) => {
       try {
+        // Debug: Log coordinates before submission
+        console.log(
+          "SignUpForm onSubmit - selectedLocation:",
+          selectedLocation
+        );
+        console.log("SignUpForm onSubmit - data coordinates:", {
+          latitude: data.latitude,
+          longitude: data.longitude,
+        });
+
+        // Use form data coordinates if selectedLocation is [0,0] or invalid
+        const finalLat =
+          selectedLocation.lat !== 0 ? selectedLocation.lat : data.latitude;
+        const finalLng =
+          selectedLocation.lng !== 0 ? selectedLocation.lng : data.longitude;
+
+        console.log("SignUpForm onSubmit - final coordinates:", {
+          lat: finalLat,
+          lng: finalLng,
+        });
+
         if (selectedRole === "contractor") {
           // Validate docs
           if (!contractorDocs.length) {
@@ -205,14 +281,8 @@ const SignUpForm: React.FC = () => {
           formData.append("phone", data.phone);
           formData.append("role", selectedRole);
           formData.append("geoHome[type]", "Point");
-          formData.append(
-            "geoHome[coordinates][0]",
-            String(selectedLocation.lng)
-          );
-          formData.append(
-            "geoHome[coordinates][1]",
-            String(selectedLocation.lat)
-          );
+          formData.append("geoHome[coordinates][0]", String(finalLng));
+          formData.append("geoHome[coordinates][1]", String(finalLat));
           formData.append("contractor[companyName]", data.companyName);
           formData.append("contractor[license]", data.license);
           formData.append("contractor[taxId]", data.taxId);
@@ -234,10 +304,7 @@ const SignUpForm: React.FC = () => {
             role: selectedRole,
             geoHome: {
               type: "Point",
-              coordinates: [selectedLocation.lng, selectedLocation.lat] as [
-                number,
-                number
-              ],
+              coordinates: [finalLng, finalLat] as [number, number],
             },
             customer: {
               defaultPropertyType: "domestic",

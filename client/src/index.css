@@ -28,17 +28,19 @@
     font-size: 16px;
   }
 
-  /* Fix browser autofill and paste styling issues - clean approach */
+  /* Fix browser autofill and paste styling issues - comprehensive approach */
   input:-webkit-autofill,
   input:-webkit-autofill:hover,
   input:-webkit-autofill:focus,
-  input:-webkit-autofill:active {
+  input:-webkit-autofill:active,
+  input:-webkit-autofill:visited {
     -webkit-text-fill-color: white !important;
     background-color: rgba(255, 255, 255, 0.1) !important;
     transition: background-color 5000s ease-in-out 0s !important;
+    -webkit-box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.1) inset !important;
   }
 
-  /* Fix paste styling for all input types */
+  /* Fix paste styling for all input types - comprehensive */
   input[type="text"]:not([readonly]):not([disabled]),
   input[type="email"]:not([readonly]):not([disabled]),
   input[type="password"]:not([readonly]):not([disabled]),
@@ -51,12 +53,28 @@
     appearance: none;
   }
 
-  /* Specific fix for dark themed forms (auth forms) - clean bg-white/10 */
+  /* Specific fix for dark themed forms (auth forms) - enhanced bg-white/10 */
   .bg-white\/10 input:-webkit-autofill,
   .bg-white\/10 input:-webkit-autofill:hover,
   .bg-white\/10 input:-webkit-autofill:focus,
-  .bg-white\/10 input:-webkit-autofill:active {
+  .bg-white\/10 input:-webkit-autofill:active,
+  .bg-white\/10 input:-webkit-autofill:visited {
     -webkit-text-fill-color: white !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    -webkit-box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.1) inset !important;
+  }
+
+  /* Additional fix for contractor sign-up form specifically */
+  .bg-white\/10 input[type="text"]:not([readonly]):not([disabled]),
+  .bg-white\/10 input[type="email"]:not([readonly]):not([disabled]),
+  .bg-white\/10 input[type="tel"]:not([readonly]):not([disabled]) {
+    color: white !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  /* Fix for when content is pasted */
+  .bg-white\/10 input:focus {
+    color: white !important;
     background-color: rgba(255, 255, 255, 0.1) !important;
   }
 
@@ -72,6 +90,71 @@
   /* Firefox autofill fix */
   input:-moz-autofill {
     background-color: rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+  }
+
+  /* Additional comprehensive fixes for contractor sign-up */
+  .bg-white\/10 input {
+    color: white !important;
+  }
+
+  .bg-white\/10 input::placeholder {
+    color: rgba(255, 255, 255, 0.6) !important;
+  }
+
+  /* Force white text on all states for contractor form */
+  .bg-white\/10 input:not([readonly]):not([disabled]) {
+    color: white !important;
+  }
+
+  /* Specific aggressive fixes for contractor fields that show black text */
+  .bg-white\/10 input[type="text"] {
+    color: white !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  /* Force white text on paste for contractor fields */
+  .bg-white\/10 input[type="text"]:focus,
+  .bg-white\/10 input[type="text"]:not(:focus) {
+    color: white !important;
+  }
+
+  /* Additional aggressive autofill override for contractor fields */
+  .bg-white\/10 input[type="text"]:-webkit-autofill,
+  .bg-white\/10 input[type="text"]:-webkit-autofill:hover,
+  .bg-white\/10 input[type="text"]:-webkit-autofill:focus,
+  .bg-white\/10 input[type="text"]:-webkit-autofill:active {
+    -webkit-text-fill-color: white !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    -webkit-box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.1) inset !important;
+  }
+
+  /* Force white text on all input events */
+  .bg-white\/10 input[type="text"]:valid,
+  .bg-white\/10 input[type="text"]:invalid,
+  .bg-white\/10 input[type="text"]:required,
+  .bg-white\/10 input[type="text"]:optional {
+    color: white !important;
+  }
+
+  /* Nuclear option: Force white text on ALL possible states */
+  .bg-white\/10 input[type="text"] * {
+    color: white !important;
+  }
+
+  /* Additional paste event handling */
+  .bg-white\/10 input[type="text"]:not(:placeholder-shown) {
+    color: white !important;
+  }
+
+  /* Force white text when input has value */
+  .bg-white\/10 input[type="text"][value] {
+    color: white !important;
+  }
+
+  /* Override any browser default text color */
+  .bg-white\/10 input[type="text"] {
+    -webkit-text-fill-color: white !important;
     color: white !important;
   }
 

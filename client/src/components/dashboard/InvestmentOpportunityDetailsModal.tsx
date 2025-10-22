@@ -9,6 +9,7 @@ import {
   withdrawInterestThunk,
 } from "../../store/slices/investmentOpportunitySlice";
 import { investmentOpportunityApi } from "../../services/investmentOpportunityService";
+import { fetchUserThunk } from "../../store/thunks/userManagementThunks";
 import type { ContactStatus, User } from "../../types";
 import Loader from "../ui/Loader";
 import ProfileViewModal from "../ProfileViewModal";
@@ -80,6 +81,8 @@ const InvestmentOpportunityDetailsModal: React.FC<
   const [selectedContractor, setSelectedContractor] = useState<User | null>(
     null
   );
+  const [loadingContractorProfile, setLoadingContractorProfile] =
+    useState(false);
   const [showInterestModal, setShowInterestModal] = useState(false);
   const [interestMessage, setInterestMessage] = useState("");
   const [submittingInterest, setSubmittingInterest] = useState(false);
@@ -238,26 +241,68 @@ const InvestmentOpportunityDetailsModal: React.FC<
     }
   }, [dispatch, selectedOpportunity]);
 
-  const handleViewContractorProfile = useCallback((interest: any) => {
-    // Convert interest data to User format for ProfileViewModal
-    const contractorUser: User = {
-      _id: interest.contractorId._id,
-      email: interest.contractorId.email,
-      firstName: interest.contractorId.firstName,
-      lastName: interest.contractorId.lastName,
-      phone: interest.contractorId.phone,
-      profileImage: interest.contractorId.profileImage,
-      role: "contractor" as const,
-      status: "active" as const,
-      approval: "approved" as const,
-      emailVerified: true,
-      contractor: interest.contractorId.contractor,
-      createdAt: "",
-      updatedAt: "",
-    };
-    setSelectedContractor(contractorUser);
-    setProfileViewOpen(true);
-  }, []);
+  const handleViewContractorProfile = useCallback(
+    async (interest: any) => {
+      try {
+        setLoadingContractorProfile(true);
+
+        // Fetch full user data by ID
+        const resultAction = await dispatch(
+          fetchUserThunk(interest.contractorId._id)
+        );
+
+        if (fetchUserThunk.fulfilled.match(resultAction)) {
+          const fullUserData = resultAction.payload;
+          setSelectedContractor(fullUserData);
+          setProfileViewOpen(true);
+        } else {
+          // Fallback to nested data if API call fails
+          console.warn("Failed to fetch full user data, using nested data");
+          const contractorUser: User = {
+            _id: interest.contractorId._id,
+            email: interest.contractorId.email,
+            firstName: interest.contractorId.firstName,
+            lastName: interest.contractorId.lastName,
+            phone: interest.contractorId.phone,
+            profileImage: interest.contractorId.profileImage,
+            role: "contractor" as const,
+            status: interest.contractorId.status || ("active" as const),
+            approval: interest.contractorId.approval || ("approved" as const),
+            emailVerified:
+              interest.contractorId.userVerification?.isVerified || true,
+            contractor: interest.contractorId.contractor,
+            geoHome: interest.contractorId.geoHome,
+            createdAt: interest.contractorId.createdAt || "",
+            updatedAt: interest.contractorId.updatedAt || "",
+            ...(interest.contractorId.userVerification && {
+              userVerification: interest.contractorId.userVerification,
+            }),
+            ...(interest.contractorId.passwordReset && {
+              passwordReset: interest.contractorId.passwordReset,
+            }),
+            ...(interest.contractorId.stripeCustomerId && {
+              stripeCustomerId: interest.contractorId.stripeCustomerId,
+            }),
+            ...(interest.contractorId.stripeConnectAccountId && {
+              stripeConnectAccountId:
+                interest.contractorId.stripeConnectAccountId,
+            }),
+            ...(interest.contractorId.stripeConnectStatus && {
+              stripeConnectStatus: interest.contractorId.stripeConnectStatus,
+            }),
+          };
+          setSelectedContractor(contractorUser);
+          setProfileViewOpen(true);
+        }
+      } catch (error) {
+        console.error("Error fetching contractor profile:", error);
+        // Show error toast or handle gracefully
+      } finally {
+        setLoadingContractorProfile(false);
+      }
+    },
+    [dispatch]
+  );
 
   const handleCloseProfile = useCallback(() => {
     setProfileViewOpen(false);
@@ -821,7 +866,8 @@ const InvestmentOpportunityDetailsModal: React.FC<
                       {/* Profile Image - Clickable */}
                       <button
                         onClick={() => handleViewContractorProfile(interest)}
-                        className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-accent-500 rounded-full"
+                        disabled={loadingContractorProfile}
+                        className="flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-accent-500 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
                         title="View Profile"
                       >
                         {interest.contractorId.profileImage ? (
@@ -846,12 +892,19 @@ const InvestmentOpportunityDetailsModal: React.FC<
                               onClick={() =>
                                 handleViewContractorProfile(interest)
                               }
-                              className="text-left hover:text-accent-600 transition-colors focus:outline-none focus:text-accent-600"
+                              disabled={loadingContractorProfile}
+                              className="text-left hover:text-accent-600 transition-colors focus:outline-none focus:text-accent-600 disabled:opacity-50 disabled:cursor-not-allowed"
                               title="View Profile"
                             >
                               <h4 className="text-lg font-semibold text-primary-900">
-                                {interest.contractorId.firstName}{" "}
-                                {interest.contractorId.lastName}
+                                {loadingContractorProfile ? (
+                                  <span className="flex items-center space-x-2">
+                                    <div className="w-4 h-4 border-2 border-accent-500 border-t-transparent rounded-full animate-spin"></div>
+                                    <span>Loading...</span>
+                                  </span>
+                                ) : (
+                                  `${interest.contractorId.firstName} ${interest.contractorId.lastName}`
+                                )}
                               </h4>
                             </button>
                             {interest.contractorId.contractor?.companyName && (

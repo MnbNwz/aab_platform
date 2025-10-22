@@ -679,25 +679,6 @@ const ProfileModal: React.FC<ExtendedProfileModalProps> = ({
                       className={getInputClassName(isAdmin(user.role))}
                     />
                   </div>
-                  <div>
-                    <label className="block text-primary-700 font-medium mb-1 text-sm sm:text-base">
-                      Documents
-                    </label>
-                    <ul className="list-disc ml-6">
-                      {user.contractor.docs.map((doc: any, idx: number) => (
-                        <li key={idx}>
-                          <a
-                            href={doc.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-accent-500 underline"
-                          >
-                            View
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
                 </div>
               )}
               <div className="pt-4 sm:pt-6">
