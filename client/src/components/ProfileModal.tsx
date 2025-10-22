@@ -364,7 +364,7 @@ const ProfileModal: React.FC<ExtendedProfileModalProps> = ({
                 </label>
                 <input
                   type="text"
-                  value={form.userRole || "admin"}
+                  value={user.role}
                   disabled
                   className={getInputClassName(true)}
                 />

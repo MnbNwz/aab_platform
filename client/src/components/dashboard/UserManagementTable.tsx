@@ -43,6 +43,7 @@ interface UserActionsDropdownProps {
   onUnrevoke: () => void;
   onEditProfile: () => void;
   isUpdating: boolean;
+  isLastRow?: boolean;
 }
 
 const UserActionsDropdown = memo<UserActionsDropdownProps>(
@@ -54,6 +55,7 @@ const UserActionsDropdown = memo<UserActionsDropdownProps>(
     onUnrevoke,
     onEditProfile,
     isUpdating,
+    isLastRow = false,
   }) => {
     const canApprove = user.approval === "pending";
     const canReject = user.approval === "pending";
@@ -138,6 +140,7 @@ const UserActionsDropdown = memo<UserActionsDropdownProps>(
         items={actionItems}
         disabled={isUpdating}
         trigger={<MoreVertical className="h-4 w-4" />}
+        forceUpward={isLastRow}
       />
     );
   }
@@ -526,7 +529,7 @@ const UserManagementTable = memo(() => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {users.map((user) => (
+                {users.map((user, index) => (
                   <tr key={user._id} className="hover:bg-gray-50 group">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
@@ -601,6 +604,7 @@ const UserManagementTable = memo(() => {
                             onUnrevoke={() => handleUnrevokeUser(user._id)}
                             onEditProfile={() => handleEditProfile(user)}
                             isUpdating={updatingUsers[user._id]}
+                            isLastRow={index === users.length - 1}
                           />
                         </div>
                       )}
@@ -634,7 +638,7 @@ const UserManagementTable = memo(() => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {users.map((user) => (
+                {users.map((user, index) => (
                   <tr key={user._id} className="hover:bg-gray-50 group">
                     <td className="px-4 py-4">
                       <div>
@@ -706,6 +710,7 @@ const UserManagementTable = memo(() => {
                             onUnrevoke={() => handleUnrevokeUser(user._id)}
                             onEditProfile={() => handleEditProfile(user)}
                             isUpdating={updatingUsers[user._id]}
+                            isLastRow={index === users.length - 1}
                           />
                         </div>
                       )}

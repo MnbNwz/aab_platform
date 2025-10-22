@@ -1,4 +1,4 @@
-import React, { FC } from "react";
+import React, { FC, useState, useRef, useEffect } from "react";
 import { Menu, Transition } from "@headlessui/react";
 import { Fragment } from "react";
 
@@ -21,6 +21,7 @@ export interface ActionDropdownProps {
   position?: "left" | "right";
   size?: "sm" | "md" | "lg";
   trigger?: React.ReactNode;
+  forceUpward?: boolean;
 }
 
 const ActionDropdown: FC<ActionDropdownProps> = ({
@@ -32,7 +33,60 @@ const ActionDropdown: FC<ActionDropdownProps> = ({
   position = "right",
   size = "md",
   trigger,
+  forceUpward = false,
 }) => {
+  const [shouldOpenUpward, setShouldOpenUpward] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const checkPosition = () => {
+      if (buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        const spaceBelow = viewportHeight - rect.bottom;
+        const spaceAbove = rect.top;
+
+        // Check for pagination element specifically
+        const paginationElement = document.querySelector(
+          '[class*="pagination"], [class*="border-t"]'
+        );
+        let paginationOffset = 0;
+
+        if (paginationElement) {
+          const paginationRect = paginationElement.getBoundingClientRect();
+          // If pagination is below the button and within reasonable distance
+          if (
+            paginationRect.top > rect.bottom &&
+            paginationRect.top < rect.bottom + 300
+          ) {
+            paginationOffset = paginationRect.height + 20; // Add some padding
+          }
+        }
+
+        // Calculate effective space below considering pagination
+        const effectiveSpaceBelow = spaceBelow - paginationOffset;
+
+        // If forceUpward is true or there's insufficient space below, open upward
+        setShouldOpenUpward(
+          forceUpward ||
+            (effectiveSpaceBelow < 200 && spaceAbove > effectiveSpaceBelow)
+        );
+      }
+    };
+
+    // Check position on mount and when window resizes
+    checkPosition();
+    window.addEventListener("resize", checkPosition);
+
+    // Also check when scrolling to handle dynamic content
+    window.addEventListener("scroll", checkPosition);
+
+    return () => {
+      window.removeEventListener("resize", checkPosition);
+      window.removeEventListener("scroll", checkPosition);
+    };
+  }, [forceUpward]);
+
   const getVariantStyles = (variant: ActionItem["variant"]) => {
     switch (variant) {
       case "danger":
@@ -71,12 +125,22 @@ const ActionDropdown: FC<ActionDropdownProps> = ({
   };
 
   const getMenuPosition = () => {
-    return position === "left" ? "left-0" : "right-0";
+    const horizontalPos = position === "left" ? "left-0" : "right-0";
+    const verticalPos = shouldOpenUpward ? "bottom-full mb-2" : "top-full mt-2";
+    return `${horizontalPos} ${verticalPos}`;
+  };
+
+  const getMenuOrigin = () => {
+    if (shouldOpenUpward) {
+      return position === "left" ? "origin-bottom-left" : "origin-bottom-right";
+    }
+    return position === "left" ? "origin-top-left" : "origin-top-right";
   };
 
   return (
     <Menu as="div" className={`relative inline-block text-left ${className}`}>
       <Menu.Button
+        ref={buttonRef}
         disabled={disabled}
         className={`
           ${getSizeStyles()}
@@ -115,7 +179,7 @@ const ActionDropdown: FC<ActionDropdownProps> = ({
       >
         <Menu.Items
           className={`
-            absolute ${getMenuPosition()} z-10 mt-2 w-48 origin-top-right 
+            absolute ${getMenuPosition()} z-10 w-48 ${getMenuOrigin()}
             rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5 
             focus:outline-none ${menuClassName}
           `}
@@ -138,9 +202,12 @@ const ActionDropdown: FC<ActionDropdownProps> = ({
                     {item.icon && (
                       <span className="mr-3 flex-shrink-0">
                         {React.isValidElement(item.icon)
-                          ? React.cloneElement(item.icon, {
-                              className: getIconSize(),
-                            })
+                          ? React.cloneElement(
+                              item.icon as React.ReactElement<any>,
+                              {
+                                className: getIconSize(),
+                              }
+                            )
                           : item.icon}
                       </span>
                     )}

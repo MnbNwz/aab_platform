@@ -1,5 +1,11 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import type { User, UserStats, UsersResponse, UserFilters } from "../../types";
+import type {
+  User,
+  UserStats,
+  UsersResponse,
+  UserFilters,
+  UserManagementPaginationInfo,
+} from "../../types";
 
 export interface UserManagementState {
   // User statistics
@@ -9,14 +15,7 @@ export interface UserManagementState {
 
   // Users list
   users: User[];
-  pagination: {
-    currentPage: number;
-    totalPages: number;
-    totalCount: number;
-    hasNextPage: boolean;
-    hasPrevPage: boolean;
-    limit: number;
-  } | null;
+  pagination: UserManagementPaginationInfo | null;
   usersLoading: boolean;
   usersError: string | null;
 
@@ -88,14 +87,7 @@ export const userManagementSlice = createSlice({
     },
     setUsers: (state, action: PayloadAction<UsersResponse>) => {
       state.users = action.payload.users;
-      state.pagination = {
-        currentPage: action.payload.pagination.currentPage,
-        totalPages: action.payload.pagination.totalPages,
-        totalCount: action.payload.pagination.totalItems,
-        hasNextPage: action.payload.pagination.hasNextPage,
-        hasPrevPage: action.payload.pagination.hasPreviousPage,
-        limit: action.payload.pagination.itemsPerPage,
-      };
+      state.pagination = action.payload.pagination;
       state.usersLoading = false;
       state.usersError = null;
     },

@@ -4,7 +4,7 @@ import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
 import { RootState } from "../store";
 import { membershipService } from "../services/membershipService";
-import ConfirmModal from "./ui/ConfirmModal";
+// import ConfirmModal from "./ui/ConfirmModal";
 import type { CurrentMembership } from "../types";
 
 interface UpgradeMembershipModalProps {
@@ -24,19 +24,12 @@ const UpgradeMembershipModal: React.FC<UpgradeMembershipModalProps> = ({
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
   const [hasShownPremiumToast, setHasShownPremiumToast] = useState(false);
-  const [isAutoRenewEnabled, setIsAutoRenewEnabled] = useState<boolean>(false);
-  const [showAutoRenewConfirm, setShowAutoRenewConfirm] = useState(false);
-  const [pendingCheckout, setPendingCheckout] = useState<{
-    planId: string;
-    billingPeriod: "monthly" | "yearly";
-  } | null>(null);
-
-  // Sync auto-renew state with current membership
-  useEffect(() => {
-    if (currentMembership?.isAutoRenew !== undefined) {
-      setIsAutoRenewEnabled(currentMembership.isAutoRenew);
-    }
-  }, [currentMembership?.isAutoRenew]);
+  // const [showAutoRenewConfirm, setShowAutoRenewConfirm] = useState(false);
+  // const [showOneTimeConfirm, setShowOneTimeConfirm] = useState(false);
+  // const [pendingCheckout, setPendingCheckout] = useState<{
+  //   planId: string;
+  //   billingPeriod: "monthly" | "yearly";
+  // } | null>(null);
 
   const handleCheckout = useCallback(
     async (planId: string, billingPeriod: "monthly" | "yearly") => {
@@ -48,7 +41,7 @@ const UpgradeMembershipModal: React.FC<UpgradeMembershipModalProps> = ({
           planId,
           billingPeriod,
           url: `${window.location.origin}/dashboard`,
-          isAutoRenew: isAutoRenewEnabled,
+          isAutoRenew: false, // Always false for now
         };
 
         const response = await membershipService.checkout(checkoutPayload);
@@ -64,33 +57,48 @@ const UpgradeMembershipModal: React.FC<UpgradeMembershipModalProps> = ({
         setLoading(null);
       }
     },
-    [isAutoRenewEnabled]
+    []
   );
 
   const handleCheckoutClick = useCallback(
     (planId: string, billingPeriod: "monthly" | "yearly") => {
-      if (isAutoRenewEnabled) {
-        setPendingCheckout({ planId, billingPeriod });
-        setShowAutoRenewConfirm(true);
-      } else {
-        handleCheckout(planId, billingPeriod);
-      }
+      handleCheckout(planId, billingPeriod);
     },
-    [isAutoRenewEnabled, handleCheckout]
+    [handleCheckout]
   );
 
-  const handleAutoRenewConfirm = useCallback(() => {
-    setShowAutoRenewConfirm(false);
-    if (pendingCheckout) {
-      handleCheckout(pendingCheckout.planId, pendingCheckout.billingPeriod);
-      setPendingCheckout(null);
-    }
-  }, [pendingCheckout, handleCheckout]);
+  // Commented out auto-renewal handlers
+  // const handleAutoRenewConfirm = useCallback(() => {
+  //   if (pendingCheckout) {
+  //     setShowAutoRenewConfirm(false);
+  //     handleCheckout(
+  //       pendingCheckout.planId,
+  //       pendingCheckout.billingPeriod,
+  //       true
+  //     );
+  //   }
+  // }, [pendingCheckout, handleCheckout]);
 
-  const handleAutoRenewCancel = useCallback(() => {
-    setShowAutoRenewConfirm(false);
-    setPendingCheckout(null);
-  }, []);
+  // const handleAutoRenewCancel = useCallback(() => {
+  //   setShowAutoRenewConfirm(false);
+  //   setShowOneTimeConfirm(true);
+  // }, []);
+
+  // const handleOneTimeConfirm = useCallback(() => {
+  //   if (pendingCheckout) {
+  //     setShowOneTimeConfirm(false);
+  //     handleCheckout(
+  //       pendingCheckout.planId,
+  //       pendingCheckout.billingPeriod,
+  //       false
+  //     );
+  //   }
+  // }, [pendingCheckout, handleCheckout]);
+
+  // const handleOneTimeCancel = useCallback(() => {
+  //   setShowOneTimeConfirm(false);
+  //   setPendingCheckout(null);
+  // }, []);
 
   // Check if user is on premium tier
   const isPremiumUser =
@@ -424,29 +432,6 @@ const UpgradeMembershipModal: React.FC<UpgradeMembershipModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Auto-Renewal Checkbox */}
-                  <div className="px-3 xs:px-4 sm:px-5 py-2 xs:py-3 bg-blue-50 border-t border-blue-100">
-                    <label className="flex items-start space-x-2 xs:space-x-3 cursor-pointer group">
-                      <input
-                        type="checkbox"
-                        checked={isAutoRenewEnabled}
-                        onChange={(e) =>
-                          setIsAutoRenewEnabled(e.target.checked)
-                        }
-                        className="w-4 h-4 xs:w-5 xs:h-5 text-accent-500 border-gray-300 rounded focus:ring-2 focus:ring-accent-500 focus:ring-offset-2 mt-0.5 flex-shrink-0 transition-colors"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs xs:text-sm sm:text-base text-primary-800 font-semibold group-hover:text-accent-600 transition-colors">
-                          Enable automatic renewal
-                        </p>
-                        <p className="text-xs sm:text-sm text-primary-600 mt-0.5 leading-relaxed">
-                          Your membership will automatically renew when it
-                          expires. You can change this anytime in Settings.
-                        </p>
-                      </div>
-                    </label>
-                  </div>
-
                   <div className="flex gap-1 xs:gap-2 p-2 xs:p-3 sm:p-4 lg:p-5">
                     <button
                       className={`flex-1 py-2 xs:py-2.5 sm:py-3 px-1 xs:px-2 sm:px-4 text-xs xs:text-xs sm:text-sm font-semibold rounded-lg transition-all duration-200
@@ -545,16 +530,47 @@ const UpgradeMembershipModal: React.FC<UpgradeMembershipModalProps> = ({
         .animate-fadein { animation: fadein 0.7s cubic-bezier(.4,2,.6,1) both; }
       `}</style>
 
-      {/* Auto-Renew Confirmation Modal */}
+      {/* Commented out auto-renewal confirmation modals */}
+      {/* 
       <ConfirmModal
         isOpen={showAutoRenewConfirm}
-        title="Enable Auto-Renewal?"
-        message="Your membership will automatically renew when it expires. You can disable this anytime from Settings. Do you want to continue with auto-renewal enabled?"
-        confirmText="Yes, Continue"
-        cancelText="Cancel"
+        title="Auto-Renewal?"
+        message={
+          <div className="text-center">
+            <p className="mb-3">Enable automatic renewal for convenience?</p>
+            <div className="text-sm text-gray-500 space-y-1">
+              <p>
+                <strong>Yes:</strong> Auto-renewal enabled
+              </p>
+              <p>
+                <strong>No:</strong> One-time payment
+              </p>
+            </div>
+          </div>
+        }
+        confirmText="Yes"
+        cancelText="No"
         onConfirm={handleAutoRenewConfirm}
         onCancel={handleAutoRenewCancel}
       />
+
+      <ConfirmModal
+        isOpen={showOneTimeConfirm}
+        title="One-Time Payment"
+        message={
+          <div className="text-center">
+            <p className="mb-3">Continue with one-time payment?</p>
+            <div className="text-sm text-gray-500">
+              <p>Your membership will expire and need manual renewal.</p>
+            </div>
+          </div>
+        }
+        confirmText="Yes"
+        cancelText="Cancel"
+        onConfirm={handleOneTimeConfirm}
+        onCancel={handleOneTimeCancel}
+      />
+      */}
     </div>
   );
 };

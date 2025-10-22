@@ -111,6 +111,18 @@ export interface PaginationInfo {
   previousPage: number | null;
 }
 
+// User management pagination types (matches actual API response)
+export interface UserManagementPaginationInfo {
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  limit: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+  nextPage: number | null;
+  previousPage: number | null;
+}
+
 // User management types
 export interface UserStats {
   totalUsers: number;
@@ -124,7 +136,7 @@ export interface UserStats {
 
 export interface UsersResponse {
   users: User[];
-  pagination: PaginationInfo;
+  pagination: UserManagementPaginationInfo;
 }
 
 export interface UserFilters {

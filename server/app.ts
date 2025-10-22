@@ -41,7 +41,7 @@ app.use(
   }),
 );
 
-app.use(limiter);
+// app.use(limiter);
 
 // MongoDB connection (singleton)
 connectDB().catch((err: Error) => logErrorWithContext(err, { operation: "database_connection" }));
