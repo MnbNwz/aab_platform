@@ -210,7 +210,7 @@ const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
             render={({ field }) => (
               <input
                 {...field}
-                className="w-full rounded-lg px-3 py-2 sm:py-3 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm sm:text-base text-primary-900 placeholder-gray-500"
+                className="w-full rounded-lg px-3 py-2 sm:py-3 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm sm:text-base text-primary-900 placeholder-gray-400"
                 minLength={5}
                 maxLength={100}
                 required
@@ -239,7 +239,7 @@ const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
             render={({ field }) => (
               <textarea
                 {...field}
-                className="w-full rounded-lg px-3 py-2 sm:py-3 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm sm:text-base resize-none text-primary-900 placeholder-gray-500"
+                className="w-full rounded-lg px-3 py-2 sm:py-3 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm sm:text-base resize-none text-primary-900 placeholder-gray-400"
                 minLength={10}
                 maxLength={2000}
                 required
@@ -358,7 +358,7 @@ const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
                   </span>
                   <input
                     {...field}
-                    className="w-full rounded-lg pl-8 pr-3 py-2 sm:py-3 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm sm:text-base text-primary-900 placeholder-gray-500"
+                    className="w-full rounded-lg pl-8 pr-3 py-2 sm:py-3 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm sm:text-base text-primary-900 placeholder-gray-400"
                     type="number"
                     min={0}
                     step="0.01"
@@ -401,7 +401,7 @@ const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
               render={({ field }) => (
                 <input
                   {...field}
-                  className="w-full rounded-lg px-3 py-2 sm:py-3 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm sm:text-base text-primary-900 placeholder-gray-500"
+                  className="w-full rounded-lg px-3 py-2 sm:py-3 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm sm:text-base text-primary-900 placeholder-gray-400"
                   type="number"
                   min={1}
                   max={365}

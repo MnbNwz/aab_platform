@@ -358,7 +358,7 @@ const InvestmentOpportunityModal: React.FC<InvestmentOpportunityModalProps> = ({
                   value={formData.title}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 placeholder-gray-400"
                   placeholder="e.g., Luxury Duplex Investment"
                 />
               </div>
@@ -372,7 +372,7 @@ const InvestmentOpportunityModal: React.FC<InvestmentOpportunityModalProps> = ({
                   value={formData.propertyType}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 placeholder-gray-400"
                 >
                   <option value="house">House</option>
                   <option value="duplex">Duplex</option>
@@ -395,7 +395,7 @@ const InvestmentOpportunityModal: React.FC<InvestmentOpportunityModalProps> = ({
                   required
                   min="0"
                   step="0.01"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 placeholder-gray-400"
                   placeholder="450000.00"
                 />
               </div>
@@ -412,7 +412,7 @@ const InvestmentOpportunityModal: React.FC<InvestmentOpportunityModalProps> = ({
                   required
                   min="0"
                   step="0.1"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 placeholder-gray-400"
                   placeholder="12.5"
                 />
               </div>
@@ -427,7 +427,7 @@ const InvestmentOpportunityModal: React.FC<InvestmentOpportunityModalProps> = ({
                   onChange={handleChange}
                   required
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 placeholder-gray-400"
                   placeholder="Detailed description of the investment opportunity..."
                 />
               </div>
@@ -501,7 +501,7 @@ const InvestmentOpportunityModal: React.FC<InvestmentOpportunityModalProps> = ({
                   value={formData.lotSize}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 placeholder-gray-400"
                   placeholder="5000 sq ft"
                 />
               </div>
@@ -516,7 +516,7 @@ const InvestmentOpportunityModal: React.FC<InvestmentOpportunityModalProps> = ({
                   value={formData.buildingSize}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 placeholder-gray-400"
                   placeholder="3000 sq ft"
                 />
               </div>
@@ -532,7 +532,7 @@ const InvestmentOpportunityModal: React.FC<InvestmentOpportunityModalProps> = ({
                   onChange={handleChange}
                   required
                   min="0"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 placeholder-gray-400"
                   placeholder="2"
                 />
               </div>
@@ -549,7 +549,7 @@ const InvestmentOpportunityModal: React.FC<InvestmentOpportunityModalProps> = ({
                   required
                   min="1800"
                   max={new Date().getFullYear()}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 placeholder-gray-400"
                   placeholder="1995"
                 />
               </div>
@@ -588,7 +588,7 @@ const InvestmentOpportunityModal: React.FC<InvestmentOpportunityModalProps> = ({
                       onChange={handleChange}
                       min="0"
                       step="0.01"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 placeholder-gray-400"
                       placeholder="50000.00"
                     />
                   </div>
@@ -603,7 +603,7 @@ const InvestmentOpportunityModal: React.FC<InvestmentOpportunityModalProps> = ({
                       value={formData.estimatedCompletionTime}
                       onChange={handleChange}
                       min="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 placeholder-gray-400"
                       placeholder="6"
                     />
                   </div>
@@ -617,7 +617,7 @@ const InvestmentOpportunityModal: React.FC<InvestmentOpportunityModalProps> = ({
                       value={formData.renovationDetails}
                       onChange={handleChange}
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 placeholder-gray-400"
                       placeholder="Kitchen and bathroom updates needed..."
                     />
                   </div>
@@ -650,7 +650,7 @@ const InvestmentOpportunityModal: React.FC<InvestmentOpportunityModalProps> = ({
                     onChange={(e) =>
                       handleHighlightChange(index, e.target.value)
                     }
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 placeholder-gray-400"
                     placeholder="e.g., Close to public transit"
                   />
                   {highlights.length > 1 && (
@@ -857,7 +857,7 @@ const InvestmentOpportunityModal: React.FC<InvestmentOpportunityModalProps> = ({
                                   e.target.value
                                 )
                               }
-                              className="mt-2 w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-accent-500"
+                              className="mt-2 w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-accent-500 placeholder-gray-400"
                               placeholder="File name/description"
                             />
                           </div>

@@ -57,7 +57,7 @@ const PendingApproval: React.FC<{ children: React.ReactNode }> = ({
 
   if (user?.approval === "pending" || user?.approval === "rejected") {
     return (
-      <div className="min-h-screen bg-primary-800 flex items-center justify-center p-4">
+      <div className="aas-loader-container-mobile bg-primary-800 p-4">
         <div className="max-w-md w-full">
           <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-lg p-6 sm:p-8">
             <div className="text-center">

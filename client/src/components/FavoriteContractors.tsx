@@ -93,7 +93,7 @@ const FavoriteContractors: React.FC = () => {
             placeholder="Search by name, company, or services..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 sm:pl-10 pr-9 sm:pr-10 py-2 sm:py-3 border border-primary-200 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 text-sm sm:text-base text-primary-900 placeholder-gray-500"
+            className="w-full pl-9 sm:pl-10 pr-9 sm:pr-10 py-2 sm:py-3 border border-primary-200 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 text-sm sm:text-base text-primary-900 placeholder-gray-400"
           />
           {searchTerm && (
             <button

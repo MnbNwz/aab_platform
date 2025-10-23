@@ -54,10 +54,10 @@ const UserDropdown: React.FC<UserDropdownProps> = ({
     // <div className="relative" ref={dropdownRef}>
     <div className="relative z-[10001]" ref={dropdownRef}>
       <button
-        className={`flex items-center space-x-0.5 xs:space-x-1 sm:space-x-2 rounded-lg px-1.5 xs:px-2 sm:px-3 h-8 xs:h-9 sm:h-10 shadow-md focus:outline-none transition-all duration-200 ${
+        className={`flex items-center space-x-1 xs:space-x-1.5 sm:space-x-2 rounded-lg px-2 xs:px-2.5 sm:px-3 h-10 xs:h-11 sm:h-12 shadow-lg focus:outline-none transition-all duration-200 ${
           prominent
             ? "bg-white/90 backdrop-blur-sm border border-primary-400/70 hover:bg-white hover:border-primary-500/80 shadow-lg"
-            : "bg-white/20 backdrop-blur-sm border border-primary-300/50 hover:bg-primary-300/20 hover:border-primary-200/70"
+            : "bg-white/25 backdrop-blur-sm border border-primary-300/60 hover:bg-primary-300/25 hover:border-primary-200/80"
         }`}
         onClick={() => setOpen((o) => !o)}
       >
@@ -66,7 +66,7 @@ const UserDropdown: React.FC<UserDropdownProps> = ({
             <img
               src={user.profileImage}
               alt={`${user?.firstName} ${user?.lastName}`}
-              className="h-3.5 w-3.5 xs:h-4 xs:w-4 sm:h-5 sm:w-5 rounded-full object-cover flex-shrink-0"
+              className="h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 rounded-full object-cover flex-shrink-0"
               loading="eager"
               onError={(e) => {
                 e.currentTarget.style.display = "none";
@@ -76,12 +76,12 @@ const UserDropdown: React.FC<UserDropdownProps> = ({
           </div>
         ) : null}
         <UserIcon
-          className={`h-3.5 w-3.5 xs:h-4 xs:w-4 sm:h-5 sm:w-5 flex-shrink-0 ${
+          className={`h-4 w-4 xs:h-5 xs:w-5 sm:h-6 sm:w-6 flex-shrink-0 ${
             user?.profileImage ? "hidden" : ""
           } ${prominent ? "text-accent-600" : "text-accent-200"}`}
         />
         <span
-          className={`hidden xs:inline text-xs sm:text-sm font-medium truncate max-w-16 xs:max-w-20 md:max-w-24 lg:max-w-32 ${
+          className={`hidden xs:inline text-sm sm:text-sm font-medium truncate max-w-16 xs:max-w-20 md:max-w-24 lg:max-w-32 ${
             prominent ? "text-primary-700" : "text-primary-100"
           }`}
           title={user?.firstName}
@@ -89,7 +89,7 @@ const UserDropdown: React.FC<UserDropdownProps> = ({
           {user?.firstName}
         </span>
         <svg
-          className={`h-2.5 w-2.5 xs:h-3 xs:w-3 sm:h-4 sm:w-4 transition-transform duration-200 ${
+          className={`h-3 w-3 xs:h-3.5 xs:w-3.5 sm:h-4 sm:w-4 transition-transform duration-200 ${
             prominent ? "text-accent-600" : "text-accent-200"
           }`}
           style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}

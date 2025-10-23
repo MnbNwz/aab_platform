@@ -326,6 +326,10 @@ const investmentOpportunitySlice = createSlice({
         if (action.payload) {
           state.opportunities.unshift(action.payload);
           state.pagination.total += 1;
+          // Recalculate total pages based on new total count
+          state.pagination.pages = Math.ceil(
+            state.pagination.total / state.pagination.limit
+          );
         }
       })
       .addCase(createInvestmentOpportunityThunk.rejected, (state, action) => {

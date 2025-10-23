@@ -279,7 +279,7 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
                       <input
                         {...field}
                         type="text"
-                        className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-primary-900 placeholder-gray-500 text-sm sm:text-base"
+                        className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-primary-900 placeholder-gray-400 text-sm sm:text-base"
                         placeholder="e.g., Install new kitchen cabinets"
                       />
                     )}
@@ -349,7 +349,7 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
                   render={({ field }) => (
                     <textarea
                       {...field}
-                      className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white resize-none text-primary-900 placeholder-gray-500 text-sm sm:text-base"
+                      className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white resize-none text-primary-900 placeholder-gray-400 text-sm sm:text-base"
                       placeholder="Describe the job in detail"
                       rows={4}
                     />
@@ -392,7 +392,7 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
                           type="number"
                           min={0}
                           step="0.01"
-                          className="w-full rounded-lg pl-8 pr-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-primary-900 placeholder-gray-500 text-sm sm:text-base"
+                          className="w-full rounded-lg pl-8 pr-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-primary-900 placeholder-gray-400 text-sm sm:text-base"
                           placeholder="5000.00"
                         />
                       </div>
@@ -429,7 +429,7 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
                         type="number"
                         min={1}
                         max={365}
-                        className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-primary-900 placeholder-gray-500 text-sm sm:text-base"
+                        className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-primary-900 placeholder-gray-400 text-sm sm:text-base"
                         placeholder="e.g., 7"
                       />
                     )}

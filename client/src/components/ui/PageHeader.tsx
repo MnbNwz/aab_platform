@@ -43,17 +43,19 @@ const PageHeader: React.FC<PageHeaderProps> = ({
       </div>
 
       {/* Main Content */}
-      <div className="header-container relative px-2 xs:px-3 sm:px-4 lg:px-6 py-2 xs:py-3 sm:py-4">
-        <div className="header-gap flex items-center justify-between gap-1 xs:gap-2 sm:gap-4">
+      <div className="header-container relative px-3 xs:px-4 sm:px-4 lg:px-6 py-3 xs:py-4 sm:py-4">
+        <div className="header-gap flex items-center justify-between gap-2 xs:gap-3 sm:gap-4">
           {/* Left Section - Hamburger Icon (hidden on md+ screens) */}
           <div className="flex-shrink-0">
-            {showHamburger && !isSidebarOpen && (
+            {showHamburger && (
               <button
                 onClick={onHamburgerClick}
-                className="flex items-center justify-center h-8 xs:h-9 sm:h-10 bg-white/10 backdrop-blur-sm border border-primary-300/50 rounded-lg shadow-md hover:bg-primary-300/20 hover:border-primary-200/70 focus:outline-none transition-all duration-200 md:hidden px-2 xs:px-2.5 sm:px-3"
+                className={`flex items-center justify-center h-10 xs:h-11 sm:h-12 bg-white/15 backdrop-blur-sm border border-primary-300/60 rounded-lg shadow-lg hover:bg-primary-300/25 hover:border-primary-200/80 focus:outline-none transition-all duration-200 md:hidden px-3 xs:px-3.5 sm:px-4 ${
+                  isSidebarOpen ? "pointer-events-none opacity-50" : ""
+                }`}
               >
                 <svg
-                  className="h-4 w-4 xs:h-4.5 xs:w-4.5 sm:h-5 sm:w-5 text-accent-200"
+                  className="h-5 w-5 xs:h-5.5 xs:w-5.5 sm:h-6 sm:w-6 text-accent-200"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -70,10 +72,10 @@ const PageHeader: React.FC<PageHeaderProps> = ({
           </div>
 
           {/* Center Section - Title */}
-          <div className="flex-1 text-center min-w-0 px-1 xs:px-2">
+          <div className="flex-1 text-center min-w-0 px-2 xs:px-3">
             <div className="relative">
               {/* Title with gradient text */}
-              <h1 className="header-title text-sm xs:text-base sm:text-lg lg:text-xl xl:text-2xl font-bold bg-gradient-to-r from-primary-100 via-accent-200 to-primary-100 bg-clip-text text-transparent truncate drop-shadow-sm">
+              <h1 className="header-title text-base xs:text-lg sm:text-lg lg:text-xl xl:text-2xl font-bold bg-gradient-to-r from-primary-100 via-accent-200 to-primary-100 bg-clip-text text-transparent truncate drop-shadow-sm">
                 {title}
               </h1>
 
@@ -83,12 +85,12 @@ const PageHeader: React.FC<PageHeaderProps> = ({
               </div>
 
               {subtitle && (
-                <p className="header-subtitle text-xs xs:text-xs sm:text-sm text-primary-100/90 truncate font-medium">
+                <p className="header-subtitle text-sm xs:text-sm sm:text-sm text-primary-100/90 truncate font-medium">
                   {subtitle}
                 </p>
               )}
 
-              {children && <div className="mt-1 xs:mt-2">{children}</div>}
+              {children && <div className="mt-2 xs:mt-2">{children}</div>}
             </div>
           </div>
 

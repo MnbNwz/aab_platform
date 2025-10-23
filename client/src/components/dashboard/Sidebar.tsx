@@ -217,7 +217,12 @@ export const Sidebar: React.FC<ExtendedSidebarProps> = ({
             return (
               <button
                 key={item.id}
-                onClick={() => onTabChange(item.id)}
+                onClick={() => {
+                  onTabChange(item.id);
+                  if (isMobileOpen) {
+                    onMobileToggle();
+                  }
+                }}
                 className={`w-full flex items-center justify-between p-2.5 sm:p-3 rounded-lg transition-colors duration-200 ${
                   isActive
                     ? "bg-primary-700 text-accent-500 border border-primary-400"
@@ -243,7 +248,13 @@ export const Sidebar: React.FC<ExtendedSidebarProps> = ({
         {/* Bottom Actions */}
         <div className="p-3 sm:p-4 border-t border-primary-700 flex-shrink-0">
           <button
-            onClick={handleLogout}
+            onClick={() => {
+              handleLogout();
+              // Auto-close mobile sidebar when logout is clicked
+              if (isMobileOpen) {
+                onMobileToggle();
+              }
+            }}
             className="w-full flex items-center space-x-2 sm:space-x-3 p-2.5 sm:p-3 rounded-lg text-accent-500 hover:bg-accent-100 transition-colors duration-200"
           >
             <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />

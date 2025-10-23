@@ -284,7 +284,7 @@ const DashboardContent = memo<DashboardContentProps>(
           return {
             ...baseProps,
             title: "Platform Dashboard",
-            subtitle: "Comprehensive platform analytics and insights",
+            subtitle: "Platform overview",
             children: (
               <PlatformDashboardCards
                 key="platform-dashboard"
@@ -297,7 +297,7 @@ const DashboardContent = memo<DashboardContentProps>(
           return {
             ...baseProps,
             title: "Customer Dashboard",
-            subtitle: "Your job and payment analytics",
+            subtitle: "Your analytics",
             children: (
               <CustomerDashboardCards
                 data={unifiedData || customerData}
@@ -310,7 +310,7 @@ const DashboardContent = memo<DashboardContentProps>(
           return {
             ...baseProps,
             title: "Contractor Dashboard",
-            subtitle: "Your performance metrics and lead analytics",
+            subtitle: "Your analytics",
             children: (
               <ContractorDashboardCards
                 data={unifiedData || contractorData}
@@ -326,13 +326,13 @@ const DashboardContent = memo<DashboardContentProps>(
         users: isAdmin && {
           ...baseProps,
           title: "User Management",
-          subtitle: "Manage system users",
+          subtitle: "User management",
           children: <UserManagementTable />,
         },
         analytics: isAdmin && {
           ...baseProps,
           title: "Analytics",
-          subtitle: "Business intelligence insights",
+          subtitle: "Analytics",
           children: <Analytics />,
         },
         properties:
@@ -340,27 +340,27 @@ const DashboardContent = memo<DashboardContentProps>(
             ? {
                 ...baseProps,
                 title: "Off Market Properties",
-                subtitle: "Manage investment opportunities for contractors",
+                subtitle: "Investment opportunities",
                 children: <InvestmentOpportunitiesManagement />,
               }
             : user.role === "customer"
             ? {
                 ...baseProps,
                 title: "My Properties",
-                subtitle: "Manage your property listings",
+                subtitle: "Your properties",
                 children: <MyProperties userRole={user.role} />,
               }
             : null,
         jobs: (user.role === "admin" || user.role === "customer") && {
           ...baseProps,
           title: "Job Management",
-          subtitle: "Manage job requests and assignments",
+          subtitle: "Job management",
           children: <JobManagementTable />,
         },
         favorites: user.role === "customer" && {
           ...baseProps,
           title: "Favorite Contractors",
-          subtitle: "Manage your trusted contractors",
+          subtitle: "Favorite contractors",
           children: <FavoriteContractors />,
         },
         // Contractor job requests
@@ -369,26 +369,25 @@ const DashboardContent = memo<DashboardContentProps>(
               jobs: {
                 ...baseProps,
                 title: "Job Requests",
-                subtitle: "View and manage available job requests",
+                subtitle: "Available jobs",
                 children: <ContractorJobRequestsTable />,
               },
               bids: {
                 ...baseProps,
                 title: "My Bids",
-                subtitle: "Track and manage your submitted bids",
+                subtitle: "Your bids",
                 children: <MyBids />,
               },
               offMarket: {
                 ...baseProps,
                 title: "Off Market Opportunities",
-                subtitle:
-                  "Exclusive investment opportunities for premium members",
+                subtitle: "Investment opportunities",
                 children: <ContractorOffMarketOpportunities />,
               },
               interestedProperties: {
                 ...baseProps,
                 title: "Interested Properties",
-                subtitle: "Track all properties you've expressed interest in",
+                subtitle: "Interested properties",
                 children: <InterestedProperties />,
               },
             }
@@ -396,7 +395,7 @@ const DashboardContent = memo<DashboardContentProps>(
         settings: {
           ...baseProps,
           title: "Settings",
-          subtitle: "Manage your account preferences and business settings",
+          subtitle: "Account settings",
           children: (
             <Settings
               user={user}
@@ -627,7 +626,7 @@ const Dashboard: React.FC = () => {
   const renderState = useMemo(() => {
     if (!user) {
       return (
-        <div className="min-h-screen flex items-center justify-center">
+        <div className="aas-loader-container-mobile">
           <div className="text-center">
             <p className="text-gray-600">Loading user data...</p>
           </div>
@@ -637,7 +636,7 @@ const Dashboard: React.FC = () => {
 
     if (!canAccessDashboard) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-primary-800">
+        <div className="aas-loader-container-mobile bg-primary-800">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-primary-100">
               Access Restricted

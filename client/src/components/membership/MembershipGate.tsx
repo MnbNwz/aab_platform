@@ -52,7 +52,7 @@ const MembershipGate: React.FC<{ children: React.ReactNode }> = ({
 
   if (needsLoading && user?.role) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-900 to-primary-800">
+      <div className="aas-loader-container-mobile bg-gradient-to-br from-primary-900 to-primary-800">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white mx-auto mb-4"></div>
           <p className="text-white text-lg">Loading AAS Platform...</p>
