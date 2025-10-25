@@ -183,32 +183,30 @@ export const PlatformDashboardCards = memo<PlatformDashboardCardsProps>(
     return (
       <div className="space-y-4 sm:space-y-6 md:space-y-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-                Platform Analytics
-              </h2>
-            </div>
-            {dashboardState.platformLastFetched && (
-              <p className="text-xs sm:text-sm text-gray-500">
-                Last updated:{" "}
-                {new Date(dashboardState.platformLastFetched).toLocaleString()}
-              </p>
-            )}
+        <div className="flex flex-col gap-2">
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+              Platform Analytics
+            </h2>
+            <button
+              onClick={onRefresh}
+              disabled={isLoading}
+              className="flex items-center px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-accent-600 bg-accent-50 border border-accent-200 rounded-lg hover:bg-accent-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <RefreshCw
+                className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${
+                  isLoading ? "animate-spin" : ""
+                }`}
+              />
+              Refresh
+            </button>
           </div>
-          <button
-            onClick={onRefresh}
-            disabled={isLoading}
-            className="flex items-center px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-accent-600 bg-accent-50 border border-accent-200 rounded-lg hover:bg-accent-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <RefreshCw
-              className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 ${
-                isLoading ? "animate-spin" : ""
-              }`}
-            />
-            Refresh
-          </button>
+          {dashboardState.platformLastFetched && (
+            <p className="text-xs sm:text-sm text-gray-500">
+              Last updated:{" "}
+              {new Date(dashboardState.platformLastFetched).toLocaleString()}
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">

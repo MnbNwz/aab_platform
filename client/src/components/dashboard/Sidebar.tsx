@@ -183,6 +183,18 @@ export const Sidebar: React.FC<ExtendedSidebarProps> = ({
     }
   }
 
+  // Add Sign Out as the last menu item
+  menuItems = [
+    ...menuItems,
+    {
+      id: "signout",
+      label: "Sign Out",
+      icon: LogOut,
+      description: "Sign out of your account",
+      isSignOut: true,
+    } as any,
+  ];
+
   return (
     <>
       {/* Mobile Overlay */}
@@ -195,7 +207,7 @@ export const Sidebar: React.FC<ExtendedSidebarProps> = ({
 
       {/* Sidebar */}
       <div
-        className={`sidebar-container bg-primary-900 shadow-lg flex flex-col fixed md:sticky top-0 z-40 w-[220px] sm:w-[260px] md:w-[280px] transition-transform duration-300 transform ${
+        className={`sidebar-container bg-primary-900 shadow-lg flex flex-col fixed md:sticky top-0 z-40 w-[240px] sm:w-[260px] md:w-[280px] transition-transform duration-300 transform ${
           isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
@@ -209,7 +221,7 @@ export const Sidebar: React.FC<ExtendedSidebarProps> = ({
         </div>
 
         {/* Navigation - Scrollable */}
-        <nav className="flex-1 p-3 sm:p-4 space-y-2 overflow-y-auto">
+        <nav className="flex-1 p-2 sm:p-4 space-y-1 sm:space-y-2 overflow-y-auto">
           {menuItems.map((item: any) => {
             const IconComponent = item.icon;
             const isActive = activeTab === item.id;
@@ -218,21 +230,27 @@ export const Sidebar: React.FC<ExtendedSidebarProps> = ({
               <button
                 key={item.id}
                 onClick={() => {
-                  onTabChange(item.id);
+                  if (item.isSignOut) {
+                    handleLogout();
+                  } else {
+                    onTabChange(item.id);
+                  }
                   if (isMobileOpen) {
                     onMobileToggle();
                   }
                 }}
-                className={`w-full flex items-center justify-between p-2.5 sm:p-3 rounded-lg transition-colors duration-200 ${
+                className={`w-full flex items-center justify-between p-2 sm:p-3 rounded-lg transition-colors duration-200 ${
                   isActive
                     ? "bg-primary-700 text-accent-500 border border-primary-400"
+                    : item.isSignOut
+                    ? "text-accent-500 hover:bg-primary-800"
                     : "text-primary-100 hover:bg-primary-800"
                 }`}
               >
                 <div className="flex items-center space-x-2 sm:space-x-3">
                   <IconComponent className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                   <div className="text-left">
-                    <p className="text-xs sm:text-sm font-medium">
+                    <p className="text-base sm:text-sm font-medium">
                       {item.label}
                     </p>
                     <p className="text-[10px] sm:text-xs opacity-75 hidden sm:block">
@@ -244,23 +262,6 @@ export const Sidebar: React.FC<ExtendedSidebarProps> = ({
             );
           })}
         </nav>
-
-        {/* Bottom Actions */}
-        <div className="p-3 sm:p-4 border-t border-primary-700 flex-shrink-0">
-          <button
-            onClick={() => {
-              handleLogout();
-              // Auto-close mobile sidebar when logout is clicked
-              if (isMobileOpen) {
-                onMobileToggle();
-              }
-            }}
-            className="w-full flex items-center space-x-2 sm:space-x-3 p-2.5 sm:p-3 rounded-lg text-accent-500 hover:bg-accent-100 transition-colors duration-200"
-          >
-            <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span className="text-xs sm:text-sm font-medium">Sign Out</span>
-          </button>
-        </div>
       </div>
     </>
   );

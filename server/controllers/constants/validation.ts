@@ -7,7 +7,12 @@ export const ALLOWED_JOB_TYPES = ["regular", "off_market", "commercial"];
 export const ALLOWED_USER_TYPES = ["customer", "contractor"];
 
 // Allowed domains for Stripe redirects
-export const ALLOWED_STRIPE_DOMAINS = ["localhost", "127.0.0.1", "yourapp.com"];
+export const ALLOWED_STRIPE_DOMAINS = [
+  "localhost",
+  "127.0.0.1",
+  "aasquebec.com",
+  "app.aasquebec.com",
+];
 
 // Controller error messages
 export const CONTROLLER_ERROR_MESSAGES = {

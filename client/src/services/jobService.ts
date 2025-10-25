@@ -36,9 +36,4 @@ export const jobApi = {
   getBidsForJob: async (jobRequestId: string) => {
     return api.get(`/api/job/bids/job/${jobRequestId}`);
   },
-
-  // Update bid status (accept or reject)
-  updateBidStatus: async (bidId: string, action: "accept" | "reject") => {
-    return api.put(`/api/job/bids/${bidId}/status`, { action });
-  },
 };

@@ -8,7 +8,7 @@ import {
   getMembershipHistoryController,
   getMembershipStatsController,
 } from "@controllers/membership";
-import { createStripeSession, createUpgradeStripeSession } from "@controllers/payment";
+import { createStripeSession } from "@controllers/payment";
 
 const router = express.Router();
 
@@ -21,9 +21,6 @@ router.get("/plans/:userType", getPlansByUserTypeController);
 router.get("/current", getCurrentMembershipController);
 router.post("/checkout", createStripeSession);
 router.get("/history", getMembershipHistoryController);
-
-// Upgrade route
-router.post("/upgrade/checkout", createUpgradeStripeSession); // Create Stripe session for upgrade
 
 // Admin routes
 router.get("/stats", requireRole(["admin"]), getMembershipStatsController);

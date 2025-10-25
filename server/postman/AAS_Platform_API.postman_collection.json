@@ -669,28 +669,6 @@
           }
         },
         {
-          "name": "Create Membership Upgrade Checkout",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"newPlanId\": \"NEW_PLAN_ID_HERE\",\n  \"newBillingPeriod\": \"monthly\"\n}\n\n// newBillingPeriod: \"monthly\" or \"yearly\"\n// Upgrades existing membership with prorated charges"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/membership/upgrade/checkout",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "membership", "upgrade", "checkout"]
-            },
-            "description": "Create Stripe checkout session for membership upgrade with prorated charges"
-          }
-        },
-        {
           "name": "Get Membership History",
           "request": {
             "method": "GET",
@@ -1076,50 +1054,6 @@
             },
             "description": "Get all bids for a specific job request"
           }
-        },
-        {
-          "name": "Accept Bid (Customer)",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"action\": \"accept\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/job/bids/{{bidId}}/status",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "job", "bids", "{{bidId}}", "status"]
-            },
-            "description": "Accept a bid for a job request (customer only). This will:\n1. Mark the selected bid as 'accepted'\n2. Reject all other bids for the same job automatically\n3. Update job status to 'inprogress'\n4. Add entry to timelineHistory\n5. Set acceptedBid field on job request\n6. Lock job from further editing"
-          }
-        },
-        {
-          "name": "Reject Bid (Customer)",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"action\": \"reject\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/job/bids/{{bidId}}/status",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "job", "bids", "{{bidId}}", "status"]
-            },
-            "description": "Reject a bid for a job request (customer only). Job remains 'open' and other bids remain unchanged."
-          }
         }
       ]
     },
@@ -1201,6 +1135,28 @@
               "path": ["api", "payment", "job", "create"]
             },
             "description": "Create a new job payment with deposit, pre-start, and completion phases"
+          }
+        },
+        {
+          "name": "Create Job Payment Checkout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bidId\": \"BID_ID_HERE\",\n  \"paymentType\": \"bid_acceptance\",\n  \"successUrl\": \"https://yourapp.com/success\",\n  \"cancelUrl\": \"https://yourapp.com/cancel\"\n}\n\n// paymentType: \"bid_acceptance\" (15% deposit) or \"job_completion\" (85% final payment)\n// Automatically calculates amounts based on bid amount\n// Returns Stripe checkout URL for payment"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/job/checkout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "job", "checkout"]
+            },
+            "description": "Create Stripe checkout session for job payments (bid acceptance or completion). Handles both 15% deposit and 85% completion payments automatically."
           }
         },
         {

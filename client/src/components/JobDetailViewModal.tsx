@@ -6,11 +6,10 @@ import {
   Calendar,
   Briefcase,
   FileText,
-  User,
+  User as UserIcon,
   Phone,
   Mail,
   Check,
-  XCircle,
   AlertCircle,
   CheckCircle,
   Package,
@@ -28,16 +27,16 @@ import {
   ChevronUp,
 } from "lucide-react";
 import ProfileViewModal from "./ProfileViewModal";
-import { showToast } from "../utils/toast";
 import { jobApi } from "../services/jobService";
 import type { RootState } from "../store";
 import type { JobDetailViewModalProps, Bid, PropertyInJob } from "../types/job";
+import type { User } from "../types";
 
 const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
   isOpen,
   onClose,
   job,
-  onRefreshJobs,
+  onRefreshJobs: _onRefreshJobs,
   onEditJob,
   shouldRefetch = true,
 }) => {
@@ -50,12 +49,10 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
   const [activeTab, setActiveTab] = useState<"details" | "bids">("details");
   const [bids, setBids] = useState<Bid[]>([]);
   const [bidsLoading, setBidsLoading] = useState(false);
-  const [acceptingBid, setAcceptingBid] = useState<string | null>(null);
-  const [rejectingBid, setRejectingBid] = useState<string | null>(null);
   const [profileViewOpen, setProfileViewOpen] = useState(false);
-  const [selectedContractor, setSelectedContractor] = useState<
-    Bid["contractor"] | null
-  >(null);
+  const [selectedContractor, setSelectedContractor] = useState<User | null>(
+    null
+  );
   const [expandedBids, setExpandedBids] = useState<Set<string>>(new Set());
 
   const fetchBids = useCallback(async () => {
@@ -101,66 +98,29 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
 
   const hasAcceptedBid = bids.some((bid) => bid.status === "accepted");
 
-  const handleAcceptBid = useCallback(
-    async (bidId: string) => {
-      setAcceptingBid(bidId);
-      try {
-        await jobApi.updateBidStatus(bidId, "accept");
-        showToast.success("Bid accepted successfully!");
-
-        setBids((prevBids) =>
-          prevBids.map((bid) =>
-            bid._id === bidId ? { ...bid, status: "accepted" as const } : bid
-          )
-        );
-
-        onRefreshJobs();
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Failed to accept bid";
-        showToast.error(errorMessage);
-      } finally {
-        setAcceptingBid(null);
-      }
-    },
-    [onRefreshJobs]
-  );
-
-  const handleRejectBid = useCallback(async (bidId: string) => {
-    setRejectingBid(bidId);
-    try {
-      await jobApi.updateBidStatus(bidId, "reject");
-      showToast.success("Bid rejected successfully!");
-
-      setBids((prevBids) =>
-        prevBids.map((bid) =>
-          bid._id === bidId ? { ...bid, status: "rejected" as const } : bid
-        )
-      );
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to reject bid";
-      showToast.error(errorMessage);
-    } finally {
-      setRejectingBid(null);
-    }
-  }, []);
-
   const handleViewContractorProfile = useCallback(
     (contractor: Bid["contractor"]) => {
       // Convert BidContractor to User format for ProfileViewModal
-      const contractorUser: any = {
+      const contractorUser: User = {
         _id: contractor._id,
         email: contractor.email,
         firstName: contractor.firstName,
         lastName: contractor.lastName,
-        phone: contractor.phone,
-        profileImage: contractor.profileImage,
+        phone: contractor.phone || undefined,
+        profileImage: contractor.profileImage || undefined,
         role: "contractor" as const,
         status: "active" as const,
         approval: "approved" as const,
         emailVerified: true,
-        contractor: contractor.contractor,
+        contractor: contractor.contractor
+          ? {
+              companyName: contractor.contractor.companyName || "",
+              services: contractor.contractor.services || [],
+              license: contractor.contractor.license || "",
+              taxId: contractor.contractor.taxId || "",
+              docs: [],
+            }
+          : undefined,
         // Note: BidContractor doesn't include geoHome, so location won't be shown
         // This is expected behavior for job bids
         createdAt: "",
@@ -595,7 +555,7 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                                       />
                                     ) : (
                                       <div className="w-12 h-12 rounded-full bg-primary-100 flex items-center justify-center">
-                                        <User className="h-6 w-6 text-primary-600" />
+                                        <UserIcon className="h-6 w-6 text-primary-600" />
                                       </div>
                                     )}
                                   </div>
@@ -775,46 +735,11 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                                     !hasAcceptedBid && (
                                       <div className="flex gap-3 pt-4 border-t border-gray-200">
                                         <button
-                                          onClick={() =>
-                                            handleAcceptBid(bid._id)
-                                          }
-                                          disabled={
-                                            !!acceptingBid || !!rejectingBid
-                                          }
-                                          className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                          disabled={true}
+                                          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-400 text-white rounded-lg font-medium transition-colors cursor-not-allowed opacity-75"
                                         >
-                                          {acceptingBid === bid._id ? (
-                                            <>
-                                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                              <span>Accepting...</span>
-                                            </>
-                                          ) : (
-                                            <>
-                                              <Check className="h-5 w-5" />
-                                              <span>Accept Bid</span>
-                                            </>
-                                          )}
-                                        </button>
-                                        <button
-                                          onClick={() =>
-                                            handleRejectBid(bid._id)
-                                          }
-                                          disabled={
-                                            !!acceptingBid || !!rejectingBid
-                                          }
-                                          className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                          {rejectingBid === bid._id ? (
-                                            <>
-                                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                              <span>Rejecting...</span>
-                                            </>
-                                          ) : (
-                                            <>
-                                              <XCircle className="h-5 w-5" />
-                                              <span>Reject Bid</span>
-                                            </>
-                                          )}
+                                          <Check className="h-5 w-5" />
+                                          <span>Accept Bid (Disabled)</span>
                                         </button>
                                       </div>
                                     )}
