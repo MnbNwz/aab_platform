@@ -28,9 +28,11 @@ import {
 } from "lucide-react";
 import ProfileViewModal from "./ProfileViewModal";
 import { jobApi } from "../services/jobService";
+import { paymentService } from "../services/paymentService";
 import type { RootState } from "../store";
 import type { JobDetailViewModalProps, Bid, PropertyInJob } from "../types/job";
-import type { User } from "../types";
+import type { User, PaymentType } from "../types";
+import { showToast } from "../utils/toast";
 
 const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
   isOpen,
@@ -130,6 +132,54 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
       setProfileViewOpen(true);
     },
     []
+  );
+
+  const handlePaymentCheckout = useCallback(
+    async (bidId: string, paymentType: PaymentType) => {
+      try {
+        const currentUrl = window.location.origin;
+        const successUrl = `${currentUrl}/dashboard?payment=success&bidId=${bidId}`;
+        const cancelUrl = `${currentUrl}/dashboard?payment=cancel&bidId=${bidId}`;
+
+        showToast.loading(
+          paymentType === "bid_acceptance"
+            ? "Creating payment session for bid acceptance..."
+            : "Creating payment session for job completion..."
+        );
+
+        const response = await paymentService.createJobCheckout({
+          bidId,
+          paymentType,
+          successUrl,
+          cancelUrl,
+        });
+
+        showToast.dismiss();
+
+        // Redirect to Stripe checkout
+        window.location.href = response.checkoutUrl;
+      } catch (err: any) {
+        showToast.dismiss();
+        const errorMessage =
+          err?.message || "Failed to create payment checkout session";
+        showToast.error(errorMessage);
+      }
+    },
+    []
+  );
+
+  const handleAcceptBid = useCallback(
+    (bidId: string) => {
+      handlePaymentCheckout(bidId, "bid_acceptance");
+    },
+    [handlePaymentCheckout]
+  );
+
+  const handleCompleteJob = useCallback(
+    (bidId: string) => {
+      handlePaymentCheckout(bidId, "job_completion");
+    },
+    [handlePaymentCheckout]
   );
 
   const toggleBidExpanded = useCallback((bidId: string) => {
@@ -735,11 +785,34 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                                     !hasAcceptedBid && (
                                       <div className="flex gap-3 pt-4 border-t border-gray-200">
                                         <button
-                                          disabled={true}
-                                          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-400 text-white rounded-lg font-medium transition-colors cursor-not-allowed opacity-75"
+                                          onClick={() =>
+                                            handleAcceptBid(bid._id)
+                                          }
+                                          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-accent-500 hover:bg-accent-600 text-white rounded-lg font-medium transition-colors"
                                         >
                                           <Check className="h-5 w-5" />
-                                          <span>Accept Bid (Disabled)</span>
+                                          <span>
+                                            Accept Bid (Pay 15% Deposit)
+                                          </span>
+                                        </button>
+                                      </div>
+                                    )}
+
+                                  {/* Complete Job Button (if bid is accepted and deposit is paid) */}
+                                  {bid.status === "accepted" &&
+                                    bid.depositPaid &&
+                                    !bid.completionPaid && (
+                                      <div className="flex gap-3 pt-4 border-t border-gray-200">
+                                        <button
+                                          onClick={() =>
+                                            handleCompleteJob(bid._id)
+                                          }
+                                          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+                                        >
+                                          <Check className="h-5 w-5" />
+                                          <span>
+                                            Complete Job (Pay 85% Final)
+                                          </span>
                                         </button>
                                       </div>
                                     )}

@@ -5,6 +5,10 @@ import type {
   PaymentHistoryApiResponse,
 } from "../types/payment";
 import type { ApiError } from "../types/api";
+import type {
+  JobPaymentCheckoutRequest,
+  JobPaymentCheckoutResponse,
+} from "../types";
 import showToast from "../utils/toast";
 
 const API_CONFIG = {
@@ -99,6 +103,12 @@ const makeRequest = async <T = any>(
 const get = <T = any>(endpoint: string): Promise<ApiResponse<T>> =>
   makeRequest<T>(endpoint, { method: "GET" });
 
+const post = <T = any>(endpoint: string, body: any): Promise<ApiResponse<T>> =>
+  makeRequest<T>(endpoint, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
 export type { Payment, PaymentFilters, PaymentHistoryApiResponse };
 
 export const paymentService = {
@@ -152,6 +162,29 @@ export const paymentService = {
     } catch (err: any) {
       showToast.error("Failed to fetch payment details");
       throw err;
+    }
+  },
+
+  // Create checkout session for job payments (bid acceptance or completion)
+  createJobCheckout: async (
+    request: JobPaymentCheckoutRequest
+  ): Promise<JobPaymentCheckoutResponse> => {
+    try {
+      const data = await post<JobPaymentCheckoutResponse>(
+        "/api/payment/job/checkout",
+        request
+      );
+
+      if (data.success) {
+        return data.data;
+      } else {
+        throw new Error(data.message || "Failed to create checkout session");
+      }
+    } catch (err: any) {
+      const errorMessage =
+        err?.message || "Failed to create payment checkout session";
+      showToast.error(errorMessage);
+      throw new Error(errorMessage);
     }
   },
 };

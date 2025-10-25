@@ -563,6 +563,30 @@ export interface InvestmentStatistics {
   }>;
 }
 
+// Payment types
+export type PaymentType = "bid_acceptance" | "job_completion";
+
+export interface JobPaymentCheckoutRequest {
+  bidId: string;
+  paymentType: PaymentType;
+  successUrl: string;
+  cancelUrl: string;
+}
+
+export interface JobPaymentCheckoutResponse {
+  success: boolean;
+  checkoutUrl: string;
+  sessionId: string;
+  amount: number;
+  paymentType: PaymentType;
+  message?: string;
+}
+
+export interface JobPaymentCheckoutError {
+  success: false;
+  message: string;
+}
+
 // Re-export all types from centralized type files
 export * from "./component";
 export * from "./job";

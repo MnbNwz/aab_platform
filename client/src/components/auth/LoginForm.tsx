@@ -198,15 +198,6 @@ const LoginForm: React.FC = () => {
           </form>
 
           <div className="mt-6 text-center space-y-4">
-            <div>
-              <Link
-                to="/forgot-password"
-                className="text-accent-400 hover:text-accent-300 font-medium text-sm"
-              >
-                Forgot your password?
-              </Link>
-            </div>
-
             <p className="text-white/80">
               Don't have an account?{" "}
               <Link

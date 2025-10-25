@@ -33,6 +33,8 @@ export interface Bid {
     description?: string;
   };
   contractor: BidContractor;
+  depositPaid?: boolean;
+  completionPaid?: boolean;
   createdAt: string;
   updatedAt: string;
 }

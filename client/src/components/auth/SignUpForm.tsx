@@ -237,26 +237,10 @@ const SignUpForm: React.FC = () => {
   const onSubmit = useCallback(
     async (data: any) => {
       try {
-        // Debug: Log coordinates before submission
-        console.log(
-          "SignUpForm onSubmit - selectedLocation:",
-          selectedLocation
-        );
-        console.log("SignUpForm onSubmit - data coordinates:", {
-          latitude: data.latitude,
-          longitude: data.longitude,
-        });
-
-        // Use form data coordinates if selectedLocation is [0,0] or invalid
         const finalLat =
           selectedLocation.lat !== 0 ? selectedLocation.lat : data.latitude;
         const finalLng =
           selectedLocation.lng !== 0 ? selectedLocation.lng : data.longitude;
-
-        console.log("SignUpForm onSubmit - final coordinates:", {
-          lat: finalLat,
-          lng: finalLng,
-        });
 
         if (selectedRole === "contractor") {
           // Validate docs
