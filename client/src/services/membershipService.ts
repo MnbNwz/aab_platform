@@ -144,32 +144,4 @@ export const membershipService = {
       throw err;
     }
   },
-  // Toggle auto-renewal for membership
-  toggleAutoRenewal: async (
-    isAutoRenew: boolean
-  ): Promise<ApiResponse<any>> => {
-    try {
-      showToast.loading("Updating auto-renewal settings...");
-      const res = await post<any>("/api/membership/toggle-auto-renewal", {
-        isAutoRenew,
-      });
-      showToast.dismiss();
-      if (res.success) {
-        showToast.success(
-          `Auto-renewal ${isAutoRenew ? "enabled" : "disabled"} successfully`
-        );
-      } else {
-        showToast.error(
-          res.message || "Failed to update auto-renewal settings."
-        );
-      }
-      return res;
-    } catch (err: any) {
-      showToast.dismiss();
-      showToast.error(
-        "Error updating auto-renewal settings. Please try again."
-      );
-      throw err;
-    }
-  },
 };

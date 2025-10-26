@@ -105,8 +105,33 @@ async function handleUpgradeCheckout(
 }
 
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
-  const { userId, planId, billingPeriod } = session.metadata || {};
+  const {
+    userId,
+    planId,
+    billingPeriod,
+    paymentType,
+    bidId,
+    jobRequestId,
+    contractorId,
+    isJobPayment,
+  } = session.metadata || {};
 
+  // Handle job payments (bid acceptance or completion)
+  if (isJobPayment === "true") {
+    if (!userId || !bidId || !jobRequestId || !contractorId || !paymentType) {
+      console.error("❌ Missing required metadata for job payment");
+      return;
+    }
+
+    try {
+      await handleJobPayment(session, userId, bidId, jobRequestId, contractorId, paymentType);
+    } catch (error) {
+      console.error("❌ Error handling job payment:", error);
+    }
+    return;
+  }
+
+  // Handle membership payments (existing logic)
   if (!userId || !planId) {
     return;
   }
@@ -376,5 +401,177 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     }
   } catch (error) {
     console.error("❌ Error handling subscription updated:", error);
+  }
+}
+
+// Handle job payment completion (bid acceptance or completion)
+async function handleJobPayment(
+  session: Stripe.Checkout.Session,
+  userId: string,
+  bidId: string,
+  jobRequestId: string,
+  contractorId: string,
+  paymentType: string,
+) {
+  try {
+    console.log(`💰 Processing ${paymentType} payment for bid: ${bidId}`);
+
+    // Import models here to avoid circular dependencies
+    const { Bid } = await import("@models/job");
+    const { JobRequest } = await import("@models/job");
+    const { Payment } = await import("@models/payment");
+
+    // Single optimized query to get bid with validation
+    const bid = await Bid.findById(bidId).lean();
+    if (!bid) {
+      console.error(`❌ Bid not found: ${bidId}`);
+      return;
+    }
+
+    const amount = parseFloat(session.metadata?.amount || "0");
+    const totalJobAmount = parseFloat(session.metadata?.totalJobAmount || "0");
+
+    if (paymentType === "bid_acceptance") {
+      // Handle bid acceptance payment (15% deposit)
+      if (bid.status !== "pending") {
+        console.error(`❌ Bid is not pending: ${bidId}, status: ${bid.status}`);
+        return;
+      }
+
+      // Create payment record
+      const payment = new Payment({
+        userId,
+        contractorId,
+        jobRequestId,
+        bidId,
+        amount: amount,
+        totalJobAmount,
+        paymentType: "job_deposit",
+        status: "completed",
+        stripeSessionId: session.id,
+        stripePaymentIntentId: session.payment_intent as string,
+        paymentMethod: "stripe_checkout",
+        metadata: {
+          depositPercentage: 15,
+          remainingAmount: totalJobAmount - amount,
+          sessionMetadata: session.metadata,
+        },
+      });
+
+      await payment.save();
+
+      // Optimized bulk operations with Promise.all
+      await Promise.all([
+        // Update bid: accept it and mark deposit as paid
+        Bid.findByIdAndUpdate(bidId, {
+          $set: {
+            status: "accepted",
+            depositPaid: true,
+            depositAmount: amount,
+            depositPaymentId: payment._id,
+            depositPaidAt: new Date(),
+          },
+        }),
+        // Reject all other bids for this job
+        Bid.updateMany(
+          {
+            jobRequest: jobRequestId,
+            _id: { $ne: bidId },
+            status: "pending",
+          },
+          { $set: { status: "rejected" } },
+        ),
+        // Update job request status
+        JobRequest.findByIdAndUpdate(jobRequestId, {
+          $set: {
+            status: "inprogress",
+            acceptedBid: bidId,
+            depositPaid: true,
+            depositAmount: amount,
+            paymentStatus: "deposit_paid",
+          },
+          $push: {
+            timelineHistory: {
+              status: "bid_accepted",
+              date: new Date(),
+              by: userId,
+              description: `Bid accepted with 15% deposit of $${amount} paid`,
+            },
+          },
+        }),
+      ]);
+
+      console.log(`✅ Bid acceptance payment processed successfully for bid: ${bidId}`);
+    } else if (paymentType === "job_completion") {
+      // Handle job completion payment (85% remaining)
+      if (bid.status !== "accepted") {
+        console.error(`❌ Bid is not accepted: ${bidId}, status: ${bid.status}`);
+        return;
+      }
+
+      if (!bid.depositPaid) {
+        console.error(`❌ Deposit not paid for bid: ${bidId}`);
+        return;
+      }
+
+      // Create payment record
+      const payment = new Payment({
+        userId,
+        contractorId,
+        jobRequestId,
+        bidId,
+        amount: amount,
+        totalJobAmount,
+        paymentType: "job_completion",
+        status: "completed",
+        stripeSessionId: session.id,
+        stripePaymentIntentId: session.payment_intent as string,
+        paymentMethod: "stripe_checkout",
+        metadata: {
+          completionPercentage: 85,
+          totalPaid: bid.depositAmount + amount,
+          sessionMetadata: session.metadata,
+        },
+      });
+
+      await payment.save();
+
+      // Optimized bulk operations with Promise.all
+      await Promise.all([
+        // Update bid with completion payment info
+        Bid.findByIdAndUpdate(bidId, {
+          $set: {
+            completionPaid: true,
+            completionAmount: amount,
+            completionPaymentId: payment._id,
+            completionPaidAt: new Date(),
+          },
+        }),
+        // Update job request status to completed
+        JobRequest.findByIdAndUpdate(jobRequestId, {
+          $set: {
+            status: "completed",
+            paymentStatus: "completed",
+            completionPaid: true,
+            completionAmount: amount,
+            completionPaymentId: payment._id,
+            completionPaidAt: new Date(),
+          },
+          $push: {
+            timelineHistory: {
+              status: "job_completed",
+              date: new Date(),
+              by: userId,
+              description: `Job completed with final payment of $${amount}`,
+            },
+          },
+        }),
+      ]);
+
+      console.log(`✅ Job completion payment processed successfully for bid: ${bidId}`);
+    }
+  } catch (error) {
+    console.error("❌ Error processing job payment:", error);
+    throw error;
   }
 }

@@ -257,7 +257,6 @@ const InvestmentOpportunityDetailsModal: React.FC<
           setProfileViewOpen(true);
         } else {
           // Fallback to nested data if API call fails
-          console.warn("Failed to fetch full user data, using nested data");
           const contractorUser: User = {
             _id: interest.contractorId._id,
             email: interest.contractorId.email,

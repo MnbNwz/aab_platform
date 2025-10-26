@@ -20,6 +20,7 @@ export interface ITimelineHistory {
   status: string;
   date: Date;
   by: Types.ObjectId;
+  description?: string;
 }
 
 // Bid types
@@ -33,6 +34,16 @@ export interface IBid extends Document {
   timeline: ITimeline;
   materials: IMaterials;
   warranty: IWarranty;
+  // Deposit payment fields
+  depositPaid?: boolean;
+  depositAmount?: number;
+  depositPaymentId?: Types.ObjectId;
+  depositPaidAt?: Date;
+  // Completion payment fields
+  completionPaid?: boolean;
+  completionAmount?: number;
+  completionPaymentId?: Types.ObjectId;
+  completionPaidAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -53,6 +64,14 @@ export interface IJobRequest extends Document {
   paymentStatus: "pending" | "deposit_paid" | "prestart_paid" | "completed" | "refunded";
   timeline: number; // timeline in days
   timelineHistory: ITimelineHistory[];
+  // Deposit payment fields
+  depositPaid?: boolean;
+  depositAmount?: number;
+  // Completion payment fields
+  completionPaid?: boolean;
+  completionAmount?: number;
+  completionPaymentId?: Types.ObjectId;
+  completionPaidAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }

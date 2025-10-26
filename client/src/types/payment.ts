@@ -36,7 +36,7 @@ export interface Payment {
   email: string;
   amount: number;
   currency: string;
-  status: "succeeded" | "pending" | "failed" | "cancelled";
+  status: "succeeded" | "pending" | "failed" | "cancelled" | "refunded";
   stripeCustomerId: string;
   stripePaymentIntentId: string;
   stripeSessionId?: string;
@@ -66,8 +66,8 @@ export interface PaymentHistoryApiResponse {
 export interface PaymentFilters {
   page?: number;
   limit?: number;
-  status?: Payment["status"];
-  type?: "membership" | "job";
+  status?: Payment["status"] | "refunded" | "all";
+  type?: "membership" | "job" | "all";
   startDate?: string;
   endDate?: string;
 }

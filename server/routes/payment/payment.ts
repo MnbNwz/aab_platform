@@ -15,6 +15,7 @@ import {
   getPaymentDetails,
   getPaymentStats,
   handleStripeWebhook,
+  createJobPaymentCheckout,
 } from "@controllers/payment";
 
 const router = express.Router();
@@ -29,6 +30,7 @@ router.post(
 );
 
 router.post("/job/deposit", authenticate, requireRole(["customer"]), processJobDeposit);
+router.post("/job/checkout", authenticate, requireRole(["customer"]), createJobPaymentCheckout);
 router.post("/job/prestart", authenticate, requireRole(["customer"]), processJobPreStart);
 router.post("/job/completion", authenticate, requireRole(["customer"]), processJobCompletion);
 router.post("/job/refund", authenticate, requireRole(["customer", "admin"]), processJobRefund);

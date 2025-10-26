@@ -1,4 +1,11 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  useMemo,
+  memo,
+} from "react";
 import { createPortal } from "react-dom";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState, AppDispatch } from "../../store";
@@ -6,13 +13,27 @@ import type { Job } from "../../store/slices/jobSlice";
 import { getJobsThunk } from "../../store/thunks/jobThunks";
 import { setJobFilters } from "../../store/slices/jobSlice";
 import { getMyPropertiesThunk } from "../../store/thunks/propertyThunks";
-import Loader from "../ui/Loader";
 import JobCreate from "../JobCreate";
 import JobDetailViewModal from "../JobDetailViewModal";
 import JobViewEditModal from "../JobViewEditModal";
 import ConfirmModal from "../ui/ConfirmModal";
+import { JOB_STATUSES, SORT_OPTIONS } from "../../constants";
+import { Search, Filter } from "lucide-react";
+import DataTable, { TableColumn } from "../ui/DataTable";
+import type { PaginationInfo } from "../ui/DataTable";
 
-const JobManagementTable: React.FC = () => {
+// Job type for table
+interface TableJob extends Record<string, unknown> {
+  _id: string;
+  title: string;
+  description?: string;
+  service: string;
+  status: string;
+  bidCount?: number;
+  createdAt: string;
+}
+
+const JobManagementTable: React.FC = memo(() => {
   const dispatch = useDispatch<AppDispatch>();
   const {
     jobs,
@@ -24,7 +45,6 @@ const JobManagementTable: React.FC = () => {
   const { properties } = useSelector((state: RootState) => state.property);
   const user = useSelector((state: RootState) => state.auth.user);
   const [searchTerm, setSearchTerm] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [jobDetailViewOpen, setJobDetailViewOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -32,6 +52,7 @@ const JobManagementTable: React.FC = () => {
   const [noPropertyConfirmOpen, setNoPropertyConfirmOpen] = useState(false);
   const [editFromDetailView, setEditFromDetailView] = useState(false);
   const [shouldRefetchBids, setShouldRefetchBids] = useState(true);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const isAdmin = user?.role === "admin";
   const isCustomer = user?.role === "customer";
@@ -46,9 +67,32 @@ const JobManagementTable: React.FC = () => {
     }
   }, [user, dispatch]);
 
-  const handleSearch = useCallback(() => {
-    dispatch(setJobFilters({ search: searchTerm, page: 1 }));
-  }, [dispatch, searchTerm]);
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Handle search input with debouncing
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearchTerm(value);
+
+      // Clear existing timer
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+
+      // Set new timer for debounced search
+      debounceTimerRef.current = setTimeout(() => {
+        dispatch(setJobFilters({ search: value, page: 1 }));
+      }, 500);
+    },
+    [dispatch]
+  );
 
   const handleFilterChange = useCallback(
     (newFilters: Partial<typeof filters>) => {
@@ -141,381 +185,266 @@ const JobManagementTable: React.FC = () => {
     setNoPropertyConfirmOpen(false);
   }, []);
 
+  // Memoized status badge getter
+  const getStatusBadge = useCallback((status: string) => {
+    const statusColors: Record<string, string> = {
+      open: "bg-accent-100 text-accent-800",
+      in_progress: "bg-primary-200 text-primary-800",
+      completed: "bg-primary-100 text-primary-600",
+      cancelled: "bg-primary-200 text-primary-800",
+    };
+    return statusColors[status] || "bg-primary-100 text-primary-600";
+  }, []);
+
+  // Memoized table columns
+  const columns = useMemo<TableColumn<TableJob>[]>(
+    () => [
+      {
+        key: "title",
+        header: "Title",
+        render: (job) => (
+          <div>
+            <div className="text-sm font-semibold text-primary-900 max-w-xs">
+              <span className="block truncate" title={job.title}>
+                {job.title.length > 40
+                  ? `${job.title.substring(0, 40)}...`
+                  : job.title}
+              </span>
+            </div>
+            {job.description && (
+              <div className="text-xs text-primary-600 mt-1">
+                {job.description.slice(0, 60)}
+                {job.description.length > 60 ? "..." : ""}
+              </div>
+            )}
+          </div>
+        ),
+        mobileLabel: "Job",
+        mobileRender: (job) => (
+          <div>
+            <h3 className="font-semibold text-primary-900 text-sm">
+              <span className="block truncate" title={job.title}>
+                {job.title.length > 30
+                  ? `${job.title.substring(0, 30)}...`
+                  : job.title}
+              </span>
+            </h3>
+            <div className="text-xs text-accent-600 font-medium mt-1">
+              {job.bidCount || 0} {job.bidCount === 1 ? "Bid" : "Bids"}
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: "service",
+        header: "Service",
+        render: (job) => (
+          <span className="text-sm text-primary-700">{job.service}</span>
+        ),
+        mobileLabel: "Service",
+      },
+      {
+        key: "status",
+        header: "Status",
+        render: (job) => (
+          <span
+            className={`px-2 py-1 rounded text-xs font-bold ${getStatusBadge(
+              job.status
+            )}`}
+          >
+            {job.status}
+          </span>
+        ),
+        mobileLabel: "Status",
+      },
+      {
+        key: "bidCount",
+        header: "Bids",
+        render: (job) => (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-accent-100 text-accent-800">
+            {job.bidCount || 0}
+          </span>
+        ),
+        hideOnMobile: true,
+      },
+    ],
+    [getStatusBadge]
+  );
+
+  // Format pagination for DataTable
+  const tablePagination = useMemo<PaginationInfo | undefined>(() => {
+    if (!pagination) return undefined;
+    const paginationAny = pagination as any;
+    return {
+      currentPage: pagination.currentPage || paginationAny.page || 1,
+      totalPages: pagination.totalPages || paginationAny.pages || 1,
+      limit: pagination.limit || pagination.itemsPerPage || 10,
+      totalCount: pagination.totalCount || pagination.totalItems || 0,
+      hasNextPage: pagination.hasNextPage ?? false,
+      hasPrevPage: pagination.hasPrevPage ?? false,
+    };
+  }, [pagination]);
+
   return (
-    <div className="bg-white rounded-lg shadow w-full max-w-full overflow-x-hidden">
-      {/* Controls Header */}
-      <div className="p-4 sm:p-6 border-b border-gray-200">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          {/* Search & Create Button Combined */}
-          <div className="flex items-center space-x-2 flex-1 min-w-0">
-            <input
-              type="text"
-              placeholder="Search jobs..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === "Enter" && searchTerm.trim()) handleSearch();
-              }}
-              className="flex-1 min-w-0 pl-3 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+    <div className="space-y-6">
+      {/* Header Card */}
+      <div className="bg-white rounded-lg shadow-sm border border-primary-200">
+        {/* Header */}
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+                Jobs Management
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Manage and filter job requests
+              </p>
+            </div>
+            {/* Create Button */}
             {isCustomer && (
               <button
                 className="flex-shrink-0 flex items-center px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition"
-                onClick={() => {
-                  if (searchTerm.trim()) {
-                    handleSearch();
-                  } else {
-                    handleCreateJobClick();
-                  }
-                }}
-                title={searchTerm.trim() ? "Search Jobs" : "Create Job"}
+                onClick={handleCreateJobClick}
+                title="Create Job"
               >
-                {searchTerm.trim() ? "Search" : "Create"}
-              </button>
-            )}
-            {isAdmin && searchTerm.trim() && (
-              <button
-                className="flex-shrink-0 flex items-center px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition"
-                onClick={handleSearch}
-                title="Search Jobs"
-              >
-                Search
+                Create Job
               </button>
             )}
           </div>
-          {/* Filters Toggle (admin only) */}
-          {isAdmin && (
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex-shrink-0 flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              <span>Filters</span>
-            </button>
-          )}
         </div>
-      </div>
 
-      {/* Filter Panel (admin only) */}
-      {isAdmin && showFilters && (
-        <div className="p-4 bg-gray-50 border-b border-gray-200">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Status
-              </label>
-              <select
-                value={filters.status || ""}
-                onChange={(e) => handleFilterChange({ status: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              >
-                <option value="">All Statuses</option>
-                <option value="pending">Pending</option>
-                <option value="active">Active</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
+        {/* Filters */}
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-200 bg-white">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <Filter className="h-5 w-5 text-gray-400" />
+              <span className="text-sm font-medium text-gray-700">
+                Filters:
+              </span>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Service
-              </label>
-              <select
-                value={filters.category || ""}
-                onChange={(e) =>
-                  handleFilterChange({ category: e.target.value })
-                }
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              >
-                <option value="">All Categories</option>
-                <option value="painting">Painting</option>
-                <option value="plumbing">Plumbing</option>
-                <option value="electrical">Electrical</option>
-                <option value="cleaning">Cleaning</option>
-                <option value="renovation">Renovation</option>
-                <option value="hvac">HVAC</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Sort By
-              </label>
-              <select
-                value={filters.sortBy || "createdAt"}
-                onChange={(e) => handleFilterChange({ sortBy: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-              >
-                <option value="createdAt">Created Date</option>
-                <option value="updatedAt">Updated Date</option>
-                <option value="title">Title</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Mobile Card View */}
-      <div className="block lg:hidden w-full overflow-x-hidden">
-        {jobsLoading ? (
-          <div className="min-h-[400px] bg-gray-50 flex items-center justify-center rounded-lg">
-            <div className="text-center">
-              <Loader size="large" color="accent" />
-              <p className="text-gray-600 mt-4 font-medium text-lg">
-                Loading jobs...
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-3 p-4 w-full">
-            {jobs.map((job: Job) => (
-              <div
-                key={job._id}
-                onClick={() => handleViewJobDetails(job)}
-                className={`bg-white border rounded-lg p-4 shadow-sm transition-shadow w-full cursor-pointer ${
-                  job.status === "open"
-                    ? "border-gray-200 hover:shadow-md hover:border-primary-300"
-                    : "border-gray-300 hover:shadow-sm hover:border-gray-400"
-                }`}
-              >
-                <div className="flex justify-between items-start mb-3 gap-2">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 text-sm">
-                      <span className="block truncate" title={job.title}>
-                        {job.title.length > 30
-                          ? `${job.title.substring(0, 30)}...`
-                          : job.title}
-                      </span>
-                    </h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-accent-600 font-medium">
-                        {job.bidCount || 0}{" "}
-                        {job.bidCount === 1 ? "Bid" : "Bids"}
-                      </span>
-                    </div>
-                  </div>
-                  {job.status !== "open" && (
-                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                      Read Only
-                    </span>
-                  )}
-                  <span
-                    className={`px-2 py-1 rounded text-xs font-bold flex-shrink-0 ${
-                      job.status === "open"
-                        ? "bg-accent-100 text-accent-800"
-                        : job.status === "in_progress"
-                        ? "bg-primary-200 text-primary-800"
-                        : job.status === "completed"
-                        ? "bg-primary-100 text-primary-600"
-                        : job.status === "cancelled"
-                        ? "bg-primary-200 text-primary-800"
-                        : "bg-primary-100 text-primary-600"
-                    }`}
-                  >
-                    {job.status}
-                  </span>
-                </div>
-
-                <div className="text-sm text-gray-600 mb-2">
-                  <span className="font-medium">Service:</span>{" "}
-                  <span className="truncate block" title={job.service}>
-                    {job.service}
-                  </span>
-                </div>
-
-                <div className="text-sm text-gray-600 mb-3">
-                  <span className="font-medium">Description:</span>{" "}
-                  <span className="truncate block" title={job.description}>
-                    {job.description?.length > 40
-                      ? `${job.description.substring(0, 40)}...`
-                      : job.description}
-                  </span>
-                </div>
-              </div>
-            ))}
-            {jobs.length === 0 && (
-              <div className="text-center text-gray-500 py-8">
-                No jobs found.
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Desktop Table View */}
-      <div className="hidden lg:block overflow-x-auto">
-        <table className="w-full divide-y divide-gray-200 text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-3 lg:px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">
-                Title
-              </th>
-              <th className="px-3 lg:px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
-                Service
-              </th>
-              <th className="px-3 lg:px-6 py-3 text-center font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">
-                Status
-              </th>
-              <th className="px-3 lg:px-6 py-3 text-center font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">
-                Bids
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {jobsLoading ? (
-              <tr>
-                <td colSpan={4} className="py-12">
-                  <div className="flex flex-col items-center justify-center w-full h-full">
-                    <Loader size="large" color="accent" />
-                    <p className="text-gray-600 mt-4 font-medium">
-                      Loading jobs...
-                    </p>
-                  </div>
-                </td>
-              </tr>
-            ) : jobs.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="text-center text-gray-500 py-8">
-                  No jobs found.
-                </td>
-              </tr>
-            ) : (
-              jobs.map((job: Job) => (
-                <tr
-                  key={job._id}
-                  onClick={() => handleViewJobDetails(job)}
-                  className="hover:bg-gray-50 cursor-pointer"
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Status Filter */}
+              <div>
+                <label
+                  className="block text-sm font-medium text-gray-700 mb-1.5"
+                  htmlFor="status"
                 >
-                  <td className="px-3 lg:px-6 py-4 font-semibold text-gray-900 max-w-xs">
-                    <span className="block truncate" title={job.title}>
-                      {job.title.length > 40
-                        ? `${job.title.substring(0, 40)}...`
-                        : job.title}
-                    </span>
-                    <div className="text-xs text-gray-500 mt-1">
-                      {job.description?.slice(0, 60)}
-                      {job.description?.length > 60 ? "..." : ""}
-                    </div>
-                  </td>
-                  <td className="px-3 lg:px-6 py-4 text-gray-700">
-                    {job.service}
-                  </td>
-                  <td className="px-3 lg:px-6 py-4 text-center">
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-bold ${
-                        job.status === "open"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : job.status === "in_progress"
-                          ? "bg-blue-100 text-blue-800"
-                          : job.status === "completed"
-                          ? "bg-green-100 text-green-800"
-                          : job.status === "cancelled"
-                          ? "bg-red-100 text-red-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {job.status}
-                    </span>
-                  </td>
-                  <td className="px-3 lg:px-6 py-4 text-center">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-accent-100 text-accent-800">
-                      {job.bidCount || 0}
-                    </span>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination */}
-      {pagination && pagination.totalCount > 0 && (
-        <div className="px-4 sm:px-3 lg:px-6 py-4 border-t border-gray-200">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="text-sm text-gray-700 order-2 sm:order-1">
-              {(() => {
-                const currentPage = pagination.currentPage ?? 0;
-                const limit = pagination.limit ?? 0;
-                const totalCount = pagination.totalCount ?? 0;
-                const start = (currentPage - 1) * limit + 1;
-                const end = Math.min(currentPage * limit, totalCount);
-                return `Showing ${start} to ${end} of ${totalCount} jobs`;
-              })()}
-            </div>
-            <div className="flex items-center gap-2 order-1 sm:order-2">
-              <button
-                onClick={() => handlePageChange(pagination.currentPage - 1)}
-                disabled={
-                  !pagination.hasPrevPage ||
-                  jobsLoading ||
-                  pagination.totalPages <= 1
-                }
-                className="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm font-medium min-w-[44px]"
-              >
-                Previous
-              </button>
-              <div className="flex items-center gap-1">
-                {pagination.totalPages > 1 ? (
-                  Array.from(
-                    { length: Math.min(5, pagination.totalPages) },
-                    (_, i) => {
-                      let pageNum;
-                      if (pagination.totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (pagination.currentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (
-                        pagination.currentPage >=
-                        pagination.totalPages - 2
-                      ) {
-                        pageNum = pagination.totalPages - 4 + i;
-                      } else {
-                        pageNum = pagination.currentPage - 2 + i;
-                      }
-
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => handlePageChange(pageNum)}
-                          className={`px-3 py-2 text-sm font-medium rounded-lg min-w-[40px] ${
-                            pagination.currentPage === pageNum
-                              ? "bg-accent-500 text-white"
-                              : "text-gray-700 hover:bg-gray-100"
-                          }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    }
-                  )
-                ) : (
-                  <span className="px-3 py-2 text-sm font-medium text-gray-500">
-                    Page 1 of 1
-                  </span>
-                )}
+                  Status
+                </label>
+                <select
+                  id="status"
+                  value={filters.status || ""}
+                  onChange={(e) =>
+                    handleFilterChange({ status: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm transition-colors"
+                >
+                  <option value="">All</option>
+                  {JOB_STATUSES.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <button
-                onClick={() => handlePageChange(pagination.currentPage + 1)}
-                disabled={
-                  !pagination.hasNextPage ||
-                  jobsLoading ||
-                  pagination.totalPages <= 1
-                }
-                className="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm font-medium min-w-[44px]"
-              >
-                Next
-              </button>
+
+              {/* Search with Icon */}
+              <div>
+                <label
+                  className="block text-sm font-medium text-gray-700 mb-1.5"
+                  htmlFor="search"
+                >
+                  Search
+                </label>
+                <div className="relative">
+                  <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    id="search"
+                    type="text"
+                    placeholder="Search jobs..."
+                    value={searchTerm}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm transition-colors"
+                  />
+                </div>
+              </div>
+
+              {/* Admin Filters */}
+              {isAdmin && (
+                <>
+                  <div>
+                    <label
+                      className="block text-sm font-medium text-gray-700 mb-1.5"
+                      htmlFor="category"
+                    >
+                      Service
+                    </label>
+                    <select
+                      id="category"
+                      value={filters.category || ""}
+                      onChange={(e) =>
+                        handleFilterChange({ category: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm transition-colors"
+                    >
+                      <option value="">All</option>
+                      <option value="plumbing">Plumbing</option>
+                      <option value="electrical">Electrical</option>
+                      <option value="hvac">HVAC</option>
+                      <option value="painting">Painting</option>
+                      <option value="flooring">Flooring</option>
+                      <option value="roofing">Roofing</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label
+                      className="block text-sm font-medium text-gray-700 mb-1.5"
+                      htmlFor="sortBy"
+                    >
+                      Sort By
+                    </label>
+                    <select
+                      id="sortBy"
+                      value={filters.sortBy || "createdAt"}
+                      onChange={(e) =>
+                        handleFilterChange({ sortBy: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm transition-colors"
+                    >
+                      {SORT_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Error */}
-      {jobsError && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
-          <p className="text-red-700">Error loading jobs: {jobsError}</p>
-        </div>
-      )}
+      {/* Jobs List Card */}
+      <div className="bg-white rounded-lg shadow-sm border border-primary-200">
+        <DataTable<TableJob>
+          data={jobs as unknown as TableJob[]}
+          columns={columns}
+          loading={jobsLoading}
+          error={jobsError}
+          emptyMessage="No jobs found."
+          onRowClick={(job) => handleViewJobDetails(job as unknown as Job)}
+          pagination={tablePagination}
+          onPageChange={handlePageChange}
+          paginationLabel={({ startItem, endItem, totalCount }) =>
+            `Showing ${startItem} to ${endItem} of ${totalCount} jobs`
+          }
+          getRowKey={(job) => (job as TableJob)._id}
+          hoverable
+        />
+      </div>
 
       {/* Job Create Modal - Rendered as Portal */}
       {showCreateModal &&
@@ -583,6 +512,6 @@ const JobManagementTable: React.FC = () => {
       />
     </div>
   );
-};
+});
 
 export default JobManagementTable;

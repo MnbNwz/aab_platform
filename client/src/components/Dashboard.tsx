@@ -28,6 +28,13 @@ import { useDashboardRefresh } from "../hooks/useDashboardRefresh";
 import { AppDispatch, RootState } from "../store";
 import { fetchInvestmentStatisticsThunk } from "../store/slices/investmentOpportunitySlice";
 import ProfileModal from "./ProfileModal";
+import {
+  isAdmin,
+  isCustomer,
+  isContractor,
+  isAdminOrCustomer,
+  isCustomerOrContractor,
+} from "../utils";
 import ProfileViewModal from "./ProfileViewModal";
 import Settings from "./Settings";
 import JobManagementTable from "./dashboard/JobManagementTable";
@@ -38,6 +45,7 @@ import InvestmentOpportunitiesManagement from "./dashboard/InvestmentOpportuniti
 import ContractorOffMarketOpportunities from "./contractor/ContractorOffMarketOpportunities";
 import InterestedProperties from "./contractor/InterestedProperties";
 import Analytics from "./dashboard/Analytics";
+import BillingHistoryTable from "./dashboard/BillingHistoryTable";
 import type { User, DashboardCardProps } from "../types";
 import { handleApiError } from "../services/apiService";
 import {
@@ -140,13 +148,13 @@ const UserDashboardCards = memo<{
   user: User;
   onProfileClick: () => void;
 }>(({ user, onProfileClick }) => {
-  const userCards = useMemo(() => {
-    const isCustomer = user.role === "customer";
-    const isContractor = user.role === "contractor";
+  const isCustomerRole = useMemo(() => isCustomer(user.role), [user.role]);
+  const isContractorRole = useMemo(() => isContractor(user.role), [user.role]);
 
+  const userCards = useMemo(() => {
     return [
       {
-        icon: isCustomer ? ShoppingCart : Briefcase,
+        icon: isCustomerRole ? ShoppingCart : Briefcase,
         title: "Profile",
         description: "Manage your account",
         onClick: onProfileClick,
@@ -154,7 +162,7 @@ const UserDashboardCards = memo<{
         iconColor: "text-blue-600",
       },
       // Conditional contractor services card
-      ...(isContractor
+      ...(isContractorRole
         ? [
             {
               icon: Briefcase,
@@ -167,13 +175,13 @@ const UserDashboardCards = memo<{
         : []),
       {
         icon: Calendar,
-        title: isCustomer ? "My Bookings" : "Appointments",
+        title: isCustomerRole ? "My Bookings" : "Appointments",
         description: "View and manage bookings",
         iconBgColor: "bg-purple-100",
         iconColor: "text-purple-600",
       },
     ];
-  }, [user.role, onProfileClick]);
+  }, [isCustomerRole, isContractorRole, onProfileClick]);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -247,6 +255,7 @@ interface DashboardContentProps {
   customerData: any;
   contractorData: any;
   platformData: any;
+  setActiveTab: (tab: string) => void;
 }
 
 const DashboardContent = memo<DashboardContentProps>(
@@ -266,8 +275,23 @@ const DashboardContent = memo<DashboardContentProps>(
     customerData,
     contractorData,
     platformData,
+    setActiveTab: _setActiveTab,
   }) => {
-    const isAdmin = user.role === "admin";
+    // Memoize role checks to avoid repeated calculations
+    const isAdminRole = useMemo(() => isAdmin(user.role), [user.role]);
+    const isCustomerRole = useMemo(() => isCustomer(user.role), [user.role]);
+    const isContractorRole = useMemo(
+      () => isContractor(user.role),
+      [user.role]
+    );
+    const isAdminOrCustomerRole = useMemo(
+      () => isAdminOrCustomer(user.role),
+      [user.role]
+    );
+    const isCustomerOrContractorRole = useMemo(
+      () => isCustomerOrContractor(user.role),
+      [user.role]
+    );
 
     // Tab content configuration
     const tabConfig = useMemo(() => {
@@ -280,7 +304,7 @@ const DashboardContent = memo<DashboardContentProps>(
       };
 
       if (activeTab === "dashboard") {
-        if (isAdmin) {
+        if (isAdminRole) {
           return {
             ...baseProps,
             title: "Platform Dashboard",
@@ -293,7 +317,7 @@ const DashboardContent = memo<DashboardContentProps>(
               />
             ),
           };
-        } else if (user.role === "customer") {
+        } else if (isCustomerRole) {
           return {
             ...baseProps,
             title: "Customer Dashboard",
@@ -306,7 +330,7 @@ const DashboardContent = memo<DashboardContentProps>(
               />
             ),
           };
-        } else if (user.role === "contractor") {
+        } else if (isContractorRole) {
           return {
             ...baseProps,
             title: "Contractor Dashboard",
@@ -323,53 +347,62 @@ const DashboardContent = memo<DashboardContentProps>(
       }
 
       const tabConfigs = {
-        users: isAdmin && {
+        users: isAdminRole && {
           ...baseProps,
           title: "User Management",
           subtitle: "User management",
           children: <UserManagementTable />,
         },
-        analytics: isAdmin && {
+        analytics: isAdminRole && {
           ...baseProps,
           title: "Analytics",
           subtitle: "Analytics",
           children: <Analytics />,
         },
-        properties:
-          user.role === "admin"
-            ? {
-                ...baseProps,
-                title: "Off Market Properties",
-                subtitle: "Investment opportunities",
-                children: <InvestmentOpportunitiesManagement />,
-              }
-            : user.role === "customer"
-            ? {
-                ...baseProps,
-                title: "My Properties",
-                subtitle: "Your properties",
-                children: <MyProperties userRole={user.role} />,
-              }
-            : null,
-        jobs: (user.role === "admin" || user.role === "customer") && {
+        properties: isAdminRole
+          ? {
+              ...baseProps,
+              title: "Off Market Properties",
+              subtitle: "Investment opportunities",
+              children: <InvestmentOpportunitiesManagement />,
+            }
+          : isCustomerRole
+          ? {
+              ...baseProps,
+              title: "My Properties",
+              subtitle: "Your properties",
+              children: <MyProperties userRole={user.role} />,
+            }
+          : null,
+        jobs: isAdminOrCustomerRole && {
           ...baseProps,
           title: "Job Management",
           subtitle: "Job management",
           children: <JobManagementTable />,
         },
-        favorites: user.role === "customer" && {
+        favorites: isCustomerRole && {
           ...baseProps,
           title: "Favorite Contractors",
           subtitle: "Favorite contractors",
           children: <FavoriteContractors />,
         },
+        "billing-history": isCustomerOrContractorRole && {
+          ...baseProps,
+          title: "Billing History",
+          subtitle: "Payment history and receipts",
+          children: (
+            <BillingHistoryTable
+              userRole={user.role as "customer" | "contractor"}
+            />
+          ),
+        },
         // Contractor job requests
-        ...(user.role === "contractor"
+        ...(isContractorRole
           ? {
               jobs: {
                 ...baseProps,
-                title: "Job Requests",
-                subtitle: "Available jobs",
+                title: "Available Jobs",
+                subtitle: "Browse and apply to jobs",
                 children: <ContractorJobRequestsTable />,
               },
               bids: {
@@ -410,7 +443,11 @@ const DashboardContent = memo<DashboardContentProps>(
       return tabConfigs[activeTab as keyof typeof tabConfigs] || null;
     }, [
       activeTab,
-      isAdmin,
+      isAdminRole,
+      isCustomerRole,
+      isContractorRole,
+      isAdminOrCustomerRole,
+      isCustomerOrContractorRole,
       user,
       handleLogout,
       onProfile,
@@ -684,6 +721,7 @@ const Dashboard: React.FC = () => {
           customerData={customerData}
           contractorData={contractorData}
           platformData={platformData}
+          setActiveTab={setActiveTab}
         />
       </div>
 

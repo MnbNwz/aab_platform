@@ -29,19 +29,6 @@ export const fetchMembershipPlans = createAsyncThunk(
   }
 );
 
-export const toggleAutoRenewal = createAsyncThunk(
-  "membership/toggleAutoRenewal",
-  async (isAutoRenew: boolean, { rejectWithValue, dispatch }) => {
-    try {
-      const res = await membershipService.toggleAutoRenewal(isAutoRenew);
-      dispatch(fetchCurrentMembership());
-      return res.data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || "Failed to toggle auto-renewal");
-    }
-  }
-);
-
 interface MembershipState {
   current: CurrentMembership | null;
   plans: MembershipPlan[];
@@ -99,17 +86,6 @@ const membershipSlice = createSlice({
         state.loading = false;
       })
       .addCase(fetchMembershipPlans.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
-      })
-      .addCase(toggleAutoRenewal.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(toggleAutoRenewal.fulfilled, (state) => {
-        state.loading = false;
-      })
-      .addCase(toggleAutoRenewal.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       });

@@ -10,6 +10,33 @@ export { default as ContractorJobDetailsModal } from "./ContractorJobDetailsModa
 export { default as UpgradeMembershipModal } from "./UpgradeMembershipModal";
 export { default as MyBids } from "./MyBids";
 
+// UI components
+export { default as FilterPanel } from "./ui/FilterPanel";
+export type {
+  FilterField,
+  FilterOption,
+  FilterFieldType,
+  FilterColumns,
+  FilterPanelProps,
+} from "./ui/FilterPanel";
+export {
+  createSelectField,
+  createSelectFieldWithAll,
+  createInputField,
+  createNumberField,
+  createDateField,
+  CommonFilterFields,
+  FilterConfigs,
+} from "./ui/FilterPanel.utils";
+export { default as DataTable } from "./ui/DataTable";
+export type {
+  TableColumn,
+  TableAction,
+  PaginationInfo,
+  PaginationLabelInfo,
+  DataTableProps,
+} from "./ui/DataTable";
+
 // Auth components
 export { default as AuthGuard } from "./auth/AuthGuard";
 export { default as LoginForm } from "./auth/LoginForm";

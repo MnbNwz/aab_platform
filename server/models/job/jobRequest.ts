@@ -29,8 +29,17 @@ const JobRequestSchema = new Schema<IJobRequest>({
       status: { type: String, required: true },
       date: { type: Date, default: Date.now },
       by: { type: Schema.Types.ObjectId, ref: "User", required: true },
+      description: { type: String }, // Optional description for timeline events
     },
   ],
+  // Deposit payment fields
+  depositPaid: { type: Boolean, default: false },
+  depositAmount: { type: Number, default: 0 },
+  // Completion payment fields
+  completionPaid: { type: Boolean, default: false },
+  completionAmount: { type: Number, default: 0 },
+  completionPaymentId: { type: Schema.Types.ObjectId, ref: "Payment" },
+  completionPaidAt: { type: Date },
 });
 
 // PERFORMANCE INDEXES (minimal, optimized for actual query patterns)

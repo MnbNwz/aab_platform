@@ -7,6 +7,7 @@ import { useForm, Controller } from "react-hook-form";
 import { showToast } from "../utils/toast";
 import type { JobCreateProps } from "../types/component";
 import type { JobFormInputs } from "../types/job";
+import { isCustomer, isAdmin, isContractor } from "../utils";
 
 const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -57,9 +58,9 @@ const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
 
   useEffect(() => {
     if (!user) return;
-    if (user.role === "customer" || user.role === "admin") {
+    if (isCustomer(user.role) || isAdmin(user.role)) {
       setJobType("regular");
-    } else if (user.role === "contractor") {
+    } else if (isContractor(user.role)) {
       // Contractors cannot create jobs
       setJobType("");
     } else {
@@ -73,7 +74,7 @@ const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
     }
 
     // Contractors cannot create jobs
-    if (user?.role === "contractor") {
+    if (user && isContractor(user.role)) {
       return;
     }
 
@@ -93,7 +94,7 @@ const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
     }
 
     // Contractors cannot create jobs
-    if (user?.role === "contractor") {
+    if (user && isContractor(user.role)) {
       return;
     }
 

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import {
   User,
   CreditCard,
@@ -13,8 +13,6 @@ import ChangeEmailModal from "./ChangeEmailModal";
 import ChangePasswordModal from "./ChangePasswordModal";
 import ServicesManagement from "./ServicesManagement";
 import ImagePreviewModal from "./ImagePreviewModal";
-import AutoRenewalModal from "./AutoRenewalModal";
-import PaymentHistoryModal from "./PaymentHistoryModal";
 import UpgradeMembershipModal from "./UpgradeMembershipModal";
 import { useDispatch, useSelector } from "react-redux";
 import { updateProfileWithFormDataThunk } from "../store/thunks/userThunks";
@@ -25,7 +23,7 @@ import {
   PROFILE_IMAGE_OPTIONS,
 } from "../utils/imageCompression";
 import type { AppDispatch, RootState } from "../store";
-import { toggleAutoRenewal } from "../store/slices/membershipSlice";
+import { isAdmin, isContractor, isNotAdmin } from "../utils";
 
 const Settings: React.FC<SettingsProps> = ({
   user,
@@ -37,9 +35,6 @@ const Settings: React.FC<SettingsProps> = ({
   const [changeEmailOpen, setChangeEmailOpen] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [servicesManagementOpen, setServicesManagementOpen] = useState(false);
-  const [autoRenewalModalOpen, setAutoRenewalModalOpen] = useState(false);
-  const [isSavingAutoRenewal, setIsSavingAutoRenewal] = useState(false);
-  const [paymentHistoryModalOpen, setPaymentHistoryModalOpen] = useState(false);
   const [upgradeMembershipModalOpen, setUpgradeMembershipModalOpen] =
     useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
@@ -54,41 +49,17 @@ const Settings: React.FC<SettingsProps> = ({
     (state: RootState) => state.membership
   );
 
-  const [settings, setSettings] = useState({
-    serviceRadius: user.role === "contractor" ? 25 : 15,
-    autoRespond: user.role === "contractor" ? false : undefined,
-    quoteTimeframe: user.role === "contractor" ? "24h" : undefined,
-    minJobValue: user.role === "contractor" ? 100 : undefined,
+  const isContractorRole = useMemo(() => isContractor(user.role), [user.role]);
 
-    autoRenewal: currentMembership?.isAutoRenew ?? true,
-  });
-
-  useEffect(() => {
-    if (currentMembership) {
-      setSettings((prev) => ({
-        ...prev,
-        autoRenewal: currentMembership.isAutoRenew,
-      }));
-    }
-  }, [currentMembership]);
-
-  const handleSaveAutoRenewal = async (newValue: boolean) => {
-    if (!currentMembership) return;
-
-    setIsSavingAutoRenewal(true);
-    try {
-      await dispatch(toggleAutoRenewal(newValue)).unwrap();
-      setAutoRenewalModalOpen(false);
-    } catch (error) {
-      console.error("Failed to save auto-renewal setting:", error);
-    } finally {
-      setIsSavingAutoRenewal(false);
-    }
-  };
-
-  const handleOpenAutoRenewalModal = () => {
-    setAutoRenewalModalOpen(true);
-  };
+  const settings = useMemo(
+    () => ({
+      serviceRadius: isContractorRole ? 25 : 15,
+      autoRespond: isContractorRole ? false : undefined,
+      quoteTimeframe: isContractorRole ? "24h" : undefined,
+      minJobValue: isContractorRole ? 100 : undefined,
+    }),
+    [isContractorRole]
+  );
 
   const handleEmailChangeLocal = async (oldEmail: string, newEmail: string) => {
     if (onEmailChange) {
@@ -211,7 +182,7 @@ const Settings: React.FC<SettingsProps> = ({
       },
     ];
 
-    if (user.role === "admin") {
+    if (isAdmin(user.role)) {
       baseSections.push({
         id: "services",
         title: "Services Management",
@@ -229,7 +200,7 @@ const Settings: React.FC<SettingsProps> = ({
       });
     }
 
-    if (user.role !== "admin") {
+    if (isNotAdmin(user.role)) {
       baseSections.push({
         id: "account",
         title: "Account & Security",
@@ -254,7 +225,7 @@ const Settings: React.FC<SettingsProps> = ({
       });
     }
 
-    if (user.role === "contractor") {
+    if (isContractorRole) {
       baseSections.splice(2, 0, {
         id: "preferences",
         title: "Service Preferences",
@@ -294,7 +265,7 @@ const Settings: React.FC<SettingsProps> = ({
       });
     }
 
-    if (user.role !== "admin") {
+    if (isNotAdmin(user.role)) {
       baseSections.push({
         id: "membership",
         title: "Membership & Billing",
@@ -307,6 +278,13 @@ const Settings: React.FC<SettingsProps> = ({
             description: "Your active membership tier",
             type: "info",
             value: currentMembership?.planId?.name || "No active plan",
+          },
+          {
+            id: "auto-renewal-status",
+            label: "Auto-Renewal Status",
+            description: "Your membership auto-renewal preference",
+            type: "info",
+            value: currentMembership?.isAutoRenew ? "Enabled" : "Disabled",
           },
           {
             id: "expires-on",
@@ -334,26 +312,12 @@ const Settings: React.FC<SettingsProps> = ({
             type: "button",
             onClick: () => setUpgradeMembershipModalOpen(true),
           },
-          {
-            id: "change-auto-renewal",
-            label: "Auto-Renewal",
-            description: "Manage your membership auto-renewal preference",
-            type: "button",
-            onClick: handleOpenAutoRenewalModal,
-          },
-          {
-            id: "billing-history",
-            label: "Billing History",
-            description: "View your payment history and receipts",
-            type: "button",
-            onClick: () => setPaymentHistoryModalOpen(true),
-          },
         ],
       });
     }
 
     return baseSections;
-  }, [user, settings, onProfileEdit, currentMembership]);
+  }, [user, settings, onProfileEdit, currentMembership, isContractorRole]);
 
   const activeSectionData = settingsSections.find(
     (section) => section.id === activeSection
@@ -658,19 +622,6 @@ const Settings: React.FC<SettingsProps> = ({
         accept="image/*"
         onChange={handleProfilePhotoUpload}
         className="hidden"
-      />
-
-      <AutoRenewalModal
-        isOpen={autoRenewalModalOpen}
-        onClose={() => setAutoRenewalModalOpen(false)}
-        currentAutoRenew={currentMembership?.isAutoRenew ?? true}
-        onSave={handleSaveAutoRenewal}
-        isSaving={isSavingAutoRenewal}
-      />
-
-      <PaymentHistoryModal
-        isOpen={paymentHistoryModalOpen}
-        onClose={() => setPaymentHistoryModalOpen(false)}
       />
 
       <UpgradeMembershipModal

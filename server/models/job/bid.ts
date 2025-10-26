@@ -25,6 +25,16 @@ const BidSchema = new Schema<IBid>({
     period: { type: Number, required: false }, // in months
     description: { type: String, required: false },
   },
+  // Deposit payment fields
+  depositPaid: { type: Boolean, default: false },
+  depositAmount: { type: Number, default: 0 },
+  depositPaymentId: { type: Schema.Types.ObjectId, ref: "Payment" },
+  depositPaidAt: { type: Date },
+  // Completion payment fields
+  completionPaid: { type: Boolean, default: false },
+  completionAmount: { type: Number, default: 0 },
+  completionPaymentId: { type: Schema.Types.ObjectId, ref: "Payment" },
+  completionPaidAt: { type: Date },
 });
 
 // PERFORMANCE INDEX for contractor bid queries

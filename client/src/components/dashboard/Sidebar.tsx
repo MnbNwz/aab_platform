@@ -10,6 +10,7 @@ import {
   Heart,
   ClipboardList,
   ChartBar,
+  CreditCard,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../store";
@@ -112,6 +113,12 @@ export const Sidebar: React.FC<ExtendedSidebarProps> = ({
         description: "Manage reviews",
       },
       {
+        id: "billing-history",
+        label: "Billing History",
+        icon: CreditCard,
+        description: "Payment history and receipts",
+      },
+      {
         id: "settings",
         label: "Settings",
         icon: Settings,
@@ -126,18 +133,6 @@ export const Sidebar: React.FC<ExtendedSidebarProps> = ({
         description: "Overview and statistics",
       },
       {
-        id: "jobs",
-        label: "Job Requests",
-        icon: Building,
-        description: "View job requests",
-      },
-      {
-        id: "bids",
-        label: "My Bids",
-        icon: ClipboardList,
-        description: "Manage your bids",
-      },
-      {
         id: "offMarket",
         label: "Off Market Properties",
         icon: Building,
@@ -148,6 +143,24 @@ export const Sidebar: React.FC<ExtendedSidebarProps> = ({
         label: "Interested Properties",
         icon: Heart,
         description: "Your expressed interests",
+      },
+      {
+        id: "jobs",
+        label: "Available Jobs",
+        icon: Building,
+        description: "Browse and apply to jobs",
+      },
+      {
+        id: "bids",
+        label: "My Bids",
+        icon: ClipboardList,
+        description: "Manage your bids",
+      },
+      {
+        id: "billing-history",
+        label: "Billing History",
+        icon: CreditCard,
+        description: "Payment history and receipts",
       },
       {
         id: "reviews",

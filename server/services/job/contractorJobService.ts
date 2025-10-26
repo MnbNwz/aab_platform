@@ -4,6 +4,7 @@ import { UserMembership } from "@models/user/userMembership";
 import { User } from "@models/user/user";
 import { LeadAccess } from "@models/job/leadAccess";
 import { IUserMembership, IMembershipPlan } from "@models/types/membership";
+import { toObjectId } from "@utils/core";
 
 // Default contractor membership for users without active membership
 const DEFAULT_CONTRACTOR_MEMBERSHIP = {
@@ -651,6 +652,40 @@ export async function getJobsForContractor(
     const pipeline = [
       // OPTIMIZATION 1: Initial match with base filters
       { $match: query },
+
+      // Filter out jobs where THIS contractor has already bid
+      // Other contractors' bids are allowed - only exclude if self has bid
+      {
+        $lookup: {
+          from: "bids",
+          let: { jobId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$jobRequest", "$$jobId"] },
+                    { $eq: ["$contractor", toObjectId(userId)] }, // Only check for self contractor's bids
+                  ],
+                },
+              },
+            },
+            { $limit: 1 },
+            { $project: { _id: 1 } },
+          ],
+          as: "selfBid",
+        },
+      },
+      {
+        $match: {
+          selfBid: { $size: 0 }, // Only jobs where self contractor hasn't bid yet
+        },
+      },
+      {
+        $project: {
+          selfBid: 0, // Remove the lookup field
+        },
+      },
 
       // OPTIMIZATION 2: Early time-based filtering (reduces documents early in pipeline)
       {

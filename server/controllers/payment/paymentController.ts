@@ -270,6 +270,8 @@ export const getPaymentHistory = async (req: AuthenticatedRequest, res: Response
     const userId = req.user?._id;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const status = req.query.status as string | undefined;
+    const type = req.query.type as string | undefined;
 
     if (!userId) {
       return res
@@ -277,7 +279,7 @@ export const getPaymentHistory = async (req: AuthenticatedRequest, res: Response
         .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
     }
 
-    const result = await paymentService.getPaymentHistory(userId, page, limit);
+    const result = await paymentService.getPaymentHistory(userId, page, limit, status, type);
 
     res.status(200).json({
       success: true,

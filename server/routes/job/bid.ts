@@ -17,7 +17,4 @@ router.get("/contractor", requireContractor, bidController.getContractorBids);
 // Get all bids for a specific job request (anyone can view bids)
 router.get("/job/:jobRequestId", bidController.getJobBids);
 
-// Accept or reject a bid (job creator only)
-router.put("/:bidId/status", bidController.updateBidStatus);
-
 export default router;

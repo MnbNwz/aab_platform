@@ -10,6 +10,7 @@ import {
   Edit,
 } from "lucide-react";
 import { useGeocoding } from "../hooks/useGeocoding";
+import { isContractor, isCustomer, isAdmin } from "../utils";
 
 interface ProfileViewModalProps {
   user: User;
@@ -253,7 +254,7 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
             </div>
 
             {/* Role-specific Information */}
-            {user.role === "contractor" && user.contractor && (
+            {isContractor(user.role) && user.contractor && (
               <div className="space-y-3 xs:space-y-4">
                 <h4 className="text-base xs:text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">
                   Business Information
@@ -335,7 +336,7 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
               </div>
             )}
 
-            {user.role === "customer" && user.customer && (
+            {isCustomer(user.role) && user.customer && (
               <div className="space-y-3 xs:space-y-4">
                 <h4 className="text-base xs:text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">
                   Customer Information
@@ -357,7 +358,7 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
         {/* Footer */}
         <div className="p-3 xs:p-4 sm:p-6 border-t border-primary-200">
           <div className="flex justify-end space-x-3">
-            {onEdit && !(hideEditForAdmin && user.role === "admin") && (
+            {onEdit && !(hideEditForAdmin && isAdmin(user.role)) && (
               <button
                 onClick={onEdit}
                 className="px-4 xs:px-6 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors duration-200 text-sm xs:text-base font-medium flex items-center space-x-2"

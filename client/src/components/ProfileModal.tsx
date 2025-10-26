@@ -10,6 +10,7 @@ import LocationSelector from "./LocationSelector";
 import { ProfileFormState } from "../store/slices/userSlice";
 import { useGeocoding } from "../hooks/useGeocoding";
 import Loader from "./ui/Loader";
+import { isAdmin, isCustomer, isContractor } from "../utils";
 
 // Extended ProfileModalProps to include showAllFields property
 interface ExtendedProfileModalProps {
@@ -19,8 +20,6 @@ interface ExtendedProfileModalProps {
   onSave: (updated: Partial<User>) => void;
   showAllFields?: boolean; // New prop to control field visibility
 }
-
-const isAdmin = (role: UserRole): role is "admin" => role === "admin";
 const getInputClassName = (disabled: boolean = false) =>
   `w-full rounded-lg px-3 py-2 sm:py-3 border border-primary-300 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 text-sm sm:text-base ${
     disabled
@@ -56,10 +55,10 @@ const ProfileModal: React.FC<ExtendedProfileModalProps> = ({
           user.geoHome?.coordinates && user.geoHome.coordinates.length === 2
             ? [user.geoHome.coordinates[0], user.geoHome.coordinates[1]]
             : [0, 0],
-        userRole: user.role === "admin" ? user.role : undefined,
+        userRole: isAdmin(user.role) ? user.role : undefined,
       };
 
-      if (user.role === "contractor" && user.contractor) {
+      if (isContractor(user.role) && user.contractor) {
         return {
           ...base,
           contractor: {
@@ -72,7 +71,7 @@ const ProfileModal: React.FC<ExtendedProfileModalProps> = ({
         };
       }
 
-      if (user.role === "customer" && user.customer) {
+      if (isCustomer(user.role) && user.customer) {
         return {
           ...base,
           customer: {
@@ -89,14 +88,14 @@ const ProfileModal: React.FC<ExtendedProfileModalProps> = ({
 
   // Fetch services for contractors
   useEffect(() => {
-    if (isOpen && user.role === "contractor" && services.length === 0) {
+    if (isOpen && isContractor(user.role) && services.length === 0) {
       dispatch(getServicesThunk());
     }
   }, [isOpen, user.role, services.length, dispatch]);
 
   // Get readable address from coordinates
   const { address: locationAddress, loading: addressLoading } = useGeocoding(
-    user.role !== "admin" && form.geoHome[0] !== 0 && form.geoHome[1] !== 0
+    !isAdmin(user.role) && form.geoHome[0] !== 0 && form.geoHome[1] !== 0
       ? { lat: form.geoHome[1], lng: form.geoHome[0] }
       : null
   );
@@ -108,7 +107,7 @@ const ProfileModal: React.FC<ExtendedProfileModalProps> = ({
     if (form.lastName !== user.lastName) return true;
 
     // Check phone only for non-admin users
-    if (user.role !== "admin" && form.phone !== (user.phone || "")) return true;
+    if (!isAdmin(user.role) && form.phone !== (user.phone || "")) return true;
 
     // Check status and approval only if showing all fields
     if (showAllFields) {
@@ -117,7 +116,7 @@ const ProfileModal: React.FC<ExtendedProfileModalProps> = ({
     }
 
     // Check location coordinates only for non-admin users
-    if (user.role !== "admin") {
+    if (!isAdmin(user.role)) {
       const originalCoords = user.geoHome?.coordinates;
       if (originalCoords && originalCoords.length === 2) {
         if (Math.abs(form.geoHome[0] - originalCoords[0]) > 0.000001)
@@ -130,7 +129,7 @@ const ProfileModal: React.FC<ExtendedProfileModalProps> = ({
     }
 
     // Check contractor specific fields
-    if (user.role === "contractor" && user.contractor && form.contractor) {
+    if (isContractor(user.role) && user.contractor && form.contractor) {
       if (form.contractor.companyName !== (user.contractor.companyName || ""))
         return true;
       if (form.contractor.license !== (user.contractor.license || ""))
@@ -145,7 +144,7 @@ const ProfileModal: React.FC<ExtendedProfileModalProps> = ({
     }
 
     // Check customer specific fields
-    if (user.role === "customer" && user.customer && form.customer) {
+    if (isCustomer(user.role) && user.customer && form.customer) {
       if (
         form.customer.defaultPropertyType !== user.customer.defaultPropertyType
       )
@@ -177,7 +176,7 @@ const ProfileModal: React.FC<ExtendedProfileModalProps> = ({
     };
 
     // Only include phone and location for non-admin users
-    if (user.role !== "admin") {
+    if (!isAdmin(user.role)) {
       updated.phone = form.phone;
       updated.geoHome = {
         type: user.geoHome?.type || "Point",
@@ -191,12 +190,12 @@ const ProfileModal: React.FC<ExtendedProfileModalProps> = ({
       updated.approval = form.approval;
     }
     // If admin, assign userRole
-    if (user.role === "admin" && form.userRole) {
+    if (isAdmin(user.role) && form.userRole) {
       updated.role = form.userRole;
     }
 
     // Add role-specific data
-    if (user.role === "contractor" && form.contractor) {
+    if (isContractor(user.role) && form.contractor) {
       updated.contractor = {
         ...user.contractor,
         companyName: form.contractor.companyName,
@@ -205,14 +204,14 @@ const ProfileModal: React.FC<ExtendedProfileModalProps> = ({
         taxId: form.contractor.taxId,
         docs: user.contractor?.docs || [],
       };
-    } else if (user.role === "customer" && form.customer) {
+    } else if (isCustomer(user.role) && form.customer) {
       updated.customer = {
         defaultPropertyType: form.customer.defaultPropertyType,
       };
     }
 
     // Validate phone using zod schema only for non-admin users
-    if (user.role !== "admin") {
+    if (!isAdmin(user.role)) {
       const phoneResult = baseUserSchema.shape.phone.safeParse(form.phone);
       if (!phoneResult.success) {
         setPhoneError(
@@ -416,7 +415,7 @@ const ProfileModal: React.FC<ExtendedProfileModalProps> = ({
 
               {/* Status and Approval Fields - Only show when showAllFields is true */}
               {showAllFields &&
-                (user.role === "admin" ? (
+                (isAdmin(user.role) ? (
                   <>
                     <div>
                       <label className="block text-primary-900 font-medium mb-1">
@@ -487,7 +486,7 @@ const ProfileModal: React.FC<ExtendedProfileModalProps> = ({
                 ))}
 
               {/* Customer specific fields */}
-              {user.role === "customer" && user.customer && (
+              {isCustomer(user.role) && user.customer && (
                 <div>
                   <label className="block text-primary-700 font-medium mb-1 text-sm sm:text-base">
                     Default Property Type
@@ -502,7 +501,7 @@ const ProfileModal: React.FC<ExtendedProfileModalProps> = ({
               )}
 
               {/* Contractor specific fields */}
-              {user.role === "contractor" && user.contractor && (
+              {isContractor(user.role) && user.contractor && (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-primary-700 font-medium mb-1 text-sm sm:text-base">
@@ -524,7 +523,7 @@ const ProfileModal: React.FC<ExtendedProfileModalProps> = ({
                           },
                         })
                       }
-                      disabled={user.role === ("admin" as UserRole)}
+                      disabled={isAdmin(user.role)}
                       className={getInputClassName(false)}
                     />
                   </div>
@@ -675,7 +674,7 @@ const ProfileModal: React.FC<ExtendedProfileModalProps> = ({
                           },
                         })
                       }
-                      disabled={user.role === ("admin" as UserRole)}
+                      disabled={isAdmin(user.role)}
                       className={getInputClassName(isAdmin(user.role))}
                     />
                   </div>

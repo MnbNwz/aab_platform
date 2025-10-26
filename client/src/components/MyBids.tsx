@@ -1,14 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState, AppDispatch } from "../store";
 import { getMyBidsThunk } from "../store/thunks/contractorBidsThunks";
 import { setBidFilters } from "../store/slices/contractorBidsSlice";
 import type { ContractorBid } from "../services/contractorBidService";
-import Loader from "./ui/Loader";
 import { useGeocoding } from "../hooks/useGeocoding";
 import { showToast } from "../utils/toast";
+import FilterPanel from "./ui/FilterPanel";
+import { createSelectFieldWithAll } from "./ui/FilterPanel.utils";
+import { BID_STATUSES } from "../constants";
+import DataTable, { TableColumn } from "./ui/DataTable";
+import type { PaginationInfo } from "./ui/DataTable";
 
-const MyBids: React.FC = () => {
+const MyBids: React.FC = memo(() => {
   const dispatch = useDispatch<AppDispatch>();
   const { bids, loading, error, pagination, filters } = useSelector(
     (state: RootState) => state.contractorBids
@@ -24,17 +28,21 @@ const MyBids: React.FC = () => {
     dispatch(getMyBidsThunk(filters));
   }, [dispatch, filters]);
 
-  const handleFilterChange = (
-    status: "all" | "pending" | "accepted" | "rejected"
-  ) => {
-    dispatch(setBidFilters({ status, page: 1 }));
-  };
+  const handleFilterChange = useCallback(
+    (newFilters: any) => {
+      dispatch(setBidFilters({ status: newFilters.status || "all", page: 1 }));
+    },
+    [dispatch]
+  );
 
-  const handlePageChange = (page: number) => {
-    dispatch(setBidFilters({ page }));
-  };
+  const handlePageChange = useCallback(
+    (page: number) => {
+      dispatch(setBidFilters({ page }));
+    },
+    [dispatch]
+  );
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = useCallback((status: string) => {
     switch (status) {
       case "pending":
         return "bg-yellow-100 text-yellow-800";
@@ -45,9 +53,9 @@ const MyBids: React.FC = () => {
       default:
         return "bg-gray-100 text-gray-800";
     }
-  };
+  }, []);
 
-  const getJobStatusColor = (status: string) => {
+  const getJobStatusColor = useCallback((status: string) => {
     switch (status) {
       case "open":
         return "bg-blue-100 text-blue-800";
@@ -60,32 +68,180 @@ const MyBids: React.FC = () => {
       default:
         return "bg-gray-100 text-gray-800";
     }
-  };
+  }, []);
+
+  // Convert filter status to include "all" option
+  const bidStatusOptions = useMemo(() => ["all", ...BID_STATUSES], []);
+
+  // Memoized columns
+  const columns = useMemo<
+    TableColumn<ContractorBid & Record<string, unknown>>[]
+  >(
+    () => [
+      {
+        key: "jobTitle",
+        header: "Job Title",
+        render: (bid) => (
+          <div
+            className="font-medium text-gray-900 truncate max-w-xs"
+            title={bid.jobRequest.title}
+          >
+            {bid.jobRequest.title}
+          </div>
+        ),
+        mobileLabel: "Job",
+        mobileRender: (bid) => (
+          <div>
+            <div className="flex justify-between items-start mb-3">
+              <h3 className="font-semibold text-gray-900 text-sm flex-1">
+                {bid.jobRequest.title}
+              </h3>
+              <div className="flex flex-col gap-1 items-end">
+                <span
+                  className={`px-2 py-1 rounded text-xs font-semibold ${getStatusColor(
+                    bid.status
+                  )}`}
+                >
+                  {bid.status}
+                </span>
+                <span
+                  className={`px-2 py-1 rounded text-xs font-semibold ${getJobStatusColor(
+                    bid.jobRequest.status
+                  )}`}
+                >
+                  {bid.jobRequest.status}
+                </span>
+              </div>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Property:</span>
+                <span className="font-medium text-gray-900">
+                  {bid.jobRequest.property.title}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Service:</span>
+                <span className="font-medium text-gray-900 capitalize">
+                  {bid.jobRequest.service}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">My Bid:</span>
+                <span className="font-bold text-green-700">
+                  ${(bid.bidAmount / 100).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Estimate:</span>
+                <span className="font-medium text-gray-900">
+                  ${(bid.jobRequest.estimate / 100).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Submitted:</span>
+                <span className="text-gray-900">
+                  {new Date(bid.createdAt).toLocaleDateString()}
+                </span>
+              </div>
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: "service",
+        header: "Service",
+        render: (bid) => (
+          <span className="text-gray-700 capitalize">
+            {bid.jobRequest.service}
+          </span>
+        ),
+        hideOnMobile: true,
+      },
+      {
+        key: "bidAmount",
+        header: "Bid Amount",
+        render: (bid) => (
+          <span className="font-semibold text-primary-700">
+            ${(bid.bidAmount / 100).toLocaleString()}
+          </span>
+        ),
+        hideOnMobile: true,
+      },
+      {
+        key: "status",
+        header: "Status",
+        render: (bid) => (
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
+              bid.status
+            )}`}
+          >
+            {bid.status}
+          </span>
+        ),
+        hideOnMobile: true,
+      },
+      {
+        key: "submitted",
+        header: "Submitted",
+        render: (bid) => (
+          <span className="text-sm text-gray-600">
+            {new Date(bid.createdAt).toLocaleDateString()}
+          </span>
+        ),
+        hideOnMobile: true,
+      },
+    ],
+    [getStatusColor, getJobStatusColor]
+  );
+
+  // Pagination info
+  const paginationInfo = useMemo<PaginationInfo | undefined>(() => {
+    if (!pagination) return undefined;
+    const paginationAny = pagination as any;
+    const totalCount = paginationAny.totalItems || paginationAny.total || 0;
+    if (totalCount === 0) return undefined;
+    return {
+      currentPage: paginationAny.currentPage || paginationAny.page || 1,
+      totalPages: paginationAny.totalPages || paginationAny.pages || 1,
+      totalCount: totalCount,
+      limit: paginationAny.itemsPerPage || paginationAny.limit || 10,
+      hasNextPage:
+        paginationAny.hasNextPage ??
+        (paginationAny.currentPage || paginationAny.page || 1) <
+          (paginationAny.totalPages || paginationAny.pages || 1),
+      hasPrevPage:
+        paginationAny.hasPrevPage ??
+        (paginationAny.currentPage || paginationAny.page || 1) > 1,
+    };
+  }, [pagination]);
 
   return (
-    <div className="bg-white rounded-lg shadow w-full max-w-full overflow-x-hidden">
-      {/* Header */}
-      <div className="p-4 sm:p-6 border-b border-gray-200">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900">My Bids</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Track and manage your submitted bids
-            </p>
-          </div>
-          {/* Lead Stats */}
-          {leadStats && (
-            <div className="bg-white rounded-xl px-4 sm:px-5 py-4 border-2 border-primary-200 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-                {/* Lead Usage Info */}
-                <div className="flex-1 min-w-0">
+    <div className="space-y-6">
+      {/* Main Content Card */}
+      <div className="bg-white rounded-lg shadow-sm border border-primary-200 w-full max-w-full overflow-x-hidden">
+        {/* Header */}
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+                My Bids
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">
+                Track and manage your submitted bids
+              </p>
+            </div>
+            {leadStats && (
+              <div className="flex-shrink-0 w-full sm:w-[35%] md:w-[30%] lg:w-[25%]">
+                <div className="bg-white rounded-lg shadow-sm border border-primary-200 px-3 py-3">
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <span className="text-xs font-semibold text-primary-600 uppercase tracking-wide">
                       Available Leads
                     </span>
-                    {/* Can Bid Badge - Mobile */}
+                    {/* Can Bid Badge */}
                     <div
-                      className={`sm:hidden flex items-center gap-1.5 px-2.5 py-1 rounded-md font-semibold text-xs whitespace-nowrap ${
+                      className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md font-semibold text-xs whitespace-nowrap ${
                         leadStats.canBid
                           ? "bg-green-50 text-green-700 border border-green-200"
                           : "bg-red-50 text-red-700 border border-red-200"
@@ -96,12 +252,12 @@ const MyBids: React.FC = () => {
                           leadStats.canBid ? "bg-green-500" : "bg-red-500"
                         }`}
                       />
-                      {leadStats.canBid ? "Can Bid" : "Limit Reached"}
+                      {leadStats.canBid ? "Can Bid" : "Limit"}
                     </div>
                   </div>
 
                   {/* Progress Bar */}
-                  <div className="relative w-full h-2.5 bg-gray-200 rounded-full overflow-hidden mb-2">
+                  <div className="relative w-full h-2 bg-gray-200 rounded-full overflow-hidden mb-2">
                     <div
                       className={`h-full rounded-full transition-all duration-300 ${
                         (leadStats.used / leadStats.limit) * 100 > 80
@@ -118,7 +274,7 @@ const MyBids: React.FC = () => {
 
                   {/* Stats */}
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm text-gray-700">
+                    <span className="text-xs text-gray-700">
                       <span className="font-bold text-primary-900">
                         {leadStats.used}
                       </span>
@@ -127,197 +283,50 @@ const MyBids: React.FC = () => {
                         / {leadStats.limit} used
                       </span>
                     </span>
-                    <span className="text-sm font-semibold text-accent-700">
+                    <span className="text-xs font-semibold text-accent-700">
                       {leadStats.remaining} left
                     </span>
                   </div>
                 </div>
-
-                {/* Can Bid Badge - Desktop */}
-                <div
-                  className={`hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-lg font-semibold text-sm whitespace-nowrap flex-shrink-0 ${
-                    leadStats.canBid
-                      ? "bg-green-50 text-green-700 border border-green-200"
-                      : "bg-red-50 text-red-700 border border-red-200"
-                  }`}
-                >
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      leadStats.canBid ? "bg-green-500" : "bg-red-500"
-                    }`}
-                  />
-                  {leadStats.canBid ? "Can Bid" : "Limit Reached"}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Status Filter */}
-        <div className="flex flex-wrap gap-2">
-          {["all", "pending", "accepted", "rejected"].map((status) => (
-            <button
-              key={status}
-              onClick={() =>
-                handleFilterChange(
-                  status as "all" | "pending" | "accepted" | "rejected"
-                )
-              }
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filters.status === status
-                  ? "bg-accent-500 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              {status.charAt(0).toUpperCase() + status.slice(1)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Mobile Card View */}
-      <div className="block lg:hidden w-full overflow-x-hidden">
-        {loading ? (
-          <div className="py-12">
-            <div className="flex justify-center items-center w-full h-full">
-              <Loader size="large" color="accent" />
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-3 p-4 w-full">
-            {bids.map((bid) => (
-              <BidCard
-                key={bid._id}
-                bid={bid}
-                onViewDetails={() => setSelectedBid(bid)}
-                getStatusColor={getStatusColor}
-                getJobStatusColor={getJobStatusColor}
-              />
-            ))}
-            {bids.length === 0 && (
-              <div className="text-center text-gray-500 py-8">
-                No bids found.
               </div>
             )}
           </div>
-        )}
-      </div>
-
-      {/* Desktop Table View */}
-      <div className="hidden lg:block overflow-x-auto">
-        <table className="w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Job Title
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Service
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Bid Amount
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Submitted
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {loading ? (
-              <tr>
-                <td colSpan={5} className="py-12">
-                  <div className="flex justify-center items-center w-full h-full">
-                    <Loader size="large" color="accent" />
-                  </div>
-                </td>
-              </tr>
-            ) : bids.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="text-center text-gray-500 py-8">
-                  No bids found.
-                </td>
-              </tr>
-            ) : (
-              bids.map((bid) => (
-                <tr
-                  key={bid._id}
-                  onClick={() => setSelectedBid(bid)}
-                  className="hover:bg-gray-50 cursor-pointer transition-colors"
-                >
-                  <td className="px-6 py-4">
-                    <div
-                      className="font-medium text-gray-900 truncate max-w-xs"
-                      title={bid.jobRequest.title}
-                    >
-                      {bid.jobRequest.title}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-gray-700 capitalize">
-                    {bid.jobRequest.service}
-                  </td>
-                  <td className="px-6 py-4 text-center font-semibold text-primary-700">
-                    ${(bid.bidAmount / 100).toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
-                        bid.status
-                      )}`}
-                    >
-                      {bid.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center text-sm text-gray-600">
-                    {new Date(bid.createdAt).toLocaleDateString()}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination */}
-      {pagination && pagination.total > 0 && (
-        <div className="px-4 sm:px-3 lg:px-6 py-4 border-t border-gray-200">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="text-sm text-gray-700 order-2 sm:order-1">
-              Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
-              {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
-              of {pagination.total} bids
-            </div>
-            <div className="flex items-center gap-2 order-1 sm:order-2">
-              <button
-                onClick={() => handlePageChange(pagination.page - 1)}
-                disabled={!pagination.hasPrevPage || loading}
-                className="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm font-medium"
-              >
-                Previous
-              </button>
-              <span className="text-sm text-gray-700">
-                Page {pagination.page} of {pagination.totalPages}
-              </span>
-              <button
-                onClick={() => handlePageChange(pagination.page + 1)}
-                disabled={!pagination.hasNextPage || loading}
-                className="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm font-medium"
-              >
-                Next
-              </button>
-            </div>
-          </div>
         </div>
-      )}
 
-      {/* Error */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 m-4">
-          <p className="text-red-700">Error: {error}</p>
-        </div>
-      )}
+        {/* Filters */}
+        <FilterPanel
+          mode="inline"
+          fields={[
+            createSelectFieldWithAll(
+              "status",
+              "Status",
+              bidStatusOptions,
+              filters.status || "all"
+            ),
+          ]}
+          values={{ status: filters.status || "all" }}
+          onChange={handleFilterChange}
+          showFilterIcon={true}
+          columns={{ mobile: 1, tablet: 1, desktop: 1 }}
+        />
+
+        {/* DataTable */}
+        <DataTable<ContractorBid & Record<string, unknown>>
+          data={bids as (ContractorBid & Record<string, unknown>)[]}
+          columns={columns}
+          loading={loading}
+          error={error}
+          emptyMessage="No bids found."
+          onRowClick={(bid) => setSelectedBid(bid)}
+          pagination={paginationInfo}
+          onPageChange={handlePageChange}
+          paginationLabel={({ startItem, endItem, totalCount }) =>
+            `Showing ${startItem} to ${endItem} of ${totalCount} bids`
+          }
+          getRowKey={(bid) => bid._id}
+          hoverable
+        />
+      </div>
 
       {/* Bid Details Modal */}
       {selectedBid && (
@@ -328,77 +337,7 @@ const MyBids: React.FC = () => {
       )}
     </div>
   );
-};
-
-// Mobile Bid Card Component
-const BidCard: React.FC<{
-  bid: ContractorBid;
-  onViewDetails: () => void;
-  getStatusColor: (status: string) => string;
-  getJobStatusColor: (status: string) => string;
-}> = ({ bid, onViewDetails, getStatusColor, getJobStatusColor }) => {
-  return (
-    <div
-      onClick={onViewDetails}
-      className="bg-white border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-    >
-      <div className="flex justify-between items-start mb-3">
-        <h3 className="font-semibold text-gray-900 text-sm flex-1">
-          {bid.jobRequest.title}
-        </h3>
-        <div className="flex flex-col gap-1 items-end">
-          <span
-            className={`px-2 py-1 rounded text-xs font-semibold ${getStatusColor(
-              bid.status
-            )}`}
-          >
-            {bid.status}
-          </span>
-          <span
-            className={`px-2 py-1 rounded text-xs font-semibold ${getJobStatusColor(
-              bid.jobRequest.status
-            )}`}
-          >
-            {bid.jobRequest.status}
-          </span>
-        </div>
-      </div>
-
-      <div className="space-y-2 text-sm">
-        <div className="flex justify-between">
-          <span className="text-gray-600">Property:</span>
-          <span className="font-medium text-gray-900">
-            {bid.jobRequest.property.title}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-gray-600">Service:</span>
-          <span className="font-medium text-gray-900 capitalize">
-            {bid.jobRequest.service}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-gray-600">My Bid:</span>
-          <span className="font-bold text-green-700">
-            ${(bid.bidAmount / 100).toLocaleString()}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-gray-600">Estimate:</span>
-          <span className="font-medium text-gray-900">
-            ${(bid.jobRequest.estimate / 100).toLocaleString()}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-gray-600">Submitted:</span>
-          <span className="text-gray-900">
-            {new Date(bid.createdAt).toLocaleDateString()}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-};
+});
 
 // Bid Details Modal Component
 const BidDetailsModal: React.FC<{
@@ -705,5 +644,7 @@ const BidDetailsModal: React.FC<{
     </div>
   );
 };
+
+MyBids.displayName = "MyBids";
 
 export default MyBids;

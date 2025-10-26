@@ -23,3 +23,6 @@ export const CHART_COLORS = {
   warning: "#F59E0B",
   info: "#3B82F6",
 } as const;
+
+// Export role helpers
+export * from "./roleHelpers";

@@ -34,7 +34,7 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
   }, [isOpen, dispatch]);
 
   const formatAmount = (amount: number) => {
-    return `$${(amount / 100).toFixed(2)}`;
+    return (amount / 100).toFixed(2);
   };
 
   const formatDate = (dateString: string) => {
@@ -44,6 +44,7 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      hour12: true,
     });
   };
 
@@ -66,12 +67,14 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
     if (!detail.payment?.metadata) return null;
 
     return (
-      <div className="bg-gray-50 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-gray-900 mb-3">Metadata</h4>
+      <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <h4 className="text-sm font-semibold text-gray-900 mb-3">
+          Additional Information
+        </h4>
         <div className="space-y-2">
           {Object.entries(detail.payment.metadata).map(([key, value]) => (
             <div key={key} className="flex justify-between text-sm">
-              <span className="text-gray-600 capitalize">
+              <span className="text-gray-500 capitalize">
                 {key.replace(/([A-Z])/g, " $1").trim()}:
               </span>
               <span className="text-gray-900 font-medium">{String(value)}</span>
@@ -87,64 +90,38 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
 
     const membership = detail.payment.membership;
     return (
-      <div className="bg-blue-50 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-blue-900 mb-3 flex items-center">
-          <Tag className="h-4 w-4 mr-2" />
-          Membership Information
-        </h4>
+      <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Tag className="h-4 w-4 text-accent-600" />
+          <h4 className="text-sm font-semibold text-gray-900">
+            Membership Details
+          </h4>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <div>
-            <span className="text-blue-700">Plan:</span>
-            <span className="ml-2 font-medium text-blue-900">
+            <p className="text-gray-500 mb-1">Plan</p>
+            <p className="font-medium text-gray-900">
               {membership.plan?.name} ({membership.plan?.tier})
-            </span>
+            </p>
           </div>
           <div>
-            <span className="text-blue-700">Status:</span>
-            <span className="ml-2 font-medium text-blue-900">
+            <p className="text-gray-500 mb-1">Status</p>
+            <p className="font-medium text-gray-900 capitalize">
               {membership.status}
-            </span>
+            </p>
           </div>
           <div>
-            <span className="text-blue-700">Billing Period:</span>
-            <span className="ml-2 font-medium text-blue-900 capitalize">
+            <p className="text-gray-500 mb-1">Billing Period</p>
+            <p className="font-medium text-gray-900 capitalize">
               {membership.billingPeriod}
-            </span>
+            </p>
           </div>
           <div>
-            <span className="text-blue-700">Billing Type:</span>
-            <span className="ml-2 font-medium text-blue-900 capitalize">
-              {membership.billingType}
-            </span>
-          </div>
-          <div>
-            <span className="text-blue-700">Auto Renewal:</span>
-            <span className="ml-2 font-medium text-blue-900">
+            <p className="text-gray-500 mb-1">Auto Renewal</p>
+            <p className="font-medium text-gray-900">
               {membership.isAutoRenew ? "Enabled" : "Disabled"}
-            </span>
+            </p>
           </div>
-          <div>
-            <span className="text-blue-700">Leads Used:</span>
-            <span className="ml-2 font-medium text-blue-900">
-              {membership.leadsUsedThisMonth}
-            </span>
-          </div>
-          {membership.startDate && (
-            <div>
-              <span className="text-blue-700">Start Date:</span>
-              <span className="ml-2 font-medium text-blue-900">
-                {formatDate(membership.startDate)}
-              </span>
-            </div>
-          )}
-          {membership.endDate && (
-            <div>
-              <span className="text-blue-700">End Date:</span>
-              <span className="ml-2 font-medium text-blue-900">
-                {formatDate(membership.endDate)}
-              </span>
-            </div>
-          )}
         </div>
       </div>
     );
@@ -155,27 +132,23 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
 
     const job = detail.payment.jobDetails;
     return (
-      <div className="bg-green-50 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-green-900 mb-3 flex items-center">
-          <Tag className="h-4 w-4 mr-2" />
-          Job Information
-        </h4>
+      <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Tag className="h-4 w-4 text-accent-600" />
+          <h4 className="text-sm font-semibold text-gray-900">Job Details</h4>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <div>
-            <span className="text-green-700">Title:</span>
-            <span className="ml-2 font-medium text-green-900">{job.title}</span>
+            <p className="text-gray-500 mb-1">Title</p>
+            <p className="font-medium text-gray-900">{job.title}</p>
           </div>
           <div>
-            <span className="text-green-700">Service:</span>
-            <span className="ml-2 font-medium text-green-900">
-              {job.service}
-            </span>
+            <p className="text-gray-500 mb-1">Service</p>
+            <p className="font-medium text-gray-900">{job.service}</p>
           </div>
           <div>
-            <span className="text-green-700">Status:</span>
-            <span className="ml-2 font-medium text-green-900">
-              {job.status}
-            </span>
+            <p className="text-gray-500 mb-1">Status</p>
+            <p className="font-medium text-gray-900 capitalize">{job.status}</p>
           </div>
         </div>
       </div>
@@ -196,7 +169,7 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
       onClick={handleBackdropClick}
     >
       <div
-        className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-auto relative flex flex-col max-h-[95vh] overflow-hidden"
+        className="bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-auto relative flex flex-col max-h-[95vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 flex-shrink-0">
@@ -238,60 +211,74 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
               </div>
             </div>
           ) : detail.payment ? (
-            <div className="space-y-6">
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="flex items-center justify-between">
+            <div className="space-y-4">
+              {/* Payment Summary */}
+              <div className="bg-gradient-to-r from-accent-50 to-primary-50 rounded-lg p-4 sm:p-6 border border-accent-200">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
                   <div>
-                    <h4 className="text-lg font-medium text-gray-900">
-                      Payment #{detail.payment._id.slice(-8).toUpperCase()}
-                    </h4>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {formatDate(detail.payment.createdAt)}
+                    <p className="text-xs sm:text-sm text-gray-600 mb-1">
+                      Payment ID
+                    </p>
+                    <p className="text-base sm:text-lg font-semibold text-gray-900">
+                      #{detail.payment._id.slice(-8).toUpperCase()}
                     </p>
                   </div>
                   <span
-                    className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${getStatusColor(
+                    className={`inline-flex px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-full self-start sm:self-auto ${getStatusColor(
                       detail.payment.status
                     )}`}
                   >
                     {detail.payment.status}
                   </span>
                 </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
-                    <DollarSign className="h-4 w-4 mr-2" />
-                    Payment Amount
-                  </h4>
-                  <div className="text-2xl font-bold text-gray-900">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-gray-600 text-xl sm:text-2xl">$</span>
+                  <span className="text-3xl sm:text-4xl font-bold text-gray-900">
                     {formatAmount(detail.payment.amount)}
-                  </div>
-                  <div className="text-sm text-gray-600 mt-1">
-                    {detail.payment.currency.toUpperCase()}
-                  </div>
+                  </span>
+                  <span className="text-gray-600 text-base sm:text-lg uppercase">
+                    {detail.payment.currency}
+                  </span>
                 </div>
-
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
-                    <UserIcon className="h-4 w-4 mr-2" />
-                    User Information
-                  </h4>
-                  <div className="space-y-2 text-sm">
-                    <div>
-                      <span className="text-gray-600">Email:</span>
-                      <span className="ml-2 font-medium text-gray-900">
-                        {detail.payment.email}
-                      </span>
-                    </div>
-                  </div>
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <p className="text-xs text-gray-500">
+                    {formatDate(detail.payment.createdAt)}
+                  </p>
                 </div>
               </div>
 
+              {/* Key Information Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <UserIcon className="h-4 w-4 text-gray-500" />
+                    <h4 className="text-sm font-medium text-gray-900">
+                      Customer
+                    </h4>
+                  </div>
+                  <p className="text-sm text-gray-700">
+                    {detail.payment.email}
+                  </p>
+                </div>
+
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <DollarSign className="h-4 w-4 text-gray-500" />
+                    <h4 className="text-sm font-medium text-gray-900">
+                      Purpose
+                    </h4>
+                  </div>
+                  <p className="text-sm text-gray-700">
+                    {detail.payment.purpose || "Payment"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Context-Specific Information */}
               {renderMembershipInfo()}
               {renderJobInfo()}
 
+              {/* Additional Metadata */}
               {renderMetadata()}
             </div>
           ) : null}

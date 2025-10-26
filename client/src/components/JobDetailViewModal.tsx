@@ -586,7 +586,7 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                           >
                             <div className="p-6 space-y-4">
                               {/* Header with Contractor Info and Toggle */}
-                              <div className="flex items-start justify-between gap-4">
+                              <div className="flex items-center justify-between gap-4">
                                 <div className="flex items-center gap-4 flex-1 min-w-0">
                                   {/* Profile Picture - Opens Profile */}
                                   <div
@@ -612,27 +612,29 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
 
                                   {/* Contact Info - Opens Profile */}
                                   <div
-                                    className="flex-1 min-w-0"
+                                    className="flex-1 min-w-0 cursor-pointer"
                                     onClick={() =>
                                       handleViewContractorProfile(
                                         bid.contractor
                                       )
                                     }
                                   >
-                                    <h4 className="font-semibold text-gray-900 hover:text-primary-600 truncate cursor-pointer">
+                                    <h4 className="font-semibold text-gray-900 hover:text-primary-600 mb-1">
                                       {bid.contractor.firstName}{" "}
                                       {bid.contractor.lastName}
                                     </h4>
-                                    <div className="flex items-center gap-2 text-sm text-gray-500 truncate cursor-pointer hover:text-primary-600 transition">
+                                    <div className="flex items-center gap-2 text-sm text-gray-500 hover:text-primary-600 transition">
                                       <Mail className="h-3.5 w-3.5 flex-shrink-0" />
                                       <span className="truncate">
                                         {bid.contractor.email}
                                       </span>
                                     </div>
                                     {bid.contractor.phone && (
-                                      <div className="flex items-center gap-2 text-sm text-gray-500 cursor-pointer hover:text-primary-600 transition">
+                                      <div className="flex items-center gap-2 text-sm text-gray-500 hover:text-primary-600 transition">
                                         <Phone className="h-3.5 w-3.5 flex-shrink-0" />
-                                        <span>{bid.contractor.phone}</span>
+                                        <span className="truncate">
+                                          {bid.contractor.phone}
+                                        </span>
                                       </div>
                                     )}
                                   </div>

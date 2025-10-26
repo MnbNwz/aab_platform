@@ -7,6 +7,8 @@
     "start": "npm cache clean --f && reset && vite",
     "build": "vite build",
     "lint": "eslint .",
+    "type-check": "tsc --noEmit",
+    "check": "npm run type-check && npm run lint",
     "preview": "vite preview",
     "clean": "rm -rf dist node_modules/.vite",
     "clean:all": "rm -rf dist node_modules/.vite node_modules/.cache",

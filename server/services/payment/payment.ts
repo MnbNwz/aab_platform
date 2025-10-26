@@ -295,7 +295,7 @@ export const processJobDepositPayment = async (jobPaymentId: string, customerId:
     // Optimistic update - update status immediately
     await JobPayment.findByIdAndUpdate(jobPaymentId, {
       depositStatus: "pending",
-      jobStatus: "deposit_paid",
+      jobStatus: "in_progress",
     });
 
     const result = await processJobDeposit(jobPaymentId, customerId);
@@ -413,13 +413,41 @@ export const getConnectAccountStatus = async (contractorId: string) => {
 };
 
 // PAYMENT MANAGEMENT (optimized with aggregation)
-export const getPaymentHistory = async (userId: string, page: number = 1, limit: number = 10) => {
+export const getPaymentHistory = async (
+  userId: string,
+  page: number = 1,
+  limit: number = 10,
+  status?: string,
+  type?: string,
+) => {
   try {
     const skip = (page - 1) * limit;
 
+    // Build match filter
+    const matchFilter: any = { userId: new mongoose.Types.ObjectId(userId) };
+
+    // Add status filter if provided
+    if (status && status !== "all") {
+      matchFilter.status = status;
+    }
+
+    // Add type filter if provided
+    const typeFilter: any = {};
+    if (type && type !== "all") {
+      switch (type) {
+        case "membership":
+          typeFilter.planId = { $exists: true, $ne: null };
+          break;
+        case "job":
+          // Only for customers - contractors don't pay for jobs
+          typeFilter.jobRequestId = { $exists: true, $ne: null };
+          break;
+      }
+    }
+
     // Optimized aggregation with only required fields for performance and security
     const pipeline = [
-      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
+      { $match: { ...matchFilter, ...typeFilter } },
 
       // Add membership plan info (only plan details)
       {
