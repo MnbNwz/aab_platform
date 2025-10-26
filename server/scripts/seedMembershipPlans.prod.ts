@@ -206,8 +206,10 @@ const membershipPlans = [
 export const seedMembershipPlansProd = async () => {
   try {
     console.log("🚀 Starting PRODUCTION membership plans seeding...");
-    console.log(`Using Stripe key: ${ENV_CONFIG.STRIPE_SECRET_KEY.substring(0, 20)}...`);
-    console.log(`Mode: ${ENV_CONFIG.STRIPE_SECRET_KEY.startsWith("sk_live_") ? "LIVE" : "TEST"}\n`);
+    console.log(`Using Stripe key: ${process.env.STRIPE_SECRET_KEY!.substring(0, 20)}...`);
+    console.log(
+      `Mode: ${process.env.STRIPE_SECRET_KEY!.startsWith("sk_live_") ? "LIVE" : "TEST"}\n`,
+    );
 
     await connectDB();
     console.log("✅ Connected to database\n");
