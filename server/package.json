@@ -13,8 +13,10 @@
     "typecheck": "tsc --noEmit",
     "seed:admin": "npx ts-node -r tsconfig-paths/register scripts/seedAdmin.ts",
     "seed:memberships": "npx ts-node -r tsconfig-paths/register scripts/seedMembershipPlans.ts",
+    "seed:memberships:prod": "npx ts-node -r tsconfig-paths/register scripts/seedMembershipPlans.prod.ts",
     "seed:services": "npx ts-node -r tsconfig-paths/register scripts/seedServices.ts",
     "seed:all": "npm run seed:admin && npm run seed:memberships && npm run seed:services",
+    "seed:all:prod": "npm run seed:admin && npm run seed:memberships:prod && npm run seed:services",
     "check": "npm run lint && npm run typecheck"
   },
   "keywords": [],
