@@ -55,8 +55,8 @@ const membershipPlans = [
     freeEvaluation: false,
     // Hardcoded Stripe IDs (LIVE mode)
     stripeProductId: "prod_TJYbXnxYXe4NFy",
-    stripePriceIdMonthly: "price_1SMvVn35zNvmKFA7CW8mICyJ",
-    stripePriceIdYearly: "price_1SMvVo35zNvmKFA7aTDs0fuE",
+    stripePriceIdMonthly: "price_1SMx5M35zNvmKFA7k0WSLd67",
+    stripePriceIdYearly: "price_1SMx5N35zNvmKFA7qAuOrnE6",
   },
   {
     name: "Standard Plan",
@@ -86,8 +86,8 @@ const membershipPlans = [
     freeEvaluation: false,
     // Hardcoded Stripe IDs (LIVE mode)
     stripeProductId: "prod_TJYbYoM6ZuXDIS",
-    stripePriceIdMonthly: "price_1SMvVp35zNvmKFA71irXjelW",
-    stripePriceIdYearly: "price_1SMvVp35zNvmKFA7l6JEZult",
+    stripePriceIdMonthly: "price_1SMx5N35zNvmKFA7MxlijXJJ",
+    stripePriceIdYearly: "price_1SMx5O35zNvmKFA78S6s2mdO",
   },
   {
     name: "Premium Plan",
@@ -119,8 +119,8 @@ const membershipPlans = [
     freeEvaluation: true,
     // Hardcoded Stripe IDs (LIVE mode)
     stripeProductId: "prod_TJYbE55UN6lmXd",
-    stripePriceIdMonthly: "price_1SMvVq35zNvmKFA7WAPY8icS",
-    stripePriceIdYearly: "price_1SMvVr35zNvmKFA75fld8IDS",
+    stripePriceIdMonthly: "price_1SMx5P35zNvmKFA7PaTvsJoW",
+    stripePriceIdYearly: "price_1SMx5Q35zNvmKFA7pZMZVNz5",
   },
 
   // CONTRACTOR PLANS
@@ -152,8 +152,8 @@ const membershipPlans = [
     propertyType: "domestic",
     // Hardcoded Stripe IDs (LIVE mode)
     stripeProductId: "prod_TJYbAE0xfr8xNV",
-    stripePriceIdMonthly: "price_1SMvVs35zNvmKFA7iE3WXfdk",
-    stripePriceIdYearly: "price_1SMvVs35zNvmKFA7IwdILrpW",
+    stripePriceIdMonthly: "price_1SMx5Q35zNvmKFA79t3TaGXN",
+    stripePriceIdYearly: "price_1SMx5R35zNvmKFA7StJY8t7F",
   },
   {
     name: "Standard Plan",
@@ -185,8 +185,8 @@ const membershipPlans = [
     propertyType: "domestic",
     // Hardcoded Stripe IDs (LIVE mode)
     stripeProductId: "prod_TJYbdppEVklwzJ",
-    stripePriceIdMonthly: "price_1SMvVt35zNvmKFA72V2Q4rGf",
-    stripePriceIdYearly: "price_1SMvVu35zNvmKFA71mIFEDS4",
+    stripePriceIdMonthly: "price_1SMx5S35zNvmKFA7wNlDYbzH",
+    stripePriceIdYearly: "price_1SMx5S35zNvmKFA7uKZjddSP",
   },
   {
     name: "Premium Plan",
@@ -219,8 +219,8 @@ const membershipPlans = [
     propertyType: "commercial",
     // Hardcoded Stripe IDs (LIVE mode)
     stripeProductId: "prod_TJYbRkcMB5k7nv",
-    stripePriceIdMonthly: "price_1SMvVu35zNvmKFA7rO1TMRUJ",
-    stripePriceIdYearly: "price_1SMvVv35zNvmKFA7XNAshAml",
+    stripePriceIdMonthly: "price_1SMx5T35zNvmKFA7SzkgAdh8",
+    stripePriceIdYearly: "price_1SMx5U35zNvmKFA7ciIrIXME",
   },
 ];
 
