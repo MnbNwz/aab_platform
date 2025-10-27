@@ -1,32 +1,29 @@
-import dotenv from "dotenv";
 import { config } from "dotenv";
 import path from "path";
 import fs from "fs";
-import Stripe from "stripe";
 import { MembershipPlan } from "@models/membership";
 import { connectDB } from "@config/db";
+
 // Load production environment
 // On local: use .env.production
 // On EC2: .env is already production, so use .env
 const envProdPath = path.join(__dirname, "../.env.production");
 const envPath = path.join(__dirname, "../.env");
 
+// Force load .env.production first with override
 if (fs.existsSync(envProdPath)) {
-  // Local development - use .env.production
-  config({ path: envProdPath });
+  // Local development - use .env.production and override any existing env
+  config({ path: envProdPath, override: true });
 } else {
   // Production server - .env is already production
-  config({ path: envPath });
+  config({ path: envPath, override: true });
 }
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-08-27.basil",
-});
 
 // Annual discount rate
 const ANNUAL_DISCOUNT_RATE = 15; // 15%
 
-// Membership plans to seed (without Stripe IDs - will be created)
+// Membership plans with HARDCODED Stripe IDs from live mode
+// These products/prices already exist in Stripe LIVE mode
 const membershipPlans = [
   // CUSTOMER PLANS
   {
@@ -56,6 +53,10 @@ const membershipPlans = [
     propertyValuationSupport: false,
     certifiedAASWork: false,
     freeEvaluation: false,
+    // Hardcoded Stripe IDs (LIVE mode)
+    stripeProductId: "prod_TJYbXnxYXe4NFy",
+    stripePriceIdMonthly: "price_1SMvVn35zNvmKFA7CW8mICyJ",
+    stripePriceIdYearly: "price_1SMvVo35zNvmKFA7aTDs0fuE",
   },
   {
     name: "Standard Plan",
@@ -83,6 +84,10 @@ const membershipPlans = [
     propertyValuationSupport: true,
     certifiedAASWork: false,
     freeEvaluation: false,
+    // Hardcoded Stripe IDs (LIVE mode)
+    stripeProductId: "prod_TJYbYoM6ZuXDIS",
+    stripePriceIdMonthly: "price_1SMvVp35zNvmKFA71irXjelW",
+    stripePriceIdYearly: "price_1SMvVp35zNvmKFA7l6JEZult",
   },
   {
     name: "Premium Plan",
@@ -112,6 +117,10 @@ const membershipPlans = [
     propertyValuationSupport: true,
     certifiedAASWork: true,
     freeEvaluation: true,
+    // Hardcoded Stripe IDs (LIVE mode)
+    stripeProductId: "prod_TJYbE55UN6lmXd",
+    stripePriceIdMonthly: "price_1SMvVq35zNvmKFA7WAPY8icS",
+    stripePriceIdYearly: "price_1SMvVr35zNvmKFA75fld8IDS",
   },
 
   // CONTRACTOR PLANS
@@ -141,6 +150,10 @@ const membershipPlans = [
     financingSupport: false,
     privateNetwork: false,
     propertyType: "domestic",
+    // Hardcoded Stripe IDs (LIVE mode)
+    stripeProductId: "prod_TJYbAE0xfr8xNV",
+    stripePriceIdMonthly: "price_1SMvVs35zNvmKFA7iE3WXfdk",
+    stripePriceIdYearly: "price_1SMvVs35zNvmKFA7IwdILrpW",
   },
   {
     name: "Standard Plan",
@@ -170,6 +183,10 @@ const membershipPlans = [
     financingSupport: false,
     privateNetwork: false,
     propertyType: "domestic",
+    // Hardcoded Stripe IDs (LIVE mode)
+    stripeProductId: "prod_TJYbdppEVklwzJ",
+    stripePriceIdMonthly: "price_1SMvVt35zNvmKFA72V2Q4rGf",
+    stripePriceIdYearly: "price_1SMvVu35zNvmKFA71mIFEDS4",
   },
   {
     name: "Premium Plan",
@@ -200,184 +217,26 @@ const membershipPlans = [
     financingSupport: true,
     privateNetwork: false,
     propertyType: "commercial",
+    // Hardcoded Stripe IDs (LIVE mode)
+    stripeProductId: "prod_TJYbRkcMB5k7nv",
+    stripePriceIdMonthly: "price_1SMvVu35zNvmKFA7rO1TMRUJ",
+    stripePriceIdYearly: "price_1SMvVv35zNvmKFA7XNAshAml",
   },
 ];
 
 export const seedMembershipPlansProd = async () => {
   try {
     console.log("🚀 Starting PRODUCTION membership plans seeding...");
-    console.log(`Using Stripe key: ${process.env.STRIPE_SECRET_KEY!.substring(0, 20)}...`);
-    console.log(
-      `Mode: ${process.env.STRIPE_SECRET_KEY!.startsWith("sk_live_") ? "LIVE" : "TEST"}\n`,
-    );
+    console.log("📝 Mode: READ-ONLY (no Stripe API calls)");
+    console.log("🔒 Using hardcoded live Stripe product IDs\n");
 
     await connectDB();
-    console.log("✅ Connected to database\n");
-
-    // Get existing products to avoid duplicates
-    console.log("🔍 Checking for existing Stripe products...");
-    const existingProducts = await stripe.products.list({ limit: 100 });
-    console.log(`Found ${existingProducts.data.length} existing products\n`);
-
-    // Note: We'll update existing plans instead of deleting to preserve IDs
+    console.log("✅ Connected to production database\n");
 
     const results = [];
 
     for (const planData of membershipPlans) {
-      const productName = `${planData.name} - ${planData.userType === "customer" ? "Customer" : "Contractor"}`;
       console.log(`\n📦 Processing: ${planData.name} (${planData.userType} - ${planData.tier})`);
-
-      // Check if product already exists in Stripe
-      let product;
-      const existingProduct = existingProducts.data.find(
-        (p) => p.name.toLowerCase() === productName.toLowerCase(),
-      );
-
-      if (existingProduct) {
-        console.log(`  ⚠️  Product already exists in Stripe: ${existingProduct.id}`);
-        product = existingProduct;
-
-        // Get existing prices
-        const existingPrices = await stripe.prices.list({
-          product: product.id,
-          limit: 100,
-        });
-
-        const monthlyPriceExisting = existingPrices.data.find(
-          (p) => p.recurring?.interval === "month",
-        );
-        const yearlyPriceExisting = existingPrices.data.find(
-          (p) => p.recurring?.interval === "year",
-        );
-
-        if (monthlyPriceExisting && yearlyPriceExisting) {
-          console.log(`  ⚠️  Using existing prices`);
-          console.log(`  📌 Monthly: ${monthlyPriceExisting.id}`);
-          console.log(`  📌 Yearly: ${yearlyPriceExisting.id}`);
-
-          // Find existing plan or create new one (preserve ID)
-          const existingPlan = await MembershipPlan.findOne({
-            userType: planData.userType,
-            tier: planData.tier,
-          });
-
-          if (existingPlan) {
-            // Update existing plan to preserve ID
-            Object.assign(existingPlan, {
-              ...planData,
-              stripeProductId: product.id,
-              stripePriceIdMonthly: monthlyPriceExisting.id,
-              stripePriceIdYearly: yearlyPriceExisting.id,
-              isActive: true,
-            });
-            await existingPlan.save();
-            console.log(`  ✅ Plan updated in database: ${existingPlan._id}`);
-
-            results.push({
-              planId: existingPlan._id.toString(),
-              planName: planData.name,
-              userType: planData.userType,
-              tier: planData.tier,
-              stripeProductId: product.id,
-              stripePriceIdMonthly: monthlyPriceExisting.id,
-              stripePriceIdYearly: yearlyPriceExisting.id,
-              action: "Updated existing plan with Stripe products",
-            });
-          } else {
-            // Create new plan if doesn't exist
-            const plan = new MembershipPlan({
-              ...planData,
-              stripeProductId: product.id,
-              stripePriceIdMonthly: monthlyPriceExisting.id,
-              stripePriceIdYearly: yearlyPriceExisting.id,
-              isActive: true,
-            });
-            await plan.save();
-            console.log(`  ✅ Plan created in database: ${plan._id}`);
-
-            results.push({
-              planId: plan._id.toString(),
-              planName: planData.name,
-              userType: planData.userType,
-              tier: planData.tier,
-              stripeProductId: product.id,
-              stripePriceIdMonthly: monthlyPriceExisting.id,
-              stripePriceIdYearly: yearlyPriceExisting.id,
-              action: "Created new plan with existing Stripe products",
-            });
-          }
-          continue;
-        }
-      } else {
-        // Create new Stripe Product
-        product = await stripe.products.create({
-          name: productName,
-          description: planData.description,
-          metadata: {
-            userType: planData.userType,
-            tier: planData.tier,
-          },
-        });
-        console.log(`  ✅ Product created in Stripe: ${product.id}`);
-      }
-
-      // Check for existing prices for this product
-      const existingPrices = await stripe.prices.list({
-        product: product.id,
-        limit: 100,
-      });
-
-      // Create Monthly Price (only if not existing)
-      let monthlyPrice;
-      const existingMonthly = existingPrices.data.find((p) => p.recurring?.interval === "month");
-
-      if (existingMonthly) {
-        monthlyPrice = existingMonthly;
-        console.log(`  ⚠️  Monthly price already exists: ${monthlyPrice.id}`);
-      } else {
-        monthlyPrice = await stripe.prices.create({
-          product: product.id,
-          unit_amount: planData.monthlyPrice,
-          currency: "usd",
-          recurring: {
-            interval: "month",
-          },
-          metadata: {
-            billingPeriod: "monthly",
-            userType: planData.userType,
-            tier: planData.tier,
-          },
-        });
-        console.log(
-          `  ✅ Monthly price created: ${monthlyPrice.id} ($${planData.monthlyPrice / 100}/month)`,
-        );
-      }
-
-      // Create Yearly Price (only if not existing)
-      let yearlyPrice;
-      const existingYearly = existingPrices.data.find((p) => p.recurring?.interval === "year");
-
-      if (existingYearly) {
-        yearlyPrice = existingYearly;
-        console.log(`  ⚠️  Yearly price already exists: ${yearlyPrice.id}`);
-      } else {
-        yearlyPrice = await stripe.prices.create({
-          product: product.id,
-          unit_amount: planData.yearlyPrice,
-          currency: "usd",
-          recurring: {
-            interval: "year",
-          },
-          metadata: {
-            billingPeriod: "yearly",
-            userType: planData.userType,
-            tier: planData.tier,
-          },
-        });
-        console.log(
-          `  ✅ Yearly price created: ${yearlyPrice.id} ($${planData.yearlyPrice / 100}/year)`,
-        );
-      }
 
       // Find existing plan or create new one (preserve ID)
       const existingPlan = await MembershipPlan.findOne({
@@ -389,44 +248,44 @@ export const seedMembershipPlansProd = async () => {
         // Update existing plan to preserve ID
         Object.assign(existingPlan, {
           ...planData,
-          stripeProductId: product.id,
-          stripePriceIdMonthly: monthlyPrice.id,
-          stripePriceIdYearly: yearlyPrice.id,
           isActive: true,
         });
         await existingPlan.save();
         console.log(`  ✅ Plan updated in database: ${existingPlan._id}`);
+        console.log(`  📌 Product: ${planData.stripeProductId}`);
+        console.log(`  📌 Monthly: ${planData.stripePriceIdMonthly}`);
+        console.log(`  📌 Yearly: ${planData.stripePriceIdYearly}`);
 
         results.push({
           planId: existingPlan._id.toString(),
           planName: planData.name,
           userType: planData.userType,
           tier: planData.tier,
-          stripeProductId: product.id,
-          stripePriceIdMonthly: monthlyPrice.id,
-          stripePriceIdYearly: yearlyPrice.id,
+          stripeProductId: planData.stripeProductId,
+          stripePriceIdMonthly: planData.stripePriceIdMonthly,
+          stripePriceIdYearly: planData.stripePriceIdYearly,
           action: "Updated existing plan",
         });
       } else {
         // Create new plan if doesn't exist
         const plan = new MembershipPlan({
           ...planData,
-          stripeProductId: product.id,
-          stripePriceIdMonthly: monthlyPrice.id,
-          stripePriceIdYearly: yearlyPrice.id,
           isActive: true,
         });
         await plan.save();
         console.log(`  ✅ Plan created in database: ${plan._id}`);
+        console.log(`  📌 Product: ${planData.stripeProductId}`);
+        console.log(`  📌 Monthly: ${planData.stripePriceIdMonthly}`);
+        console.log(`  📌 Yearly: ${planData.stripePriceIdYearly}`);
 
         results.push({
           planId: plan._id.toString(),
           planName: planData.name,
           userType: planData.userType,
           tier: planData.tier,
-          stripeProductId: product.id,
-          stripePriceIdMonthly: monthlyPrice.id,
-          stripePriceIdYearly: yearlyPrice.id,
+          stripeProductId: planData.stripeProductId,
+          stripePriceIdMonthly: planData.stripePriceIdMonthly,
+          stripePriceIdYearly: planData.stripePriceIdYearly,
           action: "Created new plan",
         });
       }
@@ -444,6 +303,7 @@ export const seedMembershipPlansProd = async () => {
     });
     console.log("\n" + "=".repeat(80));
     console.log(`\n✅ Successfully seeded ${results.length} membership plans in PRODUCTION!`);
+    console.log("ℹ️  No Stripe API calls were made - used hardcoded live IDs");
 
     return results;
   } catch (error) {

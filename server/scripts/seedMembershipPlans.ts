@@ -37,9 +37,9 @@ const membershipPlans = [
     propertyValuationSupport: false,
     certifiedAASWork: false,
     freeEvaluation: false,
-    stripeProductId: "prod_T8w06nAcySkbqS",
-    stripePriceIdMonthly: "price_1SCeEn3U4RkW3GRd9Tgg2zzJ",
-    stripePriceIdYearly: "price_1SF8q43U4RkW3GRdWnYLtcaa",
+    stripeProductId: "prod_TJYSbytq3NexsY",
+    stripePriceIdMonthly: "price_1SMvLi3U4RkW3GRda48VkQCI",
+    stripePriceIdYearly: "price_1SMvLk3U4RkW3GRd8xwkoNpq",
   },
   {
     name: "Standard Plan",
@@ -69,9 +69,9 @@ const membershipPlans = [
     propertyValuationSupport: true,
     certifiedAASWork: false,
     freeEvaluation: false,
-    stripeProductId: "prod_T8w08g7VuknEVM",
-    stripePriceIdMonthly: "price_1SCeEo3U4RkW3GRdADw6mie5",
-    stripePriceIdYearly: "price_1SF8q53U4RkW3GRdt9U45Oqw",
+    stripeProductId: "prod_TJYSdSIcXPcC1D",
+    stripePriceIdMonthly: "price_1SMvLv3U4RkW3GRdwTWbfUJ1",
+    stripePriceIdYearly: "price_1SMvLw3U4RkW3GRdZHD9cuLe",
   },
   {
     name: "Premium Plan",
@@ -102,9 +102,9 @@ const membershipPlans = [
     propertyValuationSupport: true,
     certifiedAASWork: true,
     freeEvaluation: true,
-    stripeProductId: "prod_T8w0Qce5IA3cBx",
-    stripePriceIdMonthly: "price_1SCeEp3U4RkW3GRdh3LxE7rP",
-    stripePriceIdYearly: "price_1SF8q73U4RkW3GRdpV0Hsz8E",
+    stripeProductId: "prod_TJYSwPZa0inBMv",
+    stripePriceIdMonthly: "price_1SMvLz3U4RkW3GRdDKFZEfIO",
+    stripePriceIdYearly: "price_1SMvM03U4RkW3GRdwVLKGorc",
   },
 
   // CONTRACTOR PLANS
@@ -136,9 +136,9 @@ const membershipPlans = [
     privateNetwork: false,
     // Property type access
     propertyType: "domestic", // Basic contractors: domestic properties only
-    stripeProductId: "prod_T8w0AFxXjSW15v",
-    stripePriceIdMonthly: "price_1SCeEq3U4RkW3GRddiLDhV8N",
-    stripePriceIdYearly: "price_1SF8q83U4RkW3GRdih1cues8",
+    stripeProductId: "prod_TJYSqrzi6fhOJZ",
+    stripePriceIdMonthly: "price_1SMvM33U4RkW3GRdz4wEG0Nf",
+    stripePriceIdYearly: "price_1SMvM43U4RkW3GRd9MwaVM80",
   },
   {
     name: "Standard Plan",
@@ -170,9 +170,9 @@ const membershipPlans = [
     privateNetwork: false,
     // Property type access
     propertyType: "domestic", // Standard contractors: domestic properties only
-    stripeProductId: "prod_T8w0n75f6Bsbok",
-    stripePriceIdMonthly: "price_1SCeEr3U4RkW3GRdz4ZVC365",
-    stripePriceIdYearly: "price_1SF8q93U4RkW3GRdvNeiLCgr",
+    stripeProductId: "prod_TJYStT1hQ84KkB",
+    stripePriceIdMonthly: "price_1SMvMD3U4RkW3GRdT0wvF5Ys",
+    stripePriceIdYearly: "price_1SMvMH3U4RkW3GRdlpivJBss",
   },
   {
     name: "Premium Plan",
@@ -205,9 +205,9 @@ const membershipPlans = [
     privateNetwork: false,
     // Property type access
     propertyType: "commercial", // Premium contractors: domestic + commercial properties
-    stripeProductId: "prod_T8w0Dx6DssNc0z",
-    stripePriceIdMonthly: "price_1SCeEs3U4RkW3GRdVMrohzaH",
-    stripePriceIdYearly: "price_1SF8qB3U4RkW3GRdEJq8UEe6",
+    stripeProductId: "prod_TJYSb1svHDGLB5",
+    stripePriceIdMonthly: "price_1SMvML3U4RkW3GRdOF8i1Idf",
+    stripePriceIdYearly: "price_1SMvMN3U4RkW3GRdChvhltDm",
   },
 ];
 

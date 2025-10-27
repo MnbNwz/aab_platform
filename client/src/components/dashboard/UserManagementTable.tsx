@@ -10,9 +10,10 @@ import {
   User,
   MoreVertical,
   RotateCcw,
+  Lock,
 } from "lucide-react";
 import type { RootState, AppDispatch } from "../../store";
-import type { UserFilters } from "../../types";
+import type { UserFilters, UserRole } from "../../types";
 import {
   fetchUsersThunk,
   fetchUserThunk,
@@ -34,6 +35,7 @@ import {
 import { USER_STATUSES, SORT_OPTIONS } from "../../constants";
 import DataTable, { TableColumn } from "../ui/DataTable";
 import type { PaginationInfo } from "../ui/DataTable";
+import { isAdmin } from "../../utils";
 
 // User type for table
 interface TableUser extends Record<string, unknown> {
@@ -138,13 +140,40 @@ const UserActionsDropdown = memo<UserActionsDropdownProps>(
       ]
     );
 
+    const isDisabled = useMemo(
+      () => isUpdating || isAdmin(user.role as UserRole),
+      [isUpdating, user.role]
+    );
+    const isAdminUser = useMemo(
+      () => isAdmin(user.role as UserRole),
+      [user.role]
+    );
+    const tooltipMessage = useMemo(
+      () =>
+        isAdminUser
+          ? "Admin users cannot be modified from here"
+          : "Updating...",
+      [isAdminUser]
+    );
+
     return (
-      <ActionDropdown
-        items={actionItems}
-        disabled={isUpdating}
-        trigger={<MoreVertical className="h-4 w-4" />}
-        forceUpward={isLastRow}
-      />
+      <div className="relative group">
+        <ActionDropdown
+          items={actionItems}
+          disabled={isDisabled}
+          trigger={<MoreVertical className="h-4 w-4" />}
+          forceUpward={isLastRow}
+        />
+        {isDisabled && (
+          <div className="absolute bottom-full right-0 mb-2 px-2 py-1 bg-primary-900 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50 pointer-events-none max-w-[200px] shadow-lg">
+            <div className="flex items-center gap-1.5">
+              <Lock className="h-3 w-3 flex-shrink-0 text-accent-400" />
+              <span className="truncate text-primary-50">{tooltipMessage}</span>
+            </div>
+            <div className="absolute top-full right-2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-primary-900"></div>
+          </div>
+        )}
+      </div>
     );
   }
 );
