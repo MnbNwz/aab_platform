@@ -11,6 +11,7 @@ import {
 import type { RootState } from "../../store";
 import Loader from "../ui/Loader";
 import { formatCurrency } from "../../utils";
+import { formatJobStatusText } from "../../utils/badgeColors";
 
 interface StatCardProps {
   title: string;
@@ -175,7 +176,7 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
           </div>
           <div className="text-right ml-4">
             <p className="text-sm font-medium text-primary-700">
-              {formatCurrency((bid.bidAmount || 0) / 100)}
+              {formatCurrency(bid.bidAmount || 0)}
             </p>
             <span
               className={`inline-flex px-2 py-1 text-xs rounded-full font-semibold ${
@@ -186,7 +187,9 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
                   : "bg-red-100 text-red-800"
               }`}
             >
-              {bid.status}
+              {bid.status
+                ? formatJobStatusText(bid.status)
+                : ""}
             </span>
           </div>
         </div>
@@ -211,7 +214,7 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
           </div>
           <div className="text-right ml-4">
             <p className="text-sm font-semibold text-green-600">
-              {formatCurrency((job.bidAmount || 0) / 100)}
+              {formatCurrency(job.bidAmount || 0)}
             </p>
           </div>
         </div>

@@ -148,7 +148,7 @@ const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
                 type="email"
                 value={formData.oldEmail}
                 onChange={(e) => handleInputChange("oldEmail", e.target.value)}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors ${
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors placeholder-gray-300 ${
                   errors.oldEmail
                     ? "border-red-300 bg-red-50"
                     : "border-gray-300"
@@ -170,7 +170,7 @@ const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
                 type="email"
                 value={formData.newEmail}
                 onChange={(e) => handleInputChange("newEmail", e.target.value)}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors ${
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors placeholder-gray-300 ${
                   errors.newEmail
                     ? "border-red-300 bg-red-50"
                     : "border-gray-300"
@@ -194,7 +194,7 @@ const ChangeEmailModal: React.FC<ChangeEmailModalProps> = ({
                 onChange={(e) =>
                   handleInputChange("confirmNewEmail", e.target.value)
                 }
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors ${
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors placeholder-gray-300 ${
                   errors.confirmNewEmail
                     ? "border-red-300 bg-red-50"
                     : "border-gray-300"

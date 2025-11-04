@@ -408,7 +408,7 @@ const ContractorOpportunityDetailsModal: React.FC<
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 placeholder-gray-300"
                 placeholder="Tell us why you're interested in this opportunity..."
               />
             </div>

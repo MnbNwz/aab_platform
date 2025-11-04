@@ -11,7 +11,7 @@ export interface BidMaterials {
 }
 
 export interface BidWarranty {
-  period: number; // in years
+  period: number; // in months
   description?: string;
 }
 

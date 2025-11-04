@@ -101,8 +101,8 @@ const InterestedProperties: React.FC = () => {
     setCurrentPage(1);
   }, []);
 
-  const renderContactStatusBadge = useCallback((status: string) => {
-    const { className } = getContactStatusBadge(status as any);
+  const renderContactStatusBadge = useCallback((status: ContactStatus) => {
+    const { className, label } = getContactStatusBadge(status);
     const icons = {
       pending: AlertCircle,
       accepted: CheckCircle,
@@ -115,7 +115,7 @@ const InterestedProperties: React.FC = () => {
         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${className}`}
       >
         <Icon className="h-3 w-3 mr-1" />
-        {status.toUpperCase()}
+        {label}
       </span>
     );
   }, []);
@@ -327,7 +327,9 @@ const InterestedProperties: React.FC = () => {
         key: "contactStatus",
         header: "Contact Status",
         render: (interest) =>
-          renderContactStatusBadge(interest.interest.contactStatus),
+          renderContactStatusBadge(
+            interest.interest.contactStatus as ContactStatus
+          ),
         hideOnMobile: true,
       },
       {

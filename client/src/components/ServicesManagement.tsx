@@ -133,7 +133,7 @@ const ServicesManagement: React.FC = () => {
               onChange={handleInputChange}
               onKeyPress={handleKeyPress}
               placeholder="Enter service name (e.g., Plumbing, Electrical)"
-              className="w-full px-3 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 text-sm"
+              className="w-full px-3 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 text-sm placeholder-gray-300"
             />
           </div>
           <button

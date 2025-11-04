@@ -282,7 +282,7 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
   if (!isOpen) return null;
 
   const getInputClassName = () =>
-    "w-full rounded-lg px-3 py-2 sm:py-3 border border-primary-300 bg-white text-primary-900 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 text-sm sm:text-base";
+    "w-full rounded-lg px-3 py-2 sm:py-3 border border-primary-300 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 text-sm sm:text-base bg-white text-primary-900 placeholder-gray-300";
 
   return (
     <div

@@ -10,7 +10,8 @@ import { Bid } from "@models/job";
 
 // Constants for optimization
 const PAYMENT_TYPES = ["bid_acceptance", "job_completion"] as const;
-const URL_REGEX = /^https?:\/\/(?:[-\w.])+(?:\.[a-zA-Z]{2,})+(?:\/.*)?$/;
+const URL_REGEX =
+  /^https?:\/\/(?:localhost|127\.0\.0\.1|(?:[-\w.])+(?:\.[a-zA-Z]{2,})+)(?::\d+)?(?:\/.*)?$/;
 const DEPOSIT_PERCENTAGE = 15;
 const COMPLETION_PERCENTAGE = 85;
 
@@ -193,12 +194,14 @@ export const createJobPaymentCheckout = async (req: Request, res: Response) => {
     }
 
     // Optimized payment calculation using constants
+    // Convert bidAmount from dollars to cents first
+    const bidAmountCents = Math.round(bid.bidAmount * 100);
     const amountCents =
       paymentType === "bid_acceptance"
-        ? Math.round(bid.bidAmount * DEPOSIT_PERCENTAGE) // 15% in cents
-        : Math.round(bid.bidAmount * COMPLETION_PERCENTAGE); // 85% in cents
+        ? Math.round(bidAmountCents * (DEPOSIT_PERCENTAGE / 100)) // 15% in cents
+        : Math.round(bidAmountCents * (COMPLETION_PERCENTAGE / 100)); // 85% in cents
 
-    const amountDollars = amountCents / 100;
+    const amountDollars = amountCents / 100; // For display only
     const productName = `${paymentType === "bid_acceptance" ? "Job Deposit" : "Job Completion"} - ${jobRequest.title || "Contractor Job"}`;
     const description =
       paymentType === "bid_acceptance"
@@ -228,8 +231,9 @@ export const createJobPaymentCheckout = async (req: Request, res: Response) => {
         jobRequestId: jobRequest._id.toString(),
         contractorId: bid.contractor.toString(),
         paymentType,
-        amount: amountDollars.toString(),
-        totalJobAmount: bid.bidAmount.toString(),
+        // IMPORTANT: All amounts in metadata are stored in CENTS
+        amount: amountCents.toString(), // Payment amount in CENTS
+        totalJobAmount: bidAmountCents.toString(), // Total job amount in CENTS
         isJobPayment: "true",
       },
     });
@@ -238,7 +242,7 @@ export const createJobPaymentCheckout = async (req: Request, res: Response) => {
       success: true,
       checkoutUrl: session.url,
       sessionId: session.id,
-      amount: amountDollars,
+      amount: amountDollars, // Return dollars for frontend display
       paymentType,
     });
   } catch (error) {

@@ -1,21 +1,7 @@
 import imageCompression from "browser-image-compression";
+import type { CompressionOptions, CompressionResult } from "./types";
 
-export interface CompressionOptions {
-  maxSizeMB: number;
-  maxWidthOrHeight: number;
-  useWebWorker: boolean;
-  fileType: string;
-  quality: number;
-}
-
-export interface CompressionResult {
-  originalFile: File;
-  compressedFile: File;
-  originalSize: number;
-  compressedSize: number;
-  compressionRatio: number;
-  wasCompressed: boolean;
-}
+export type { CompressionOptions, CompressionResult };
 
 // Profile image compression settings
 export const PROFILE_IMAGE_OPTIONS: CompressionOptions = {

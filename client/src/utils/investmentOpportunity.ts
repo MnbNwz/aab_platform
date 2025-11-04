@@ -4,6 +4,11 @@ import type {
   ContactStatus,
 } from "../types";
 import { Building2, Home, MapPin } from "lucide-react";
+import {
+  getInvestmentStatusBadge as getInvestmentStatusBadgeUtil,
+  getContactStatusBadge as getContactStatusBadgeUtil,
+  formatJobStatusText,
+} from "./badgeColors";
 
 // Format price from cents to currency string
 export const formatInvestmentPrice = (priceInCents: number): string => {
@@ -15,33 +20,17 @@ export const formatInvestmentPrice = (priceInCents: number): string => {
 
 // Get status badge styling
 export const getInvestmentStatusBadge = (status: InvestmentStatus) => {
-  const statusStyles: Record<InvestmentStatus, string> = {
-    available: "bg-green-100 text-green-800",
-    under_offer: "bg-yellow-100 text-yellow-800",
-    sold: "bg-gray-100 text-gray-800",
-  };
-
   return {
-    className: statusStyles[status],
-    label: status.replace("_", " ").toUpperCase(),
+    className: getInvestmentStatusBadgeUtil(status),
+    label: formatJobStatusText(status.replace("_", " ")),
   };
 };
 
 // Get contact status badge styling
 export const getContactStatusBadge = (status: ContactStatus) => {
-  const statusStyles: Record<
-    ContactStatus,
-    { bg: string; text: string; label: string }
-  > = {
-    pending: { bg: "bg-yellow-100", text: "text-yellow-800", label: "PENDING" },
-    accepted: { bg: "bg-green-100", text: "text-green-800", label: "ACCEPTED" },
-    rejected: { bg: "bg-red-100", text: "text-red-800", label: "REJECTED" },
-  };
-
-  const config = statusStyles[status];
   return {
-    className: `${config.bg} ${config.text}`,
-    label: config.label,
+    className: getContactStatusBadgeUtil(status),
+    label: formatJobStatusText(status),
   };
 };
 

@@ -414,7 +414,7 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = memo(
                     placeholder="Search properties..."
                     value={search}
                     onChange={(e) => handleSearchChange(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm transition-colors"
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm transition-colors placeholder-gray-300"
                   />
                 </div>
               </div>

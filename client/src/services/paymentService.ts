@@ -176,7 +176,13 @@ export const paymentService = {
       );
 
       if (data.success) {
-        return data.data;
+        const response = data.data;
+        if (!response || !response.checkoutUrl) {
+          throw new Error(
+            "Invalid response: checkoutUrl is missing from server response"
+          );
+        }
+        return response;
       } else {
         throw new Error(data.message || "Failed to create checkout session");
       }

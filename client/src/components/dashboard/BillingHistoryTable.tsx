@@ -8,6 +8,7 @@ import FilterPanel from "../ui/FilterPanel";
 import { FilterConfigs } from "../ui/FilterPanel.utils";
 import type { Payment } from "../../services/paymentService";
 import DataTable, { TableColumn } from "../ui/DataTable";
+import { getPaymentStatusBadge, formatJobStatusText } from "../../utils/badgeColors";
 import type { PaginationInfo } from "../ui/DataTable";
 
 interface BillingHistoryTableProps {
@@ -73,22 +74,10 @@ const BillingHistoryTable: React.FC<BillingHistoryTableProps> = memo(
       });
     }, []);
 
-    const getStatusColor = useCallback((status: Payment["status"]) => {
-      switch (status) {
-        case "succeeded":
-          return "bg-green-100 text-green-800";
-        case "pending":
-          return "bg-yellow-100 text-yellow-800";
-        case "failed":
-          return "bg-red-100 text-red-800";
-        case "cancelled":
-          return "bg-gray-100 text-gray-800";
-        case "refunded":
-          return "bg-purple-100 text-purple-800";
-        default:
-          return "bg-gray-100 text-gray-800";
-      }
-    }, []);
+    const getStatusColor = useCallback(
+      (status: Payment["status"]) => getPaymentStatusBadge(status),
+      []
+    );
 
     const getPaymentType = useCallback((payment: Payment) => {
       if (payment.purpose?.startsWith("Membership:")) return "Membership";
@@ -144,7 +133,7 @@ const BillingHistoryTable: React.FC<BillingHistoryTableProps> = memo(
                     payment.status
                   )}`}
                 >
-                  {payment.status}
+                  {formatJobStatusText(payment.status)}
                 </span>
               </div>
             </div>
@@ -196,12 +185,12 @@ const BillingHistoryTable: React.FC<BillingHistoryTableProps> = memo(
           header: "Status",
           render: (payment) => (
             <span
-              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
-                payment.status
-              )}`}
-            >
-              {payment.status}
-            </span>
+                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
+              payment.status
+            )}`}
+          >
+            {formatJobStatusText(payment.status)}
+          </span>
           ),
           mobileLabel: "Status",
           hideOnMobile: true,

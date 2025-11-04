@@ -403,7 +403,7 @@ const DashboardContent = memo<DashboardContentProps>(
                 ...baseProps,
                 title: "Available Jobs",
                 subtitle: "Browse and apply to jobs",
-                children: <ContractorJobRequestsTable />,
+                children: <ContractorJobRequestsTable key="available-jobs" />,
               },
               bids: {
                 ...baseProps,

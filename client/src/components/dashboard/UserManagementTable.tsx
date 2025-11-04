@@ -26,6 +26,7 @@ import { setFilters } from "../../store/slices/userManagementSlice";
 import ConfirmModal from "../ui/ConfirmModal";
 import ProfileModal from "../ProfileModal";
 import ProfileViewModal from "../ProfileViewModal";
+import { getUserStatusBadge, capitalizeFirst } from "../../utils/badgeColors";
 import ActionDropdown, { ActionItem } from "../ui/ActionDropdown";
 import FilterPanel from "../ui/FilterPanel";
 import {
@@ -341,21 +342,10 @@ const UserManagementTable = memo(() => {
     setConfirmModal({ open: false, userId: null, action: null });
   };
 
-  const getStatusBadge = useCallback((status: string, approval: string) => {
-    if (status === "revoke") {
-      return "bg-red-100 text-red-800";
-    }
-    if (approval === "pending") {
-      return "bg-yellow-100 text-yellow-800";
-    }
-    if (approval === "approved" && status === "active") {
-      return "bg-green-100 text-green-800";
-    }
-    if (approval === "rejected") {
-      return "bg-red-100 text-red-800";
-    }
-    return "bg-gray-100 text-gray-800";
-  }, []);
+  const getStatusBadge = useCallback(
+    (status: string, approval: string) => getUserStatusBadge(status, approval),
+    []
+  );
 
   const getRoleBadge = useCallback((role: string) => {
     switch (role) {
@@ -467,7 +457,7 @@ const UserManagementTable = memo(() => {
               user.approval
             )}`}
           >
-            {user.status}
+            {capitalizeFirst(user.status || "")}
           </span>
         ),
       },

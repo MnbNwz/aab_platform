@@ -40,6 +40,13 @@ const ContractorJobRequestsTable: React.FC = memo(() => {
   const [showJobDetails, setShowJobDetails] = useState(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  useEffect(() => {
+    if (filters.page !== 1) {
+      dispatch(setContractorJobFilters({ page: 1 }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Fetch jobs when filters change
   useEffect(() => {
     dispatch(getContractorJobsThunk(filters));
@@ -197,7 +204,11 @@ const ContractorJobRequestsTable: React.FC = memo(() => {
         header: "Estimate",
         render: (job) => (
           <span className="font-semibold text-primary-700">
-            ${(job.estimate / 100).toLocaleString()}
+            $
+            {job.estimate.toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
           </span>
         ),
         mobileLabel: "Estimate",
@@ -205,7 +216,11 @@ const ContractorJobRequestsTable: React.FC = memo(() => {
           <div className="flex justify-between">
             <span className="text-gray-600">Estimate:</span>
             <span className="font-semibold text-primary-700">
-              ${(job.estimate / 100).toLocaleString()}
+              $
+              {job.estimate.toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </span>
           </div>
         ),
@@ -355,7 +370,7 @@ const ContractorJobRequestsTable: React.FC = memo(() => {
                   placeholder="Search jobs..."
                   value={searchTerm}
                   onChange={(e) => handleSearchChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm transition-colors"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm transition-colors placeholder-gray-300"
                 />
               </div>
             </div>

@@ -1,10 +1,18 @@
 import "dotenv/config";
 import { Request, Response } from "express";
 import Stripe from "stripe";
-import { UserMembership } from "@models/user";
+import { User, UserMembership } from "@models/user";
+import { Bid, JobRequest } from "@models/job";
+import { Payment } from "@models/payment";
 import { getPlanById } from "@services/membership/membership";
 import * as webhookService from "@services/payment/webhook";
+import {
+  sendPaymentReceipt,
+  sendPaymentFailedNotification,
+  sendSubscriptionCancelledNotification,
+} from "@utils/email";
 import { stripe, webhookSecret } from "@config/stripe";
+import { ENV_CONFIG } from "@config/env";
 
 const endpointSecret = webhookSecret;
 
@@ -116,7 +124,6 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     isJobPayment,
   } = session.metadata || {};
 
-  // Handle job payments (bid acceptance or completion)
   if (isJobPayment === "true") {
     if (!userId || !bidId || !jobRequestId || !contractorId || !paymentType) {
       console.error("❌ Missing required metadata for job payment");
@@ -131,20 +138,17 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     return;
   }
 
-  // Handle membership payments (existing logic)
   if (!userId || !planId) {
     return;
   }
 
   try {
-    // AUTO-DETECT UPGRADE: Check if user has active membership
     const existingMembership = await UserMembership.findOne({
       userId,
       status: "active",
     }).populate("planId");
 
     if (existingMembership) {
-      // Use upgrade logic with auto-detected values
       await handleUpgradeCheckout(
         session,
         userId,
@@ -186,8 +190,6 @@ async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
   }
 }
 
-// ==================== SUBSCRIPTION RENEWAL HANDLERS ====================
-
 async function handleInvoicePaid(invoice: Stripe.Invoice) {
   try {
     const subscriptionId = (invoice as any).subscription as string;
@@ -197,7 +199,6 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
       return;
     }
 
-    // Skip the first invoice (it's handled by checkout.session.completed)
     if (invoice.billing_reason === "subscription_create") {
       console.log("🔵 Skipping subscription_create invoice (handled by checkout)");
       return;
@@ -205,7 +206,6 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
 
     console.log(`🔄 Processing subscription renewal for: ${subscriptionId}`);
 
-    // Find membership by subscription ID
     const membership = await UserMembership.findOne({
       stripeSubscriptionId: subscriptionId,
     }).populate("planId");
@@ -215,19 +215,15 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
       return;
     }
 
-    // Calculate new end date based on billing period
     const daysToAdd = membership.billingPeriod === "monthly" ? 30 : 365;
     const newEndDate = new Date(membership.endDate.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
 
-    // Update membership
     membership.endDate = newEndDate;
     membership.status = "active";
     await membership.save();
 
     console.log(`✅ Membership renewed until: ${newEndDate.toISOString()}`);
 
-    // Create payment record for the renewal
-    const { Payment } = await import("@models/payment");
     const payment = new Payment({
       userId: membership.userId,
       email: invoice.customer_email || "",
@@ -243,9 +239,6 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
 
     console.log(`✅ Payment record created for renewal: ${payment._id}`);
 
-    // Send renewal success email
-    const { User } = await import("@models/user");
-    const { sendPaymentReceipt } = await import("@utils/email");
     const user = await User.findById(membership.userId).select("firstName email").lean();
 
     if (user && invoice.customer_email) {
@@ -280,7 +273,6 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
 
     console.log(`⚠️ Subscription payment failed for: ${subscriptionId}`);
 
-    // Find membership by subscription ID
     const membership = await UserMembership.findOne({
       stripeSubscriptionId: subscriptionId,
     });
@@ -290,16 +282,9 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
       return;
     }
 
-    // Mark membership as having payment issues (but don't expire immediately)
-    // Stripe will retry automatically, so we just log for now
     console.log(
       `⚠️ Payment failed for membership: ${membership._id}. Stripe will retry automatically.`,
     );
-
-    // Send payment failure email
-    const { User } = await import("@models/user");
-    const { sendPaymentFailedNotification } = await import("@utils/email");
-    const { ENV_CONFIG } = await import("@config/env");
 
     const user = await User.findById(membership.userId).select("firstName email").lean();
     const planDetails = membership.planId as any;
@@ -327,7 +312,6 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
     console.log(`🔴 Subscription deleted: ${subscriptionId}`);
 
-    // Find membership by subscription ID
     const membership = await UserMembership.findOne({
       stripeSubscriptionId: subscriptionId,
     });
@@ -345,9 +329,6 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     console.log(`✅ Auto-renewal disabled for membership: ${membership._id}`);
     console.log(`ℹ️ Membership will expire on: ${membership.endDate.toISOString()}`);
 
-    // Send cancellation notification email
-    const { User } = await import("@models/user");
-    const { sendSubscriptionCancelledNotification } = await import("@utils/email");
     const user = await User.findById(membership.userId).select("firstName email").lean();
     const planDetails = await getPlanById(membership.planId.toString());
 
@@ -370,7 +351,6 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 
     console.log(`🔄 Subscription updated: ${subscriptionId}`);
 
-    // Find membership by subscription ID
     const membership = await UserMembership.findOne({
       stripeSubscriptionId: subscriptionId,
     });
@@ -416,162 +396,249 @@ async function handleJobPayment(
   try {
     console.log(`💰 Processing ${paymentType} payment for bid: ${bidId}`);
 
-    // Import models here to avoid circular dependencies
-    const { Bid } = await import("@models/job");
-    const { JobRequest } = await import("@models/job");
-    const { Payment } = await import("@models/payment");
-
-    // Single optimized query to get bid with validation
     const bid = await Bid.findById(bidId).lean();
     if (!bid) {
       console.error(`❌ Bid not found: ${bidId}`);
       return;
     }
 
-    const amount = parseFloat(session.metadata?.amount || "0");
+    const amount = session.amount_total || parseFloat(session.metadata?.amount || "0");
     const totalJobAmount = parseFloat(session.metadata?.totalJobAmount || "0");
 
+    let email = session.customer_email || null;
+    let stripeCustomerId = (session.customer as string) || null;
+
+    if (!email || !stripeCustomerId) {
+      const user = await User.findById(userId).select("email stripeCustomerId").lean();
+      if (!user) {
+        console.error(`❌ User not found: ${userId}`);
+        return;
+      }
+
+      if (!email) {
+        email = user.email;
+      }
+
+      if (!stripeCustomerId) {
+        stripeCustomerId = user.stripeCustomerId || null;
+      }
+    }
+
+    if (!stripeCustomerId && session.payment_intent) {
+      try {
+        const pi = await stripe.paymentIntents.retrieve(session.payment_intent as string);
+        stripeCustomerId = (pi.customer as string) || null;
+      } catch (error) {
+        console.error("Failed to retrieve payment intent:", error);
+      }
+    }
+
+    if (!stripeCustomerId) {
+      try {
+        const customer = await stripe.customers.create({
+          email: email,
+          metadata: { userId: userId.toString() },
+        });
+        stripeCustomerId = customer.id;
+        await User.findByIdAndUpdate(userId, { stripeCustomerId: customer.id });
+      } catch (error) {
+        console.error("Failed to create Stripe customer:", error);
+        stripeCustomerId = `temp_${userId}`;
+      }
+    }
+
     if (paymentType === "bid_acceptance") {
-      // Handle bid acceptance payment (15% deposit)
-      if (bid.status !== "pending") {
-        console.error(`❌ Bid is not pending: ${bidId}, status: ${bid.status}`);
-        return;
-      }
-
-      // Create payment record
-      const payment = new Payment({
+      await processBidAcceptancePayment(
         userId,
-        contractorId,
-        jobRequestId,
+        email,
+        stripeCustomerId,
+        session,
         bidId,
-        amount: amount,
+        jobRequestId,
+        contractorId,
+        amount,
         totalJobAmount,
-        paymentType: "job_deposit",
-        status: "completed",
-        stripeSessionId: session.id,
-        stripePaymentIntentId: session.payment_intent as string,
-        paymentMethod: "stripe_checkout",
-        metadata: {
-          depositPercentage: 15,
-          remainingAmount: totalJobAmount - amount,
-          sessionMetadata: session.metadata,
-        },
-      });
-
-      await payment.save();
-
-      // Optimized bulk operations with Promise.all
-      await Promise.all([
-        // Update bid: accept it and mark deposit as paid
-        Bid.findByIdAndUpdate(bidId, {
-          $set: {
-            status: "accepted",
-            depositPaid: true,
-            depositAmount: amount,
-            depositPaymentId: payment._id,
-            depositPaidAt: new Date(),
-          },
-        }),
-        // Reject all other bids for this job
-        Bid.updateMany(
-          {
-            jobRequest: jobRequestId,
-            _id: { $ne: bidId },
-            status: "pending",
-          },
-          { $set: { status: "rejected" } },
-        ),
-        // Update job request status
-        JobRequest.findByIdAndUpdate(jobRequestId, {
-          $set: {
-            status: "inprogress",
-            acceptedBid: bidId,
-            depositPaid: true,
-            depositAmount: amount,
-            paymentStatus: "deposit_paid",
-          },
-          $push: {
-            timelineHistory: {
-              status: "bid_accepted",
-              date: new Date(),
-              by: userId,
-              description: `Bid accepted with 15% deposit of $${amount} paid`,
-            },
-          },
-        }),
-      ]);
-
-      console.log(`✅ Bid acceptance payment processed successfully for bid: ${bidId}`);
+        bid,
+      );
     } else if (paymentType === "job_completion") {
-      // Handle job completion payment (85% remaining)
-      if (bid.status !== "accepted") {
-        console.error(`❌ Bid is not accepted: ${bidId}, status: ${bid.status}`);
-        return;
-      }
-
-      if (!bid.depositPaid) {
-        console.error(`❌ Deposit not paid for bid: ${bidId}`);
-        return;
-      }
-
-      // Create payment record
-      const payment = new Payment({
+      await processJobCompletionPayment(
         userId,
-        contractorId,
-        jobRequestId,
+        email,
+        stripeCustomerId,
+        session,
         bidId,
-        amount: amount,
+        jobRequestId,
+        contractorId,
+        amount,
         totalJobAmount,
-        paymentType: "job_completion",
-        status: "completed",
-        stripeSessionId: session.id,
-        stripePaymentIntentId: session.payment_intent as string,
-        paymentMethod: "stripe_checkout",
-        metadata: {
-          completionPercentage: 85,
-          totalPaid: bid.depositAmount + amount,
-          sessionMetadata: session.metadata,
-        },
-      });
-
-      await payment.save();
-
-      // Optimized bulk operations with Promise.all
-      await Promise.all([
-        // Update bid with completion payment info
-        Bid.findByIdAndUpdate(bidId, {
-          $set: {
-            completionPaid: true,
-            completionAmount: amount,
-            completionPaymentId: payment._id,
-            completionPaidAt: new Date(),
-          },
-        }),
-        // Update job request status to completed
-        JobRequest.findByIdAndUpdate(jobRequestId, {
-          $set: {
-            status: "completed",
-            paymentStatus: "completed",
-            completionPaid: true,
-            completionAmount: amount,
-            completionPaymentId: payment._id,
-            completionPaidAt: new Date(),
-          },
-          $push: {
-            timelineHistory: {
-              status: "job_completed",
-              date: new Date(),
-              by: userId,
-              description: `Job completed with final payment of $${amount}`,
-            },
-          },
-        }),
-      ]);
-
-      console.log(`✅ Job completion payment processed successfully for bid: ${bidId}`);
+        bid,
+      );
     }
   } catch (error) {
     console.error("❌ Error processing job payment:", error);
     throw error;
   }
+}
+
+async function processBidAcceptancePayment(
+  userId: string,
+  email: string,
+  stripeCustomerId: string,
+  session: Stripe.Checkout.Session,
+  bidId: string,
+  jobRequestId: string,
+  contractorId: string,
+  amount: number,
+  totalJobAmount: number,
+  bid: any,
+) {
+  if (bid.status !== "pending") {
+    console.error(`❌ Bid is not pending: ${bidId}, status: ${bid.status}`);
+    return;
+  }
+
+  const payment = new Payment({
+    userId,
+    email,
+    amount,
+    currency: session.currency || "usd",
+    status: "succeeded",
+    stripeCustomerId,
+    stripeSessionId: session.id,
+    stripePaymentIntentId: session.payment_intent as string,
+    billingPeriod: "monthly",
+    metadata: {
+      contractorId,
+      jobRequestId,
+      bidId,
+      paymentType: "job_deposit",
+      totalJobAmount,
+      depositPercentage: 15,
+      remainingAmount: totalJobAmount - amount,
+      sessionMetadata: session.metadata,
+    },
+  });
+
+  await payment.save();
+
+  // Update bid, reject others, update job
+  await Promise.all([
+    Bid.findByIdAndUpdate(bidId, {
+      $set: {
+        status: "accepted",
+        depositPaid: true,
+        depositAmount: amount,
+        depositPaymentId: payment._id,
+        depositPaidAt: new Date(),
+      },
+    }),
+    Bid.updateMany(
+      {
+        jobRequest: jobRequestId,
+        _id: { $ne: bidId },
+        status: "pending",
+      },
+      { $set: { status: "rejected" } },
+    ),
+    JobRequest.findByIdAndUpdate(jobRequestId, {
+      $set: {
+        status: "inprogress",
+        acceptedBid: bidId,
+        depositPaid: true,
+        depositAmount: amount,
+        paymentStatus: "deposit_paid",
+      },
+      $push: {
+        timelineHistory: {
+          status: "bid_accepted",
+          date: new Date(),
+          by: userId,
+          description: `Bid accepted with 15% deposit of $${(amount / 100).toFixed(2)} paid`,
+        },
+      },
+    }),
+  ]);
+
+  console.log(`✅ Bid acceptance payment processed successfully for bid: ${bidId}`);
+}
+
+// Helper: Process job completion payment (85% remaining)
+async function processJobCompletionPayment(
+  userId: string,
+  email: string,
+  stripeCustomerId: string,
+  session: Stripe.Checkout.Session,
+  bidId: string,
+  jobRequestId: string,
+  contractorId: string,
+  amount: number,
+  totalJobAmount: number,
+  bid: any,
+) {
+  if (bid.status !== "accepted") {
+    console.error(`❌ Bid is not accepted: ${bidId}, status: ${bid.status}`);
+    return;
+  }
+
+  if (!bid.depositPaid) {
+    console.error(`❌ Deposit not paid for bid: ${bidId}`);
+    return;
+  }
+
+  // Create payment record
+  const payment = new Payment({
+    userId,
+    email,
+    amount,
+    currency: session.currency || "usd",
+    status: "succeeded",
+    stripeCustomerId,
+    stripeSessionId: session.id,
+    stripePaymentIntentId: session.payment_intent as string,
+    billingPeriod: "monthly",
+    metadata: {
+      contractorId,
+      jobRequestId,
+      bidId,
+      paymentType: "job_completion",
+      totalJobAmount,
+      completionPercentage: 85,
+      totalPaid: (bid.depositAmount || 0) + amount,
+      sessionMetadata: session.metadata,
+    },
+  });
+
+  await payment.save();
+
+  // Update bid and job
+  await Promise.all([
+    Bid.findByIdAndUpdate(bidId, {
+      $set: {
+        completionPaid: true,
+        completionAmount: amount,
+        completionPaymentId: payment._id,
+        completionPaidAt: new Date(),
+      },
+    }),
+    JobRequest.findByIdAndUpdate(jobRequestId, {
+      $set: {
+        status: "completed",
+        paymentStatus: "completed",
+        completionPaid: true,
+        completionAmount: amount,
+        completionPaymentId: payment._id,
+        completionPaidAt: new Date(),
+      },
+      $push: {
+        timelineHistory: {
+          status: "job_completed",
+          date: new Date(),
+          by: userId,
+          description: `Job completed with final payment of $${(amount / 100).toFixed(2)}`,
+        },
+      },
+    }),
+  ]);
+
+  console.log(`✅ Job completion payment processed successfully for bid: ${bidId}`);
 }

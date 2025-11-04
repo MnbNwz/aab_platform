@@ -134,6 +134,7 @@ export const getCustomerAnalytics = async (customerId: string) => {
                 },
               },
             },
+            { $sort: { createdAt: -1 } },
           ],
         },
       },
@@ -259,7 +260,7 @@ export const getCustomerAnalytics = async (customerId: string) => {
           jobStats: 1,
           paymentStats: 1,
           propertyStats: 1,
-          recentJobs: { $slice: ["$jobs", 0, 5] }, // Last 5 jobs
+          recentJobs: { $slice: ["$jobs", 0, 5] }, // Last 5 most recent jobs (all statuses: open, inprogress, completed, cancelled)
           recentPayments: { $slice: ["$payments", 0, 5] }, // Last 5 payments
           recentProperties: { $slice: ["$properties", 0, 3] }, // Last 3 properties
         },

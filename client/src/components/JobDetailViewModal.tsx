@@ -33,6 +33,11 @@ import type { RootState } from "../store";
 import type { JobDetailViewModalProps, Bid, PropertyInJob } from "../types/job";
 import type { User, PaymentType } from "../types";
 import { showToast } from "../utils/toast";
+import {
+  getBidStatusBadgeWithBorder,
+  getJobStatusBadge,
+  formatJobStatusText,
+} from "../utils/badgeColors";
 
 const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
   isOpen,
@@ -138,8 +143,13 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
     async (bidId: string, paymentType: PaymentType) => {
       try {
         const currentUrl = window.location.origin;
-        const successUrl = `${currentUrl}/dashboard?payment=success&bidId=${bidId}`;
-        const cancelUrl = `${currentUrl}/dashboard?payment=cancel&bidId=${bidId}`;
+        const jobId = job._id;
+
+        const successUrl =
+          paymentType === "bid_acceptance"
+            ? `${currentUrl}/dashboard?payment=success&jobId=${jobId}&bidId=${bidId}`
+            : `${currentUrl}/dashboard?completed=true&jobId=${jobId}&bidId=${bidId}`;
+        const cancelUrl = `${currentUrl}/dashboard?payment=cancelled&jobId=${jobId}`;
 
         showToast.loading(
           paymentType === "bid_acceptance"
@@ -156,6 +166,10 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
 
         showToast.dismiss();
 
+        if (!response || !response.checkoutUrl) {
+          throw new Error("Invalid checkout response: missing checkoutUrl");
+        }
+
         // Redirect to Stripe checkout
         window.location.href = response.checkoutUrl;
       } catch (err: any) {
@@ -165,7 +179,7 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
         showToast.error(errorMessage);
       }
     },
-    []
+    [job._id]
   );
 
   const handleAcceptBid = useCallback(
@@ -199,8 +213,11 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
     setSelectedContractor(null);
   }, []);
 
-  const formatCurrency = (amount: number) => {
-    return `$${(amount / 100).toLocaleString("en-US", {
+  // Format currency for display
+  // IMPORTANT: This expects amounts in DOLLARS (not cents)
+  // For database amounts in cents, divide by 100 before calling this
+  const formatCurrency = (amountInDollars: number) => {
+    return `$${amountInDollars.toLocaleString("en-US", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;
@@ -214,33 +231,13 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
     });
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "accepted":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "rejected":
-        return "bg-red-100 text-red-800 border-red-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
+  // Use centralized badge utilities with border support
+  const getStatusBadge = (status: string) =>
+    getBidStatusBadgeWithBorder(status);
+  const getJobStatusColor = (status: string) => getJobStatusBadge(status);
 
-  const getJobStatusColor = (status: string) => {
-    switch (status) {
-      case "open":
-        return "bg-accent-100 text-accent-800";
-      case "in_progress":
-        return "bg-blue-100 text-blue-800";
-      case "completed":
-        return "bg-green-100 text-green-800";
-      case "cancelled":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
+  // Format status text with capital first character
+  const formatStatusText = (status: string) => formatJobStatusText(status);
 
   // Type guard to check if property is populated
   const isPropertyPopulated = (
@@ -647,7 +644,7 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                                       bid.status
                                     )}`}
                                   >
-                                    {bid.status}
+                                    {formatStatusText(bid.status)}
                                   </span>
                                   {/* Toggle Button */}
                                   <button
@@ -757,16 +754,17 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                                         Warranty
                                       </h5>
                                       <div className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3">
-                                        <p className="font-medium mb-1">
-                                          {bid.warranty.period}{" "}
-                                          {bid.warranty.period === 1
-                                            ? "Month"
-                                            : "Months"}{" "}
-                                          Warranty
-                                        </p>
-                                        {bid.warranty.description && (
-                                          <p className="text-xs text-gray-600 mt-2">
+                                        {bid.warranty.description ? (
+                                          <p className="font-medium">
                                             {bid.warranty.description}
+                                          </p>
+                                        ) : (
+                                          <p className="font-medium">
+                                            {bid.warranty.period}{" "}
+                                            {bid.warranty.period === 1
+                                              ? "Month"
+                                              : "Months"}{" "}
+                                            Warranty
                                           </p>
                                         )}
                                       </div>

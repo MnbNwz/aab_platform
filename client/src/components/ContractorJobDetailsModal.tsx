@@ -7,6 +7,7 @@ import { showToast } from "../utils/toast";
 import { submitBidThunk } from "../store/thunks/contractorBidsThunks";
 import { addRecentBid } from "../store/slices/dashboardSlice";
 import { useGeocoding } from "../hooks/useGeocoding";
+import { formatJobStatusText } from "../utils/badgeColors";
 
 interface ContractorJobDetailsModalProps {
   job: ContractorJobDetails | null;
@@ -41,6 +42,7 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
   const [bidTimeline, setBidTimeline] = useState("");
   const [materials, setMaterials] = useState("");
   const [warranty, setWarranty] = useState("");
+  const [warrantyDescription, setWarrantyDescription] = useState("");
   const [submittingBid, setSubmittingBid] = useState(false);
   const [imageCarouselIndex, setImageCarouselIndex] = useState(0);
   const [fullSizeImage, setFullSizeImage] = useState<string | null>(null);
@@ -110,7 +112,7 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
 
       const bidData: any = {
         jobRequestId: job._id,
-        bidAmount: parseFloat(bidAmount) * 100, // Convert to cents
+        bidAmount: parseFloat(bidAmount), // Send in dollars (backend expects dollars)
         message: bidMessage,
         timeline: {
           startDate: startDate.toISOString().split("T")[0], // Format as YYYY-MM-DD
@@ -134,9 +136,12 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
         if (!isNaN(period) && period > 0) {
           bidData.warranty = {
             period: Math.round(period), // Round to nearest whole month
-            description: `${Math.round(period)} month${
-              Math.round(period) !== 1 ? "s" : ""
-            } warranty`,
+            // Use custom description if provided, otherwise auto-generate
+            description: warrantyDescription.trim()
+              ? warrantyDescription.trim()
+              : `${Math.round(period)} month${
+                  Math.round(period) !== 1 ? "s" : ""
+                } warranty`,
           };
         }
       }
@@ -154,7 +159,7 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
               bidId: bidResult._id,
               jobTitle: job.title,
               service: job.service,
-              bidAmount: bidData.bidAmount, // Already in cents
+              bidAmount: bidData.bidAmount * 100, // Convert to cents for dashboard display (dashboard stores in cents)
               status: "pending",
             })
           );
@@ -179,6 +184,7 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
       setBidTimeline("");
       setMaterials("");
       setWarranty("");
+      setWarrantyDescription("");
       onBidSubmitted?.();
       onClose();
     } catch (error: any) {
@@ -267,7 +273,7 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
                         : "bg-gray-500 text-white"
                     }`}
                   >
-                    {job.status}
+                    {formatJobStatusText(job.status)}
                   </span>
                 </div>
                 <div className="text-sm text-white text-opacity-90">
@@ -387,7 +393,11 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
                     Your Bid Amount
                   </div>
                   <div className="text-lg font-bold text-primary-700">
-                    ${(myBid.bidAmount / 100).toLocaleString()}
+                    $
+                    {myBid.bidAmount.toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
                   </div>
                 </div>
 
@@ -462,7 +472,11 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
                     Customer Estimate
                   </div>
                   <div className="text-3xl font-bold text-accent-700">
-                    ${(job.estimate / 100).toLocaleString()}
+                    $
+                    {job.estimate.toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
                   </div>
                 </div>
 
@@ -961,7 +975,7 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
                       step="0.01"
                       min="0"
                       required
-                      className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
+                      className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 placeholder-gray-300"
                     />
                   </div>
 
@@ -976,7 +990,7 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
                       placeholder="e.g., 7"
                       min="1"
                       required
-                      className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
+                      className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 placeholder-gray-300"
                     />
                   </div>
                 </div>
@@ -1028,6 +1042,23 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Enter warranty period in months (numbers only)
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-primary-700 mb-2">
+                    Warranty Description (Optional)
+                  </label>
+                  <textarea
+                    value={warrantyDescription}
+                    onChange={(e) => setWarrantyDescription(e.target.value)}
+                    placeholder="e.g., 18 months warranty on all work, including labor and materials..."
+                    rows={2}
+                    className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Custom warranty description. If left empty, will
+                    auto-generate from period.
                   </p>
                 </div>
 

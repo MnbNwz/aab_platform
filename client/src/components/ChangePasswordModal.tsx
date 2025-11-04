@@ -199,7 +199,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   onChange={(e) =>
                     handleInputChange("currentPassword", e.target.value)
                   }
-                  className={`w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-colors ${
+                  className={`w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-colors placeholder-gray-300 ${
                     errors.currentPassword
                       ? "border-red-300 bg-red-50"
                       : "border-primary-300"
@@ -239,7 +239,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   onChange={(e) =>
                     handleInputChange("newPassword", e.target.value)
                   }
-                  className={`w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-colors ${
+                  className={`w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-colors placeholder-gray-300 ${
                     errors.newPassword
                       ? "border-red-300 bg-red-50"
                       : "border-primary-300"
@@ -279,7 +279,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   onChange={(e) =>
                     handleInputChange("confirmNewPassword", e.target.value)
                   }
-                  className={`w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-colors ${
+                  className={`w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 transition-colors placeholder-gray-300 ${
                     errors.confirmNewPassword
                       ? "border-red-300 bg-red-50"
                       : "border-primary-300"

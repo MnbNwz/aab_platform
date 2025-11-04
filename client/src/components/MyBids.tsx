@@ -11,6 +11,11 @@ import { createSelectFieldWithAll } from "./ui/FilterPanel.utils";
 import { BID_STATUSES } from "../constants";
 import DataTable, { TableColumn } from "./ui/DataTable";
 import type { PaginationInfo } from "./ui/DataTable";
+import {
+  getBidStatusBadge,
+  getJobStatusBadge,
+  formatJobStatusText,
+} from "../utils/badgeColors";
 
 const MyBids: React.FC = memo(() => {
   const dispatch = useDispatch<AppDispatch>();
@@ -42,33 +47,15 @@ const MyBids: React.FC = memo(() => {
     [dispatch]
   );
 
-  const getStatusColor = useCallback((status: string) => {
-    switch (status) {
-      case "pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "accepted":
-        return "bg-green-100 text-green-800";
-      case "rejected":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  }, []);
+  const getStatusColor = useCallback(
+    (status: string) => getBidStatusBadge(status),
+    []
+  );
 
-  const getJobStatusColor = useCallback((status: string) => {
-    switch (status) {
-      case "open":
-        return "bg-blue-100 text-blue-800";
-      case "inprogress":
-        return "bg-purple-100 text-purple-800";
-      case "completed":
-        return "bg-green-100 text-green-800";
-      case "cancelled":
-        return "bg-gray-100 text-gray-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  }, []);
+  const getJobStatusColor = useCallback(
+    (status: string) => getJobStatusBadge(status),
+    []
+  );
 
   // Convert filter status to include "all" option
   const bidStatusOptions = useMemo(() => ["all", ...BID_STATUSES], []);
@@ -102,14 +89,14 @@ const MyBids: React.FC = memo(() => {
                     bid.status
                   )}`}
                 >
-                  {bid.status}
+                  {formatJobStatusText(bid.status)}
                 </span>
                 <span
                   className={`px-2 py-1 rounded text-xs font-semibold ${getJobStatusColor(
                     bid.jobRequest.status
                   )}`}
                 >
-                  {bid.jobRequest.status}
+                  {formatJobStatusText(bid.jobRequest.status)}
                 </span>
               </div>
             </div>
@@ -129,13 +116,21 @@ const MyBids: React.FC = memo(() => {
               <div className="flex justify-between">
                 <span className="text-gray-600">My Bid:</span>
                 <span className="font-bold text-green-700">
-                  ${(bid.bidAmount / 100).toLocaleString()}
+                  $
+                  {bid.bidAmount.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Estimate:</span>
                 <span className="font-medium text-gray-900">
-                  ${(bid.jobRequest.estimate / 100).toLocaleString()}
+                  $
+                  {bid.jobRequest.estimate.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -163,7 +158,11 @@ const MyBids: React.FC = memo(() => {
         header: "Bid Amount",
         render: (bid) => (
           <span className="font-semibold text-primary-700">
-            ${(bid.bidAmount / 100).toLocaleString()}
+            $
+            {bid.bidAmount.toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
           </span>
         ),
         hideOnMobile: true,
@@ -177,7 +176,7 @@ const MyBids: React.FC = memo(() => {
               bid.status
             )}`}
           >
-            {bid.status}
+            {formatJobStatusText(bid.status)}
           </span>
         ),
         hideOnMobile: true,
@@ -425,7 +424,11 @@ const BidDetailsModal: React.FC<{
                 Your Bid
               </div>
               <div className="text-3xl font-bold text-gray-900">
-                ${(bid.bidAmount / 100).toLocaleString()}
+                $
+                {bid.bidAmount.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </div>
             </div>
 
@@ -517,7 +520,7 @@ const BidDetailsModal: React.FC<{
                       {bid.warranty.period ? (
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                           {bid.warranty.period}{" "}
-                          {bid.warranty.period === 1 ? "year" : "years"}
+                          {bid.warranty.period === 1 ? "Month" : "Months"}
                         </div>
                       ) : (
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">

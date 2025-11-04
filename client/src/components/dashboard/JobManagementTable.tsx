@@ -21,6 +21,10 @@ import { JOB_STATUSES, SORT_OPTIONS } from "../../constants";
 import { Search, Filter } from "lucide-react";
 import DataTable, { TableColumn } from "../ui/DataTable";
 import type { PaginationInfo } from "../ui/DataTable";
+import {
+  getJobStatusBadge,
+  formatJobStatusText,
+} from "../../utils/badgeColors";
 
 // Job type for table
 interface TableJob extends Record<string, unknown> {
@@ -185,16 +189,15 @@ const JobManagementTable: React.FC = memo(() => {
     setNoPropertyConfirmOpen(false);
   }, []);
 
-  // Memoized status badge getter
-  const getStatusBadge = useCallback((status: string) => {
-    const statusColors: Record<string, string> = {
-      open: "bg-accent-100 text-accent-800",
-      in_progress: "bg-primary-200 text-primary-800",
-      completed: "bg-primary-100 text-primary-600",
-      cancelled: "bg-primary-200 text-primary-800",
-    };
-    return statusColors[status] || "bg-primary-100 text-primary-600";
-  }, []);
+  // Use centralized badge utilities
+  const getStatusBadge = useCallback(
+    (status: string) => getJobStatusBadge(status),
+    []
+  );
+  const formatStatusText = useCallback(
+    (status: string) => formatJobStatusText(status),
+    []
+  );
 
   // Memoized table columns
   const columns = useMemo<TableColumn<TableJob>[]>(
@@ -248,11 +251,11 @@ const JobManagementTable: React.FC = memo(() => {
         header: "Status",
         render: (job) => (
           <span
-            className={`px-2 py-1 rounded text-xs font-bold ${getStatusBadge(
+            className={`px-2 py-1 rounded text-xs font-bold whitespace-nowrap ${getStatusBadge(
               job.status
             )}`}
           >
-            {job.status}
+            {formatStatusText(job.status)}
           </span>
         ),
         mobileLabel: "Status",
@@ -268,7 +271,7 @@ const JobManagementTable: React.FC = memo(() => {
         hideOnMobile: true,
       },
     ],
-    [getStatusBadge]
+    [getStatusBadge, formatStatusText]
   );
 
   // Format pagination for DataTable
@@ -364,7 +367,7 @@ const JobManagementTable: React.FC = memo(() => {
                     placeholder="Search jobs..."
                     value={searchTerm}
                     onChange={(e) => handleSearchChange(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm transition-colors"
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm transition-colors placeholder-gray-300"
                   />
                 </div>
               </div>

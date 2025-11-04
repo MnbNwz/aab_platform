@@ -1,35 +1,7 @@
 import { User } from "../types";
+import type { ProfileFormDataParams } from "./types";
 
-export interface ProfileFormDataParams {
-  // Basic user fields
-  firstName: string;
-  lastName: string;
-  phone?: string;
-  email?: string;
-
-  // GeoHome object
-  geoHome?: {
-    type: "Point";
-    coordinates: [number, number]; // [longitude, latitude]
-  };
-
-  // Customer-specific fields
-  customer?: {
-    defaultPropertyType: "domestic" | "commercial";
-  };
-
-  // Contractor-specific fields
-  contractor?: {
-    companyName: string;
-    services: string[];
-    license: string;
-    taxId: string;
-    docs: Array<{ type: string; url: string }>;
-  };
-
-  // Profile image file
-  profileImageFile?: File;
-}
+export type { ProfileFormDataParams };
 
 export const buildProfileFormData = (
   params: ProfileFormDataParams

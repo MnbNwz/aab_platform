@@ -21,7 +21,7 @@ interface ExtendedProfileModalProps {
   showAllFields?: boolean; // New prop to control field visibility
 }
 const getInputClassName = (disabled: boolean = false) =>
-  `w-full rounded-lg px-3 py-2 sm:py-3 border border-primary-300 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 text-sm sm:text-base ${
+  `w-full rounded-lg px-3 py-2 sm:py-3 border border-primary-300 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 text-sm sm:text-base placeholder-gray-300 ${
     disabled
       ? "bg-primary-100 text-primary-700 cursor-not-allowed"
       : "bg-white text-primary-900"

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useGeocoding } from "../hooks/useGeocoding";
 import { isContractor, isCustomer, isAdmin } from "../utils";
+import { capitalizeFirst } from "../utils/badgeColors";
 
 interface ProfileViewModalProps {
   user: User;
@@ -228,8 +229,7 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
                         user.status || ""
                       )}`}
                     >
-                      {user.status?.charAt(0).toUpperCase() +
-                        user.status?.slice(1)}
+                      {capitalizeFirst(user.status || "")}
                     </p>
                   </div>
                 </div>
@@ -244,8 +244,7 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
                       <p className="font-medium text-gray-900 text-sm xs:text-base">
                         {user.approval === "approved"
                           ? "Approved"
-                          : user.approval?.charAt(0).toUpperCase() +
-                            user.approval?.slice(1)}
+                          : capitalizeFirst(user.approval || "")}
                       </p>
                     </div>
                   </div>
