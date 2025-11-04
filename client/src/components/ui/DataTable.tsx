@@ -392,19 +392,19 @@ const DataTable = memo(
 
         {/* Mobile Card View */}
         <div className={`${breakpointClass}`}>
-          <div className="space-y-3 p-4">
+          <div className="space-y-3 p-3 sm:p-4">
             {data.map((row, index) => {
               const rowKey = getKey(row, index);
               return (
                 <div
                   key={rowKey}
-                  className={`bg-white border border-primary-200 rounded-lg p-4 shadow-sm transition-shadow ${
+                  className={`bg-white border border-primary-200 rounded-lg p-3 sm:p-4 shadow-sm transition-shadow w-full ${
                     hoverable ? "hover:shadow-md" : ""
                   } ${onRowClick ? "cursor-pointer" : ""}`}
                   onClick={() => handleRowClick(row, index)}
                 >
                   {/* Mobile Card Content */}
-                  <div className="space-y-3">
+                  <div className="space-y-3 min-w-0 w-full">
                     {mobileColumns.map((column) => {
                       const label = column.mobileLabel || column.header;
                       const content = column.mobileRender
@@ -412,11 +412,20 @@ const DataTable = memo(
                         : renderCell(column, row, index);
 
                       return (
-                        <div key={column.key} className="flex flex-col gap-1">
+                        <div
+                          key={column.key}
+                          className="flex flex-col gap-1 min-w-0 w-full overflow-hidden"
+                        >
                           <span className="text-xs font-medium text-primary-600 uppercase">
                             {label}
                           </span>
-                          <div className="text-sm text-primary-900">
+                          <div
+                            className="text-sm text-primary-900 min-w-0 w-full break-words"
+                            style={{
+                              wordBreak: "break-word",
+                              overflowWrap: "anywhere",
+                            }}
+                          >
                             {content}
                           </div>
                         </div>

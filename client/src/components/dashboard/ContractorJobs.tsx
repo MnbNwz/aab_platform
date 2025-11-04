@@ -20,7 +20,7 @@ import DataTable, { TableColumn } from "../ui/DataTable";
 import type { PaginationInfo } from "../ui/DataTable";
 import { Filter } from "lucide-react";
 
-const ContractorJobRequestsTable: React.FC = memo(() => {
+const ContractorJobs: React.FC = memo(() => {
   const dispatch = useDispatch<AppDispatch>();
   const {
     jobs,
@@ -38,14 +38,21 @@ const ContractorJobRequestsTable: React.FC = memo(() => {
   );
   const [selectedJobLeadInfo, setSelectedJobLeadInfo] = useState<any>(null);
   const [showJobDetails, setShowJobDetails] = useState(false);
+  const [activeTab, setActiveTab] = useState<"available" | "started">(
+    "available"
+  );
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Update filters when tab changes or on mount
   useEffect(() => {
-    if (filters.page !== 1) {
-      dispatch(setContractorJobFilters({ page: 1 }));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const statusValue = activeTab === "available" ? "open" : "in_progress";
+    dispatch(
+      setContractorJobFilters({
+        status: statusValue,
+        page: 1,
+      })
+    );
+  }, [activeTab, dispatch]);
 
   // Fetch jobs when filters change
   useEffect(() => {
@@ -157,64 +164,58 @@ const ContractorJobRequestsTable: React.FC = memo(() => {
     });
   }, []);
 
-  // Memoized columns
+  // Memoized columns - conditional based on activeTab
   const columns = useMemo<
     TableColumn<ContractorJob & Record<string, unknown>>[]
-  >(
-    () => [
-      {
-        key: "title",
-        header: "Job Title",
-        render: (job) => (
-          <div
-            className="font-medium text-gray-900 truncate max-w-xs"
-            title={job.title}
-          >
-            {job.title}
-          </div>
-        ),
-        mobileLabel: "Job Title",
-        mobileRender: (job) => (
-          <h3
-            className="font-semibold text-gray-900 text-base mb-3 truncate"
-            title={job.title}
-          >
-            {job.title}
-          </h3>
-        ),
-      },
-      {
-        key: "service",
-        header: "Service",
-        render: (job) => (
-          <span className="text-gray-700 capitalize">{job.service}</span>
-        ),
-        mobileLabel: "Service",
-        mobileRender: (job) => (
-          <div className="flex justify-between">
-            <span className="text-gray-600">Service:</span>
-            <span className="font-medium text-gray-900 capitalize">
-              {job.service}
-            </span>
-          </div>
-        ),
-      },
-      {
-        key: "estimate",
-        header: "Estimate",
-        render: (job) => (
-          <span className="font-semibold text-primary-700">
-            $
-            {job.estimate.toLocaleString("en-US", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
-          </span>
-        ),
-        mobileLabel: "Estimate",
-        mobileRender: (job) => (
-          <div className="flex justify-between">
-            <span className="text-gray-600">Estimate:</span>
+  >(() => {
+    const baseColumns: TableColumn<ContractorJob & Record<string, unknown>>[] =
+      [
+        {
+          key: "title",
+          header: "Job Title",
+          render: (job) => (
+            <div className="min-w-0 max-w-xs">
+              <div
+                className="font-medium text-gray-900 truncate"
+                title={job.title}
+              >
+                {job.title}
+              </div>
+            </div>
+          ),
+          mobileLabel: "Job Title",
+          mobileRender: (job) => (
+            <div className="min-w-0 w-full overflow-hidden">
+              <h3
+                className="font-semibold text-gray-900 text-base mb-3 break-words"
+                style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}
+                title={job.title}
+              >
+                {job.title}
+              </h3>
+            </div>
+          ),
+        },
+        {
+          key: "service",
+          header: "Service",
+          render: (job) => (
+            <span className="text-gray-700 capitalize">{job.service}</span>
+          ),
+          mobileLabel: "Service",
+          mobileRender: (job) => (
+            <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-2">
+              <span className="text-gray-600 text-sm">Service:</span>
+              <span className="font-medium text-gray-900 capitalize text-sm">
+                {job.service}
+              </span>
+            </div>
+          ),
+        },
+        {
+          key: "estimate",
+          header: "Estimate",
+          render: (job) => (
             <span className="font-semibold text-primary-700">
               $
               {job.estimate.toLocaleString("en-US", {
@@ -222,48 +223,44 @@ const ContractorJobRequestsTable: React.FC = memo(() => {
                 maximumFractionDigits: 2,
               })}
             </span>
-          </div>
-        ),
-      },
-      {
-        key: "timeline",
-        header: "Timeline",
-        render: (job) => (
-          <span className="text-gray-700">{job.timeline} days</span>
-        ),
-        mobileLabel: "Timeline",
-        mobileRender: (job) => (
-          <div className="flex justify-between">
-            <span className="text-gray-600">Timeline:</span>
-            <span className="font-medium text-gray-900">
-              {job.timeline} days
-            </span>
-          </div>
-        ),
-        hideOnMobile: true,
-      },
-      {
-        key: "posted",
-        header: "Posted",
-        render: (job) => (
-          <span className="text-sm text-gray-600">
-            {formatPostedDate(job.createdAt)}
+          ),
+          mobileLabel: "Estimate",
+          mobileRender: (job) => (
+            <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-2">
+              <span className="text-gray-600 text-sm">Estimate:</span>
+              <span className="font-semibold text-primary-700 text-sm">
+                $
+                {job.estimate.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </span>
+            </div>
+          ),
+        },
+      ];
+
+    // Add Timeline column for both tabs
+    baseColumns.push({
+      key: "timeline",
+      header: "Timeline",
+      render: (job) => (
+        <span className="text-gray-700">{job.timeline} days</span>
+      ),
+      mobileLabel: "Timeline",
+      mobileRender: (job) => (
+        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-2">
+          <span className="text-gray-600 text-sm">Timeline:</span>
+          <span className="font-medium text-gray-900 text-sm">
+            {job.timeline} days
           </span>
-        ),
-        mobileLabel: "Posted",
-        mobileRender: (job) => (
-          <div className="flex justify-between">
-            <span className="text-gray-600">Posted:</span>
-            <span className="text-gray-900">
-              {formatPostedDate(job.createdAt)}
-            </span>
-          </div>
-        ),
-        hideOnMobile: true,
-      },
-    ],
-    [formatPostedDate]
-  );
+        </div>
+      ),
+      hideOnMobile: true,
+    });
+
+    return baseColumns;
+  }, [formatPostedDate]);
 
   // Pagination info
   const paginationInfo = useMemo<PaginationInfo | undefined>(() => {
@@ -287,59 +284,87 @@ const ContractorJobRequestsTable: React.FC = memo(() => {
   }, [pagination]);
 
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-4 sm:space-y-6">
       {/* Header Card */}
-      <div className="bg-white rounded-lg shadow-sm border border-primary-200">
+      <div className="bg-white rounded-lg shadow-sm border border-primary-200 overflow-hidden w-full">
         {/* Header */}
-        <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
-            <div>
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+        <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-gray-200">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 truncate">
                 Job Requests
               </h2>
               {membershipInfo && (
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1">
                   <span
-                    className={`px-2 py-1 rounded text-xs font-medium ${getMembershipTierColor(
+                    className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-medium whitespace-nowrap ${getMembershipTierColor(
                       membershipInfo.tier
                     )}`}
                   >
                     {membershipInfo.tier.toUpperCase()} PLAN
                   </span>
-                  <span className="text-sm text-gray-600">
+                  <span className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">
                     {leadInfo?.leadsUsed || 0}/{leadInfo?.leadsLimit || 0} leads
                     used
                   </span>
                 </div>
               )}
               {!membershipInfo && (
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-xs sm:text-sm text-gray-500 mt-1">
                   Browse available job requests
                 </p>
               )}
             </div>
             {membershipInfo && (
-              <div className="text-sm text-gray-600">
-                <div>Access Delay: {membershipInfo.accessDelayHours}h</div>
-                <div>Radius: {membershipInfo.radiusKm}km</div>
+              <div className="text-xs sm:text-sm text-gray-600 flex-shrink-0">
+                <div className="whitespace-nowrap">
+                  Access Delay: {membershipInfo.accessDelayHours}h
+                </div>
+                <div className="whitespace-nowrap">
+                  Radius: {membershipInfo.radiusKm}km
+                </div>
               </div>
             )}
+          </div>
+
+          {/* Tabs */}
+          <div className="flex border-b border-gray-200 -mb-3 sm:-mb-4">
+            <button
+              onClick={() => setActiveTab("available")}
+              className={`flex-1 px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors text-center ${
+                activeTab === "available"
+                  ? "text-accent-600 border-b-2 border-accent-600"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Available Jobs
+            </button>
+            <button
+              onClick={() => setActiveTab("started")}
+              className={`flex-1 px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors text-center ${
+                activeTab === "started"
+                  ? "text-accent-600 border-b-2 border-accent-600"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Started Jobs
+            </button>
           </div>
         </div>
 
         {/* Filters with Search */}
-        <div className="px-4 sm:px-6 py-4 border-b border-gray-200 bg-white">
+        <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-b border-gray-200 bg-white">
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2">
-              <Filter className="h-5 w-5 text-gray-400" />
-              <span className="text-sm font-medium text-gray-700">
+              <Filter className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 flex-shrink-0" />
+              <span className="text-xs sm:text-sm font-medium text-gray-700">
                 Filters:
               </span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {/* Service Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5">
                   Service
                 </label>
                 <select
@@ -347,7 +372,7 @@ const ContractorJobRequestsTable: React.FC = memo(() => {
                   onChange={(e) =>
                     handleFilterChange({ service: e.target.value })
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm transition-colors"
+                  className="w-full px-2 sm:px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white transition-colors"
                 >
                   <option value="">All</option>
                   <option value="plumbing">Plumbing</option>
@@ -362,7 +387,7 @@ const ContractorJobRequestsTable: React.FC = memo(() => {
 
               {/* Search Input */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5">
                   Search
                 </label>
                 <input
@@ -370,31 +395,37 @@ const ContractorJobRequestsTable: React.FC = memo(() => {
                   placeholder="Search jobs..."
                   value={searchTerm}
                   onChange={(e) => handleSearchChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm transition-colors placeholder-gray-300"
+                  className="w-full px-2 sm:px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 placeholder-gray-300 transition-colors"
                 />
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Jobs List Card */}
-      <div className="bg-white rounded-lg shadow-sm border border-primary-200">
-        <DataTable<ContractorJob & Record<string, unknown>>
-          data={jobs as (ContractorJob & Record<string, unknown>)[]}
-          columns={columns}
-          loading={jobsLoading}
-          error={jobsError}
-          emptyMessage="No job requests found."
-          onRowClick={handleViewJob}
-          pagination={paginationInfo}
-          onPageChange={handlePageChange}
-          paginationLabel={({ startItem, endItem, totalCount }) =>
-            `Showing ${startItem} to ${endItem} of ${totalCount} jobs`
-          }
-          getRowKey={(job) => job._id}
-          hoverable
-        />
+        {/* Jobs List Card */}
+        <div className="w-full">
+          <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+            <DataTable<ContractorJob & Record<string, unknown>>
+              data={jobs as (ContractorJob & Record<string, unknown>)[]}
+              columns={columns}
+              loading={jobsLoading}
+              error={jobsError}
+              emptyMessage={
+                activeTab === "available"
+                  ? "No available jobs found."
+                  : "No started jobs found."
+              }
+              onRowClick={handleViewJob}
+              pagination={paginationInfo}
+              onPageChange={handlePageChange}
+              paginationLabel={({ startItem, endItem, totalCount }) =>
+                `Showing ${startItem} to ${endItem} of ${totalCount} jobs`
+              }
+              getRowKey={(job) => job._id}
+              hoverable
+            />
+          </div>
+        </div>
       </div>
 
       {/* Job Details Modal */}
@@ -405,11 +436,12 @@ const ContractorJobRequestsTable: React.FC = memo(() => {
         loading={jobDetailsLoading}
         leadInfo={selectedJobLeadInfo}
         onBidSubmitted={handleBidSubmitted}
+        activeTab={activeTab}
       />
     </div>
   );
 });
 
-ContractorJobRequestsTable.displayName = "ContractorJobRequestsTable";
+ContractorJobs.displayName = "ContractorJobs";
 
-export default ContractorJobRequestsTable;
+export default ContractorJobs;

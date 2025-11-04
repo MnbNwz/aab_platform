@@ -297,7 +297,7 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                     job.status
                   )}`}
                 >
-                  {job.status}
+                  {formatStatusText(job.status)}
                 </span>
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-accent-100 text-accent-700">
                   {bids.length} {bids.length === 1 ? "Bid" : "Bids"}

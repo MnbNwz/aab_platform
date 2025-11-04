@@ -8,7 +8,11 @@ export const contractorJobApi = {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined && value !== "") {
-        params.append(key, String(value));
+        if (key === "status" && value === "in_progress") {
+          params.append(key, "inprogress");
+        } else {
+          params.append(key, String(value));
+        }
       }
     });
     return api.get(`/api/job/contractor/jobs?${params.toString()}`);

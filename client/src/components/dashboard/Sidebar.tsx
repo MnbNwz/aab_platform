@@ -146,9 +146,9 @@ export const Sidebar: React.FC<ExtendedSidebarProps> = ({
       },
       {
         id: "jobs",
-        label: "Available Jobs",
+        label: "All Jobs",
         icon: Building,
-        description: "Browse and apply to jobs",
+        description: "All about your jobs",
       },
       {
         id: "bids",

@@ -5,6 +5,7 @@ import { User } from "@models/user/user";
 import { LeadAccess } from "@models/job/leadAccess";
 import { IUserMembership, IMembershipPlan } from "@models/types/membership";
 import { toObjectId } from "@utils/core";
+import { JOB_STATUSES } from "@models/constants";
 
 // Default contractor membership for users without active membership
 const DEFAULT_CONTRACTOR_MEMBERSHIP = {
@@ -563,9 +564,11 @@ export async function getJobsForContractor(
         }
       : null;
 
-    // Build base query
+    const statusFilter =
+      filters.status && JOB_STATUSES.includes(filters.status as any) ? filters.status : "open";
+
     const query: any = {
-      status: "open",
+      status: statusFilter,
     };
 
     // Filter out off-market jobs if contractor doesn't have access
@@ -639,62 +642,60 @@ export async function getJobsForContractor(
     const accessDelay = (effectivePlan.accessDelayHours ?? 24) * 60 * 60 * 1000;
     const currentTime = new Date();
 
-    // DEBUG: Log query details
-    console.log("🔍 Contractor Jobs Query Debug:");
-    console.log("  User ID:", userId);
-    console.log("  Access Delay Hours:", effectivePlan.accessDelayHours);
-    console.log("  Access Delay MS:", accessDelay);
-    console.log("  Radius KM:", effectivePlan.radiusKm);
-    console.log("  Contractor Services:", contractor?.contractor?.services);
-    console.log("  Base Query:", JSON.stringify(query, null, 2));
-    console.log("  Current Time:", currentTime.toISOString());
-
     const pipeline = [
       // OPTIMIZATION 1: Initial match with base filters
       { $match: query },
 
-      // Filter out jobs where THIS contractor has already bid
-      // Other contractors' bids are allowed - only exclude if self has bid
-      {
-        $lookup: {
-          from: "bids",
-          let: { jobId: "$_id" },
-          pipeline: [
+      ...(statusFilter === "open"
+        ? [
+            {
+              $lookup: {
+                from: "bids",
+                let: { jobId: "$_id" },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $eq: ["$jobRequest", "$$jobId"] },
+                          { $eq: ["$contractor", toObjectId(userId)] }, // Only check for self contractor's bids
+                        ],
+                      },
+                    },
+                  },
+                  { $limit: 1 },
+                  { $project: { _id: 1 } },
+                ],
+                as: "selfBid",
+              },
+            },
+            {
+              $match: {
+                selfBid: { $size: 0 }, // Only jobs where self contractor hasn't bid yet
+              },
+            },
+            {
+              $project: {
+                selfBid: 0, // Remove the lookup field
+              },
+            },
+          ]
+        : []),
+
+      // OPTIMIZATION 2: Early time-based filtering (reduces documents early in pipeline)
+      // Only apply access delay for "open" status jobs (new jobs contractors can bid on)
+      // For other statuses (like "inprogress"), skip access delay check
+      ...(statusFilter === "open"
+        ? [
             {
               $match: {
                 $expr: {
-                  $and: [
-                    { $eq: ["$jobRequest", "$$jobId"] },
-                    { $eq: ["$contractor", toObjectId(userId)] }, // Only check for self contractor's bids
-                  ],
+                  $lte: [{ $add: ["$createdAt", accessDelay] }, currentTime],
                 },
               },
             },
-            { $limit: 1 },
-            { $project: { _id: 1 } },
-          ],
-          as: "selfBid",
-        },
-      },
-      {
-        $match: {
-          selfBid: { $size: 0 }, // Only jobs where self contractor hasn't bid yet
-        },
-      },
-      {
-        $project: {
-          selfBid: 0, // Remove the lookup field
-        },
-      },
-
-      // OPTIMIZATION 2: Early time-based filtering (reduces documents early in pipeline)
-      {
-        $match: {
-          $expr: {
-            $lte: [{ $add: ["$createdAt", accessDelay] }, currentTime],
-          },
-        },
-      },
+          ]
+        : []),
 
       // OPTIMIZATION 3: Project only essential fields early (reduces document size)
       {

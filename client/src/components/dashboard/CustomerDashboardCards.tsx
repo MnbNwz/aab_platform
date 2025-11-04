@@ -79,8 +79,8 @@ const RecentActivityCard: React.FC<RecentActivityCardProps> = ({
   <div className="bg-white rounded-lg shadow p-4 sm:p-6 flex flex-col h-full">
     <div className="flex justify-between items-center mb-4">
       <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
-        {title}
-      </h3>
+      {title}
+    </h3>
       {totalAmount !== undefined && totalAmount > 0 && (
         <div className="text-right">
           <p className="text-xs text-gray-500 uppercase tracking-wide">
@@ -292,30 +292,30 @@ export const CustomerDashboardCards: React.FC<CustomerDashboardCardsProps> =
               const paymentMethod = payment.paymentMethod || "Stripe";
 
               return (
-                <div
+              <div
                   key={payment._id || index}
-                  className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">
+                className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900">
                       {formatCurrency(amount)}
-                    </p>
-                    <p className="text-xs text-gray-500">
+                  </p>
+                  <p className="text-xs text-gray-500">
                       {paymentType} • {paymentMethod}
-                    </p>
-                  </div>
-                  <span
-                    className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                      payment.status === "succeeded"
-                        ? "bg-green-100 text-green-800"
-                        : payment.status === "pending"
-                        ? "bg-accent-100 text-accent-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
-                  >
-                    {payment.status}
-                  </span>
+                  </p>
                 </div>
+                <span
+                  className={`inline-flex px-2 py-1 text-xs rounded-full ${
+                    payment.status === "succeeded"
+                      ? "bg-green-100 text-green-800"
+                      : payment.status === "pending"
+                      ? "bg-accent-100 text-accent-800"
+                      : "bg-red-100 text-red-800"
+                  }`}
+                >
+                  {payment.status}
+                </span>
+              </div>
               );
             }}
           />

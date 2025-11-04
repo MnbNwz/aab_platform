@@ -51,6 +51,7 @@ const initialState: ContractorJobState = {
     limit: 10,
     service: "",
     search: "",
+    status: "open",
   },
 };
 
@@ -76,6 +77,7 @@ const contractorJobSlice = createSlice({
         limit: 10,
         service: "",
         search: "",
+        status: "open",
       };
     },
   },

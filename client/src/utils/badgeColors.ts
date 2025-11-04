@@ -167,3 +167,43 @@ export const getInvestmentStatusBadge = (status: InvestmentStatus): string => {
 export const getContactStatusBadge = (status: ContactStatus): string => {
   return getSemanticBadge(status).className;
 };
+
+// Get badge colors for dark backgrounds (white text on colored backgrounds)
+export const getJobStatusBadgeForDarkBg = (
+  status: JobStatusType | string
+): string => {
+  const normalizedStatus =
+    status === "inprogress" ? "in_progress" : status.toLowerCase();
+
+  if (
+    ["completed", "accepted", "succeeded", "available"].includes(
+      normalizedStatus
+    )
+  ) {
+    return "bg-green-500 text-white";
+  }
+
+  if (["active", "approved"].includes(normalizedStatus)) {
+    return "bg-green-500 text-white";
+  }
+
+  if (["pending", "under_offer", "under offer"].includes(normalizedStatus)) {
+    return "bg-yellow-500 text-white";
+  }
+
+  if (
+    ["rejected", "failed", "cancelled", "revoke"].includes(normalizedStatus)
+  ) {
+    return "bg-red-500 text-white";
+  }
+
+  if (normalizedStatus === "open") {
+    return "bg-accent-500 text-white";
+  }
+
+  if (["inprogress", "in_progress", "in-progress"].includes(normalizedStatus)) {
+    return "bg-green-500 text-white";
+  }
+
+  return "bg-gray-500 text-white";
+};

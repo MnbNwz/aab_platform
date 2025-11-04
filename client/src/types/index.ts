@@ -269,6 +269,7 @@ export interface ContractorJobFilters {
   limit?: number;
   service?: string;
   search?: string;
+  status?: string;
 }
 
 // Membership Plan types

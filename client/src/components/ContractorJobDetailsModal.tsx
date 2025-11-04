@@ -7,7 +7,10 @@ import { showToast } from "../utils/toast";
 import { submitBidThunk } from "../store/thunks/contractorBidsThunks";
 import { addRecentBid } from "../store/slices/dashboardSlice";
 import { useGeocoding } from "../hooks/useGeocoding";
-import { formatJobStatusText } from "../utils/badgeColors";
+import {
+  formatJobStatusText,
+  getJobStatusBadgeForDarkBg,
+} from "../utils/badgeColors";
 
 interface ContractorJobDetailsModalProps {
   job: ContractorJobDetails | null;
@@ -25,6 +28,7 @@ interface ContractorJobDetailsModalProps {
     alreadyBid: boolean;
   } | null;
   onBidSubmitted?: () => void;
+  activeTab?: "available" | "started"; // Add activeTab prop
 }
 
 const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
@@ -34,6 +38,7 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
   loading = false,
   leadInfo,
   onBidSubmitted,
+  activeTab = "available", // Default to "available"
 }) => {
   const dispatch = useDispatch<AppDispatch>();
   const [showBidForm, setShowBidForm] = useState(false);
@@ -267,11 +272,9 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
                     Regular
                   </span>
                   <span
-                    className={`px-3 py-1 rounded-full ${
-                      job.status === "open"
-                        ? "bg-green-500 text-white"
-                        : "bg-gray-500 text-white"
-                    }`}
+                    className={`px-3 py-1 rounded-full ${getJobStatusBadgeForDarkBg(
+                      job.status
+                    )}`}
                   >
                     {formatJobStatusText(job.status)}
                   </span>
@@ -906,7 +909,7 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
               >
                 Close
               </button>
-              {!alreadyBid && (
+              {!alreadyBid && activeTab === "available" && (
                 <button
                   onClick={() => setShowBidForm(true)}
                   disabled={!canBid}
@@ -920,7 +923,7 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
         </div>
 
         {/* Bid Form Modal - Separate modal with its own ref */}
-        {showBidForm && !alreadyBid && (
+        {showBidForm && !alreadyBid && activeTab === "available" && (
           <div
             className="fixed inset-0 z-[10000] bg-black bg-opacity-60 flex items-center justify-center p-4"
             onClick={(e) => {

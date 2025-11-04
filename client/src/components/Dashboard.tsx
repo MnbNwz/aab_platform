@@ -38,7 +38,7 @@ import {
 import ProfileViewModal from "./ProfileViewModal";
 import Settings from "./Settings";
 import JobManagementTable from "./dashboard/JobManagementTable";
-import ContractorJobRequestsTable from "./dashboard/ContractorJobRequestsTable";
+import ContractorJobs from "./dashboard/ContractorJobs";
 import FavoriteContractors from "./FavoriteContractors";
 import MyBids from "./MyBids";
 import InvestmentOpportunitiesManagement from "./dashboard/InvestmentOpportunitiesManagement";
@@ -401,9 +401,9 @@ const DashboardContent = memo<DashboardContentProps>(
           ? {
               jobs: {
                 ...baseProps,
-                title: "Available Jobs",
+                title: "Jobs",
                 subtitle: "Browse and apply to jobs",
-                children: <ContractorJobRequestsTable key="available-jobs" />,
+                children: <ContractorJobs key="jobs" />,
               },
               bids: {
                 ...baseProps,
