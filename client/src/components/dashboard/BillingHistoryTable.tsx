@@ -8,7 +8,10 @@ import FilterPanel from "../ui/FilterPanel";
 import { FilterConfigs } from "../ui/FilterPanel.utils";
 import type { Payment } from "../../services/paymentService";
 import DataTable, { TableColumn } from "../ui/DataTable";
-import { getPaymentStatusBadge, formatJobStatusText } from "../../utils/badgeColors";
+import {
+  getPaymentStatusBadge,
+  formatJobStatusText,
+} from "../../utils/badgeColors";
 import type { PaginationInfo } from "../ui/DataTable";
 
 interface BillingHistoryTableProps {
@@ -185,12 +188,12 @@ const BillingHistoryTable: React.FC<BillingHistoryTableProps> = memo(
           header: "Status",
           render: (payment) => (
             <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
-              payment.status
-            )}`}
-          >
-            {formatJobStatusText(payment.status)}
-          </span>
+              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
+                payment.status
+              )}`}
+            >
+              {formatJobStatusText(payment.status)}
+            </span>
           ),
           mobileLabel: "Status",
           hideOnMobile: true,

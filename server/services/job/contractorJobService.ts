@@ -1,5 +1,6 @@
 import { Types } from "mongoose";
 import { JobRequest } from "@models/job/jobRequest";
+import { Bid } from "@models/job/bid";
 import { UserMembership } from "@models/user/userMembership";
 import { User } from "@models/user/user";
 import { LeadAccess } from "@models/job/leadAccess";
@@ -543,7 +544,6 @@ export async function getContractorLocation(userId: string): Promise<{
   }
 }
 
-// Main function to get jobs for contractor with all filters applied
 export async function getJobsForContractor(
   userId: string,
   filters: any = {},
@@ -555,7 +555,6 @@ export async function getJobsForContractor(
   try {
     const { effectivePlan } = await getContractorMembership(userId);
 
-    // OPTIMIZATION 3: Get contractor data in single query
     const contractor = await User.findById(userId).select("contractor.services geoHome");
     const contractorLocation = contractor?.geoHome
       ? {
@@ -571,16 +570,13 @@ export async function getJobsForContractor(
       status: statusFilter,
     };
 
-    // Filter out off-market jobs if contractor doesn't have access
     if (!effectivePlan.offMarketAccess) {
       query.type = { $ne: "off_market" };
     }
 
-    // ENHANCEMENT 1: Filter by contractor's registered services
     if (contractor?.contractor?.services?.length > 0) {
       query.service = { $in: contractor.contractor.services };
     } else {
-      // If contractor has no services registered, return empty result
       return {
         jobs: [],
         total: 0,
@@ -638,12 +634,10 @@ export async function getJobsForContractor(
       sortOptions.type = -1; // off_market first
     }
 
-    // OPTIMIZED: Aggregation pipeline with minimal operations
     const accessDelay = (effectivePlan.accessDelayHours ?? 24) * 60 * 60 * 1000;
     const currentTime = new Date();
 
     const pipeline = [
-      // OPTIMIZATION 1: Initial match with base filters
       { $match: query },
 
       ...(statusFilter === "open"
@@ -658,7 +652,7 @@ export async function getJobsForContractor(
                       $expr: {
                         $and: [
                           { $eq: ["$jobRequest", "$$jobId"] },
-                          { $eq: ["$contractor", toObjectId(userId)] }, // Only check for self contractor's bids
+                          { $eq: ["$contractor", toObjectId(userId)] },
                         ],
                       },
                     },
@@ -671,20 +665,17 @@ export async function getJobsForContractor(
             },
             {
               $match: {
-                selfBid: { $size: 0 }, // Only jobs where self contractor hasn't bid yet
+                selfBid: { $size: 0 },
               },
             },
             {
               $project: {
-                selfBid: 0, // Remove the lookup field
+                selfBid: 0,
               },
             },
           ]
         : []),
 
-      // OPTIMIZATION 2: Early time-based filtering (reduces documents early in pipeline)
-      // Only apply access delay for "open" status jobs (new jobs contractors can bid on)
-      // For other statuses (like "inprogress"), skip access delay check
       ...(statusFilter === "open"
         ? [
             {
@@ -697,24 +688,6 @@ export async function getJobsForContractor(
           ]
         : []),
 
-      // OPTIMIZATION 3: Project only essential fields early (reduces document size)
-      {
-        $project: {
-          _id: 1,
-          property: 1, // Needed for radius filtering
-          title: 1,
-          description: 1,
-          service: 1,
-          estimate: 1,
-          type: 1,
-          status: 1,
-          timeline: 1,
-          createdAt: 1,
-          updatedAt: 1,
-        },
-      },
-
-      // OPTIMIZATION 4: Conditional property lookup (only if radius filtering needed)
       ...(contractorLocation && effectivePlan.radiusKm !== null
         ? [
             {
@@ -723,7 +696,26 @@ export async function getJobsForContractor(
                 localField: "property",
                 foreignField: "_id",
                 as: "propertyData",
-                pipeline: [{ $project: { location: 1 } }],
+                pipeline: [
+                  {
+                    $match: {
+                      "location.coordinates": {
+                        $geoWithin: {
+                          $centerSphere: [
+                            [contractorLocation.lng, contractorLocation.lat],
+                            effectivePlan.radiusKm / 6378.1,
+                          ],
+                        },
+                      },
+                    },
+                  },
+                  { $project: { location: 1 } },
+                ],
+              },
+            },
+            {
+              $match: {
+                propertyData: { $ne: [] },
               },
             },
             {
@@ -732,23 +724,50 @@ export async function getJobsForContractor(
               },
             },
             {
-              $project: { propertyData: 0 },
+              $project: {
+                propertyData: 0,
+              },
             },
           ]
         : []),
 
-      // Add distance field
-      { $addFields: { distance: 0 } },
-
-      // OPTIMIZATION 5: Remove property field if no radius filtering
       ...(contractorLocation && effectivePlan.radiusKm !== null
-        ? [] // Property will be removed by filterJobsByRadius
-        : [{ $project: { property: 0 } }]), // Remove property ObjectId
+        ? [
+            {
+              $project: {
+                _id: 1,
+                property: 1,
+                title: 1,
+                description: 1,
+                service: 1,
+                estimate: 1,
+                type: 1,
+                status: 1,
+                timeline: 1,
+                createdAt: 1,
+                updatedAt: 1,
+              },
+            },
+          ]
+        : [
+            {
+              $project: {
+                _id: 1,
+                title: 1,
+                description: 1,
+                service: 1,
+                estimate: 1,
+                type: 1,
+                status: 1,
+                timeline: 1,
+                createdAt: 1,
+                updatedAt: 1,
+              },
+            },
+          ]),
 
-      // OPTIMIZATION 6: Sort before facet for better index usage
       { $sort: sortOptions },
 
-      // OPTIMIZATION 7: Facet for single-pass pagination + count
       {
         $facet: {
           data: [{ $skip: skip }, { $limit: limit }],
@@ -758,29 +777,8 @@ export async function getJobsForContractor(
     ];
 
     const [result] = await JobRequest.aggregate(pipeline as any);
-    let jobs = result.data || [];
-    let total = result.count[0]?.total || 0;
-
-    // DEBUG: Log aggregation results
-    console.log("📊 Aggregation Results:");
-    console.log("  Jobs found:", jobs.length);
-    console.log("  Total count:", total);
-    if (jobs.length > 0) {
-      console.log("  First job:", {
-        _id: jobs[0]._id,
-        title: jobs[0].title,
-        service: jobs[0].service,
-        createdAt: jobs[0].createdAt,
-      });
-    }
-
-    // Apply radius filtering post-aggregation if needed
-    // NOTE: filterJobsByRadius also removes property field for performance
-    if (contractorLocation && effectivePlan.radiusKm !== null) {
-      jobs = await filterJobsByRadius(jobs, contractorLocation, effectivePlan.radiusKm);
-      // CRITICAL FIX: Update total count after radius filtering
-      total = jobs.length;
-    }
+    const jobs = result.data || [];
+    const total = result.count[0]?.total || 0;
 
     // Calculate pagination info based on actual filtered results
     const totalPages = Math.ceil(total / limit);
@@ -800,6 +798,218 @@ export async function getJobsForContractor(
     };
   } catch (error) {
     console.error("Error getting jobs for contractor:", error);
+    throw error;
+  }
+}
+
+// Get contractor's own jobs (jobs they've bid on) with bid details
+export async function getContractorMyJobs(
+  userId: string,
+  filters: any = {},
+): Promise<{
+  jobs: any[];
+  total: number;
+  pagination: any;
+}> {
+  try {
+    const { effectivePlan } = await getContractorMembership(userId);
+
+    const contractor = await User.findById(userId).select("contractor.services geoHome");
+    const contractorLocation = contractor?.geoHome
+      ? {
+          lat: contractor.geoHome.coordinates[1],
+          lng: contractor.geoHome.coordinates[0],
+        }
+      : null;
+
+    const statusFilter =
+      filters.status && JOB_STATUSES.includes(filters.status as any) ? filters.status : undefined;
+
+    const bidStatusFilter = filters.bidStatus;
+
+    const effectiveBidStatusFilter =
+      bidStatusFilter ||
+      (statusFilter && ["inprogress", "hold", "completed"].includes(statusFilter)
+        ? "accepted"
+        : undefined);
+
+    const page = Math.max(1, Number(filters.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(filters.limit) || 10));
+    const skip = (page - 1) * limit;
+
+    const bidMatchQuery: any = {
+      contractor: toObjectId(userId),
+    };
+
+    if (effectiveBidStatusFilter) {
+      bidMatchQuery.status = effectiveBidStatusFilter;
+    }
+
+    const jobMatchQuery: any = {};
+    if (statusFilter) {
+      jobMatchQuery.status = statusFilter;
+    }
+    if (contractor?.contractor?.services?.length > 0) {
+      jobMatchQuery.service = { $in: contractor.contractor.services };
+    }
+    if (filters.search) {
+      jobMatchQuery.$or = [
+        { title: new RegExp(filters.search, "i") },
+        { description: new RegExp(filters.search, "i") },
+      ];
+    }
+
+    const pipeline = [
+      {
+        $match: bidMatchQuery,
+      },
+      {
+        $lookup: {
+          from: "jobrequests",
+          localField: "jobRequest",
+          foreignField: "_id",
+          as: "job",
+          pipeline: [
+            ...(Object.keys(jobMatchQuery).length > 0 ? [{ $match: jobMatchQuery }] : []),
+            {
+              $lookup: {
+                from: "properties",
+                localField: "property",
+                foreignField: "_id",
+                as: "property",
+                pipeline: [
+                  {
+                    $project: {
+                      title: 1,
+                      propertyType: 1,
+                      location: 1,
+                    },
+                  },
+                ],
+              },
+            },
+            {
+              $addFields: {
+                property: { $arrayElemAt: ["$property", 0] },
+              },
+            },
+            ...(contractorLocation && effectivePlan.radiusKm !== null
+              ? [
+                  {
+                    $match: {
+                      "property.location.coordinates": {
+                        $geoWithin: {
+                          $centerSphere: [
+                            [contractorLocation.lng, contractorLocation.lat],
+                            effectivePlan.radiusKm / 6378.1,
+                          ],
+                        },
+                      },
+                    },
+                  },
+                ]
+              : []),
+            {
+              $lookup: {
+                from: "users",
+                localField: "createdBy",
+                foreignField: "_id",
+                as: "customer",
+                pipeline: [
+                  {
+                    $project: {
+                      _id: 1,
+                      firstName: 1,
+                      lastName: 1,
+                      email: 1,
+                    },
+                  },
+                ],
+              },
+            },
+            {
+              $addFields: {
+                customerData: { $arrayElemAt: ["$customer", 0] },
+              },
+            },
+            {
+              $project: {
+                customer: 0,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $match: {
+          job: { $ne: [] },
+        },
+      },
+      {
+        $addFields: {
+          job: { $arrayElemAt: ["$job", 0] },
+        },
+      },
+      {
+        $sort: { updatedAt: -1 },
+      },
+      {
+        $addFields: {
+          "job.createdBy": {
+            $cond: {
+              if: { $eq: ["$status", "accepted"] },
+              then: "$job.customerData",
+              else: {
+                _id: { $ifNull: ["$job.customerData._id", null] },
+              },
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          "job.customerData": 0,
+        },
+      },
+      {
+        $facet: {
+          data: [
+            { $skip: skip },
+            { $limit: limit },
+            {
+              $project: {
+                _id: "$jobRequest",
+                title: "$job.title",
+                service: "$job.service",
+                estimate: "$job.estimate",
+                timeline: "$job.timeline",
+              },
+            },
+          ],
+          count: [{ $count: "total" }],
+        },
+      },
+    ];
+
+    const [result] = await Bid.aggregate(pipeline as any);
+    const jobs = result?.data || [];
+    const total = result?.count[0]?.total || 0;
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      jobs,
+      total,
+      pagination: {
+        page,
+        limit,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    };
+  } catch (error) {
+    console.error("Error getting contractor my jobs:", error);
     throw error;
   }
 }

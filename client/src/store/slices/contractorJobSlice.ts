@@ -1,6 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 import {
   getContractorJobsThunk,
+  getContractorSelfJobsThunk,
   getContractorJobByIdThunk,
 } from "../thunks/contractorJobThunks";
 import type {
@@ -83,7 +84,7 @@ const contractorJobSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Get Contractor Jobs
+      // Get Contractor Jobs (Available Jobs)
       .addCase(getContractorJobsThunk.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -108,7 +109,44 @@ const contractorJobSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      // Get Contractor Job by ID
+      // Get Contractor's Own Jobs (Started Jobs - simplified job information)
+      .addCase(getContractorSelfJobsThunk.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(getContractorSelfJobsThunk.fulfilled, (state, action) => {
+        state.loading = false;
+        state.error = null;
+        // Response contains simplified job objects: _id (bid ID), title, service, estimate, timeline
+        // Preserve bidAmount if available (it's the agreed bid price)
+        state.jobs = (action.payload.jobs || []).map((job: any) => ({
+          _id: job._id,
+          title: job.title || "",
+          description: "",
+          service: job.service || "",
+          estimate: job.estimate || 0,
+          bidAmount: job.bidAmount || job.estimate || 0,
+          customerEstimate: job.customerEstimate || null,
+          type: "regular" as const,
+          status: "in_progress" as const,
+          timeline: job.timeline || 0,
+          createdAt: "",
+          updatedAt: "",
+          distance: 0,
+        }));
+        state.pagination = {
+          ...action.payload.pagination,
+          total: action.payload.total,
+        };
+        state.membershipInfo = null;
+        state.leadInfo = null;
+      })
+      .addCase(getContractorSelfJobsThunk.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+
+      // Get Contractor Job by ID (consumes a lead)
       .addCase(getContractorJobByIdThunk.pending, (state) => {
         state.jobDetailsLoading = true; // Separate loader for job details
         state.error = null;

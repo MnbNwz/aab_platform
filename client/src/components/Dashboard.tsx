@@ -38,7 +38,9 @@ import {
 import ProfileViewModal from "./ProfileViewModal";
 import Settings from "./Settings";
 import JobManagementTable from "./dashboard/JobManagementTable";
-import ContractorJobs from "./dashboard/ContractorJobs";
+import AvailableJobs from "./dashboard/AvailableJobs";
+import StartedJobs from "./dashboard/StartedJobs";
+import CompletedJobs from "./dashboard/CompletedJobs";
 import FavoriteContractors from "./FavoriteContractors";
 import MyBids from "./MyBids";
 import InvestmentOpportunitiesManagement from "./dashboard/InvestmentOpportunitiesManagement";
@@ -235,6 +237,66 @@ const TabContentWrapper = memo<{
 
 TabContentWrapper.displayName = "TabContentWrapper";
 
+// Jobs Tabs Wrapper - handles switching between Available, Started, and Completed Jobs
+const JobsTabsWrapper = memo(() => {
+  const [activeTab, setActiveTab] = useState<
+    "available" | "started" | "completed"
+  >("available");
+
+  return (
+    <div className="w-full space-y-4 sm:space-y-6">
+      {/* Tab Navigation */}
+      <div className="bg-white rounded-lg shadow-sm border border-primary-200 overflow-hidden">
+        <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+          <div className="flex border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab("available")}
+              className={`flex-1 px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors text-center ${
+                activeTab === "available"
+                  ? "text-accent-600 border-b-2 border-accent-600"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Available Jobs
+            </button>
+            <button
+              onClick={() => setActiveTab("started")}
+              className={`flex-1 px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors text-center ${
+                activeTab === "started"
+                  ? "text-accent-600 border-b-2 border-accent-600"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Started Jobs
+            </button>
+            <button
+              onClick={() => setActiveTab("completed")}
+              className={`flex-1 px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors text-center ${
+                activeTab === "completed"
+                  ? "text-accent-600 border-b-2 border-accent-600"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Completed Jobs
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === "available" ? (
+        <AvailableJobs />
+      ) : activeTab === "started" ? (
+        <StartedJobs />
+      ) : (
+        <CompletedJobs />
+      )}
+    </div>
+  );
+});
+
+JobsTabsWrapper.displayName = "JobsTabsWrapper";
+
 // Main Dashboard Content Component
 interface DashboardContentProps {
   user: User;
@@ -403,7 +465,7 @@ const DashboardContent = memo<DashboardContentProps>(
                 ...baseProps,
                 title: "Jobs",
                 subtitle: "Browse and apply to jobs",
-                children: <ContractorJobs key="jobs" />,
+                children: <JobsTabsWrapper key="jobs" />,
               },
               bids: {
                 ...baseProps,

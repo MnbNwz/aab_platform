@@ -37,8 +37,11 @@ const BidSchema = new Schema<IBid>({
   completionPaidAt: { type: Date },
 });
 
-// PERFORMANCE INDEX for contractor bid queries
+// PERFORMANCE INDEXES for contractor bid queries
 BidSchema.index({ contractor: 1, updatedAt: -1 }); // For sorting contractor's bids by most recent
+BidSchema.index({ contractor: 1, status: 1, updatedAt: -1 }); // For filtering contractor's bids by status
+BidSchema.index({ jobRequest: 1, contractor: 1 }); // For bid exclusion checks in job listings
+BidSchema.index({ jobRequest: 1, status: 1 }); // For finding accepted bids per job
 
 const Bid = createModel<IBid>({
   schema: BidSchema,

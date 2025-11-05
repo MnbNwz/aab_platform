@@ -1098,6 +1098,55 @@
           }
         },
         {
+          "name": "Get Contractor's Own Jobs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/job/contractor/jobs/self?page=1&limit=10&status=inprogress",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "job", "contractor", "jobs", "self"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number for pagination"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Number of jobs per page (max 100)"
+                },
+                {
+                  "key": "status",
+                  "value": "inprogress",
+                  "description": "Filter by job status: open, inprogress, hold, completed, cancelled. For inprogress/hold/completed, only shows accepted bids.",
+                  "disabled": false
+                },
+                {
+                  "key": "bidStatus",
+                  "value": "accepted",
+                  "description": "Filter by bid status: pending, accepted, rejected",
+                  "disabled": true
+                },
+                {
+                  "key": "service",
+                  "value": "plumbing",
+                  "description": "Filter by service type",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search in job title and description",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get contractor's own jobs (jobs they've bid on). Returns simplified job information with only title, service, estimate, and timeline fields. For status=inprogress/hold/completed, automatically filters to only show accepted bids."
+          }
+        },
+        {
           "name": "Get Job Details (Free View)",
           "request": {
             "method": "GET",

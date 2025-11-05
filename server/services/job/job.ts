@@ -342,48 +342,60 @@ export const getJobRequests = async (filters: any, user: any) => {
 
 // Get job request by ID (optimized with aggregation)
 export const getJobRequestById = async (id: string) => {
-  const pipeline = [
-    { $match: { _id: toObjectId(id) } },
+  try {
+    if (!id) {
+      return null;
+    }
 
-    // Lookup related collections
-    {
-      $lookup: {
-        from: "users",
-        localField: "createdBy",
-        foreignField: "_id",
-        as: "createdBy",
-        pipeline: [{ $project: { name: 1, email: 1, phone: 1 } }],
-      },
-    },
-    {
-      $lookup: {
-        from: "properties",
-        localField: "property",
-        foreignField: "_id",
-        as: "property",
-        // No pipeline = return all fields (full property object)
-      },
-    },
+    let objectId;
+    try {
+      objectId = toObjectId(id);
+    } catch (error) {
+      console.error("Invalid job ID format:", id, error);
+      return null;
+    }
 
-    // Transform arrays to single objects
-    {
-      $addFields: {
-        createdBy: { $arrayElemAt: ["$createdBy", 0] },
-        property: { $arrayElemAt: ["$property", 0] },
-      },
-    },
+    const pipeline = [
+      { $match: { _id: objectId } },
 
-    // Remove bid-related fields from contractor view
-    {
-      $project: {
-        bids: 0,
-        acceptedBid: 0,
+      {
+        $lookup: {
+          from: "users",
+          localField: "createdBy",
+          foreignField: "_id",
+          as: "createdBy",
+          pipeline: [{ $project: { name: 1, email: 1, phone: 1 } }],
+        },
       },
-    },
-  ];
+      {
+        $lookup: {
+          from: "properties",
+          localField: "property",
+          foreignField: "_id",
+          as: "property",
+        },
+      },
 
-  const [result] = await JobRequest.aggregate(pipeline as any);
-  return result;
+      {
+        $addFields: {
+          createdBy: { $arrayElemAt: ["$createdBy", 0] },
+          property: { $arrayElemAt: ["$property", 0] },
+        },
+      },
+
+      {
+        $project: {
+          bids: 0,
+        },
+      },
+    ];
+
+    const [result] = await JobRequest.aggregate(pipeline as any);
+    return result || null;
+  } catch (error) {
+    console.error("Error in getJobRequestById:", error);
+    return null;
+  }
 };
 
 // Update job request

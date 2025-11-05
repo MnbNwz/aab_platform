@@ -1,11 +1,11 @@
 import { Request, Response } from "express";
 import { AuthenticatedRequest } from "@middlewares/types";
-import { getJobsForContractor } from "@services/job/contractorJobService";
+import { getJobsForContractor, getContractorMyJobs } from "@services/job/contractorJobService";
 import { getJobRequestById } from "@services/job/job";
 import { LeadAccess } from "@models/job/leadAccess";
+import { Bid } from "@models/job";
 import { CONTROLLER_ERROR_MESSAGES, HTTP_STATUS } from "@controllers/constants/validation";
 
-// Get jobs for contractor with membership-based filtering
 export const getContractorJobs = async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
@@ -18,7 +18,6 @@ export const getContractorJobs = async (req: Request, res: Response) => {
       });
     }
 
-    // Check if user is contractor
     if (authReq.user.role !== "contractor") {
       return res.status(HTTP_STATUS.FORBIDDEN).json({
         success: false,
@@ -42,7 +41,6 @@ export const getContractorJobs = async (req: Request, res: Response) => {
   }
 };
 
-// Get a specific job for contractor (returns job details + bid status)
 export const getContractorJobById = async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
@@ -56,7 +54,6 @@ export const getContractorJobById = async (req: Request, res: Response) => {
       });
     }
 
-    // Check if user is contractor
     if (authReq.user.role !== "contractor") {
       return res.status(HTTP_STATUS.FORBIDDEN).json({
         success: false,
@@ -64,7 +61,6 @@ export const getContractorJobById = async (req: Request, res: Response) => {
       });
     }
 
-    // Get the job
     const job = await getJobRequestById(jobId);
     if (!job) {
       return res.status(HTTP_STATUS.NOT_FOUND).json({
@@ -73,29 +69,63 @@ export const getContractorJobById = async (req: Request, res: Response) => {
       });
     }
 
-    // Check if contractor already bid on this job and get bid details
     const leadAccess = await LeadAccess.findOne({
       contractor: userId,
       jobRequest: jobId,
     }).populate("bid");
 
-    const self = !!leadAccess;
-    const myBid = leadAccess?.bid ? (leadAccess.bid as any) : null;
-    const selfBidAccepted = myBid?.status === "accepted";
+    let self = !!leadAccess;
+    let myBid = leadAccess?.bid ? (leadAccess.bid as any) : null;
+    let selfBidAccepted = myBid?.status === "accepted";
 
-    // SECURITY: Only show customer contact info if contractor's bid was accepted
+    if (!myBid && job.acceptedBid) {
+      const acceptedBidDoc = await Bid.findById(job.acceptedBid).lean();
+      if (acceptedBidDoc && acceptedBidDoc.contractor?.toString() === userId?.toString()) {
+        myBid = acceptedBidDoc;
+        selfBidAccepted = myBid.status === "accepted";
+        self = true;
+      }
+    }
+
     const responseData: any = {
       ...job,
-      self, // NEW: true if contractor has bid on this job
-      myBid, // NEW: contractor's bid details (or null)
-      selfBidAccepted, // NEW: true if contractor's bid was accepted
+      self,
+      myBid,
+      selfBidAccepted,
     };
 
+    const bidInfo = req.query.bidInfo === "true";
+
+    if (bidInfo && selfBidAccepted && myBid) {
+      const acceptedBid = await Bid.findById(myBid._id || myBid)
+        .populate("contractor", "firstName lastName email phone")
+        .lean();
+
+      if (acceptedBid) {
+        responseData.bidInfo = {
+          _id: acceptedBid._id,
+          bidAmount: acceptedBid.bidAmount,
+          message: acceptedBid.message,
+          status: acceptedBid.status,
+          timeline: acceptedBid.timeline,
+          materials: acceptedBid.materials,
+          warranty: acceptedBid.warranty,
+          depositPaid: acceptedBid.depositPaid,
+          depositAmount: acceptedBid.depositAmount,
+          depositPaidAt: acceptedBid.depositPaidAt,
+          completionPaid: acceptedBid.completionPaid,
+          completionAmount: acceptedBid.completionAmount,
+          completionPaidAt: acceptedBid.completionPaidAt,
+          createdAt: acceptedBid.createdAt,
+          updatedAt: acceptedBid.updatedAt,
+          contractor: acceptedBid.contractor,
+        };
+      }
+    }
+
     if (!selfBidAccepted && responseData.createdBy) {
-      // Hide customer contact information if bid not accepted
       responseData.createdBy = {
         _id: responseData.createdBy._id,
-        // Hide email, phone, and name for security
       };
     }
 
@@ -108,6 +138,41 @@ export const getContractorJobById = async (req: Request, res: Response) => {
     res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       success: false,
       message: "Failed to fetch job details",
+    });
+  }
+};
+
+export const getContractorSelfJobs = async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user?._id;
+
+    if (!userId) {
+      return res.status(HTTP_STATUS.UNAUTHORIZED).json({
+        success: false,
+        message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED,
+      });
+    }
+
+    if (authReq.user.role !== "contractor") {
+      return res.status(HTTP_STATUS.FORBIDDEN).json({
+        success: false,
+        message: "This endpoint is only available for contractors",
+      });
+    }
+
+    const filters = req.query;
+    const result = await getContractorMyJobs(userId, filters);
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error("Error getting contractor my jobs:", error);
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: "Failed to fetch contractor my jobs",
     });
   }
 };

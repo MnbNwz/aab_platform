@@ -10,6 +10,7 @@ import {
   sendPaymentReceipt,
   sendPaymentFailedNotification,
   sendSubscriptionCancelledNotification,
+  sendBidAcceptedNotification,
 } from "@utils/email";
 import { stripe, webhookSecret } from "@config/stripe";
 import { ENV_CONFIG } from "@config/env";
@@ -384,7 +385,6 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   }
 }
 
-// Handle job payment completion (bid acceptance or completion)
 async function handleJobPayment(
   session: Stripe.Checkout.Session,
   userId: string,
@@ -521,7 +521,15 @@ async function processBidAcceptancePayment(
 
   await payment.save();
 
-  // Update bid, reject others, update job
+  const [jobRequest, contractor, customer] = await Promise.all([
+    JobRequest.findById(jobRequestId)
+      .select("title createdBy")
+      .populate("createdBy", "firstName lastName")
+      .lean(),
+    User.findById(contractorId).select("email firstName lastName").lean(),
+    User.findById(userId).select("firstName lastName").lean(),
+  ]);
+
   await Promise.all([
     Bid.findByIdAndUpdate(bidId, {
       $set: {
@@ -559,6 +567,19 @@ async function processBidAcceptancePayment(
     }),
   ]);
 
+  if (contractor?.email && customer && jobRequest) {
+    const customerName =
+      `${customer.firstName || ""} ${customer.lastName || ""}`.trim() || "Customer";
+    const jobTitle = jobRequest.title || "Job";
+    const bidAmount = bid.bidAmount || 0;
+
+    sendBidAcceptedNotification(contractor.email, customerName, jobTitle, bidAmount).catch(
+      (error) => {
+        console.error(`❌ Failed to send bid acceptance email to contractor:`, error);
+      },
+    );
+  }
+
   console.log(`✅ Bid acceptance payment processed successfully for bid: ${bidId}`);
 }
 
@@ -585,7 +606,6 @@ async function processJobCompletionPayment(
     return;
   }
 
-  // Create payment record
   const payment = new Payment({
     userId,
     email,
@@ -610,7 +630,6 @@ async function processJobCompletionPayment(
 
   await payment.save();
 
-  // Update bid and job
   await Promise.all([
     Bid.findByIdAndUpdate(bidId, {
       $set: {

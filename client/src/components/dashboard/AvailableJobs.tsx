@@ -13,14 +13,16 @@ import {
   getContractorJobsThunk,
   getContractorJobByIdThunk,
 } from "../../store/thunks/contractorJobThunks";
-import { setContractorJobFilters } from "../../store/slices/contractorJobSlice";
-import { showToast } from "../../utils/toast";
+import {
+  setContractorJobFilters,
+  clearContractorJobError,
+} from "../../store/slices/contractorJobSlice";
 import ContractorJobDetailsModal from "../ContractorJobDetailsModal";
 import DataTable, { TableColumn } from "../ui/DataTable";
 import type { PaginationInfo } from "../ui/DataTable";
 import { Filter } from "lucide-react";
 
-const ContractorJobs: React.FC = memo(() => {
+const AvailableJobs: React.FC = memo(() => {
   const dispatch = useDispatch<AppDispatch>();
   const {
     jobs,
@@ -38,25 +40,29 @@ const ContractorJobs: React.FC = memo(() => {
   );
   const [selectedJobLeadInfo, setSelectedJobLeadInfo] = useState<any>(null);
   const [showJobDetails, setShowJobDetails] = useState(false);
-  const [activeTab, setActiveTab] = useState<"available" | "started">(
-    "available"
-  );
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const hasInitializedRef = useRef(false);
 
-  // Update filters when tab changes or on mount
+  // Initialize filters on mount only
   useEffect(() => {
-    const statusValue = activeTab === "available" ? "open" : "in_progress";
-    dispatch(
-      setContractorJobFilters({
-        status: statusValue,
-        page: 1,
-      })
-    );
-  }, [activeTab, dispatch]);
+    if (!hasInitializedRef.current) {
+      dispatch(
+        setContractorJobFilters({
+          status: "open",
+          page: 1,
+        })
+      );
+      hasInitializedRef.current = true;
+    }
+  }, [dispatch]);
 
-  // Fetch jobs when filters change
+  // Fetch available jobs when filters change
   useEffect(() => {
-    dispatch(getContractorJobsThunk(filters));
+    const apiFilters = {
+      ...filters,
+      status: "open", // Always use "open" for available jobs
+    };
+    dispatch(getContractorJobsThunk(apiFilters));
   }, [dispatch, filters]);
 
   // Handle search input with debouncing
@@ -99,25 +105,26 @@ const ContractorJobs: React.FC = memo(() => {
     setSelectedJobLeadInfo(null);
   }, []);
 
-  // Handle job view (consumes a lead)
   const handleViewJob = useCallback(
     async (job: ContractorJob) => {
-      // Open modal immediately with loader (set to null, details will load)
+      dispatch(clearContractorJobError());
       setSelectedJob(null);
       setSelectedJobLeadInfo(null);
       setShowJobDetails(true);
 
       try {
-        const result = await dispatch(getContractorJobByIdThunk(job._id));
+        const result = await dispatch(
+          getContractorJobByIdThunk({ jobId: job._id })
+        );
         if (getContractorJobByIdThunk.fulfilled.match(result)) {
-          // New API response: job data is directly in payload (no nested .job)
           setSelectedJob(result.payload as ContractorJobDetails);
-          // No leadInfo in new response
           setSelectedJobLeadInfo(null);
+        } else if (getContractorJobByIdThunk.rejected.match(result)) {
+          dispatch(clearContractorJobError());
+          handleCloseJobDetails();
         }
       } catch (_error) {
-        showToast.error("Failed to load job details");
-        // Close modal on error
+        dispatch(clearContractorJobError());
         handleCloseJobDetails();
       }
     },
@@ -125,8 +132,12 @@ const ContractorJobs: React.FC = memo(() => {
   );
 
   const handleBidSubmitted = useCallback(() => {
-    // Refresh job list after bid submission to update bid counts
-    dispatch(getContractorJobsThunk(filters));
+    // Refresh job list after bid submission
+    const apiFilters = {
+      ...filters,
+      status: "open",
+    };
+    dispatch(getContractorJobsThunk(apiFilters));
   }, [dispatch, filters]);
 
   // Get membership tier color
@@ -143,124 +154,98 @@ const ContractorJobs: React.FC = memo(() => {
     }
   }, []);
 
-  // Format date as "X days ago" or full date
-  const formatPostedDate = useCallback((dateString: string) => {
-    const postedDate = new Date(dateString);
-    const now = new Date();
-    const diffInMs = now.getTime() - postedDate.getTime();
-    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-    const diffInMonths = Math.floor(diffInDays / 30);
-
-    if (diffInMonths < 1) {
-      if (diffInDays === 0) return "Today";
-      if (diffInDays === 1) return "1 day ago";
-      return `${diffInDays} days ago`;
-    }
-
-    return postedDate.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  }, []);
-
-  // Memoized columns - conditional based on activeTab
+  // Memoized columns
   const columns = useMemo<
     TableColumn<ContractorJob & Record<string, unknown>>[]
   >(() => {
-    const baseColumns: TableColumn<ContractorJob & Record<string, unknown>>[] =
-      [
-        {
-          key: "title",
-          header: "Job Title",
-          render: (job) => (
-            <div className="min-w-0 max-w-xs">
-              <div
-                className="font-medium text-gray-900 truncate"
-                title={job.title}
-              >
-                {job.title}
-              </div>
+    return [
+      {
+        key: "title",
+        header: "Job Title",
+        render: (job) => (
+          <div className="min-w-0 max-w-xs">
+            <div
+              className="font-medium text-gray-900 truncate"
+              title={job.title}
+            >
+              {job.title}
             </div>
-          ),
-          mobileLabel: "Job Title",
-          mobileRender: (job) => (
-            <div className="min-w-0 w-full overflow-hidden">
-              <h3
-                className="font-semibold text-gray-900 text-base mb-3 break-words"
-                style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}
-                title={job.title}
-              >
-                {job.title}
-              </h3>
-            </div>
-          ),
-        },
-        {
-          key: "service",
-          header: "Service",
-          render: (job) => (
-            <span className="text-gray-700 capitalize">{job.service}</span>
-          ),
-          mobileLabel: "Service",
-          mobileRender: (job) => (
-            <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-2">
-              <span className="text-gray-600 text-sm">Service:</span>
-              <span className="font-medium text-gray-900 capitalize text-sm">
-                {job.service}
-              </span>
-            </div>
-          ),
-        },
-        {
-          key: "estimate",
-          header: "Estimate",
-          render: (job) => (
-            <span className="font-semibold text-primary-700">
+          </div>
+        ),
+        mobileLabel: "Job Title",
+        mobileRender: (job) => (
+          <div className="min-w-0 w-full overflow-hidden">
+            <h3
+              className="font-semibold text-gray-900 text-base mb-3 break-words"
+              style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}
+              title={job.title}
+            >
+              {job.title}
+            </h3>
+          </div>
+        ),
+      },
+      {
+        key: "service",
+        header: "Service",
+        render: (job) => (
+          <span className="text-gray-700 capitalize">{job.service}</span>
+        ),
+        mobileLabel: "Service",
+        mobileRender: (job) => (
+          <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-2">
+            <span className="text-gray-600 text-sm">Service:</span>
+            <span className="font-medium text-gray-900 capitalize text-sm">
+              {job.service}
+            </span>
+          </div>
+        ),
+      },
+      {
+        key: "estimate",
+        header: "Estimate",
+        render: (job) => (
+          <span className="font-semibold text-primary-700">
+            $
+            {job.estimate.toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </span>
+        ),
+        mobileLabel: "Estimate",
+        mobileRender: (job) => (
+          <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-2">
+            <span className="text-gray-600 text-sm">Estimate:</span>
+            <span className="font-semibold text-primary-700 text-sm">
               $
               {job.estimate.toLocaleString("en-US", {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}
             </span>
-          ),
-          mobileLabel: "Estimate",
-          mobileRender: (job) => (
-            <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-2">
-              <span className="text-gray-600 text-sm">Estimate:</span>
-              <span className="font-semibold text-primary-700 text-sm">
-                $
-                {job.estimate.toLocaleString("en-US", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </span>
-            </div>
-          ),
-        },
-      ];
-
-    // Add Timeline column for both tabs
-    baseColumns.push({
-      key: "timeline",
-      header: "Timeline",
-      render: (job) => (
-        <span className="text-gray-700">{job.timeline} days</span>
-      ),
-      mobileLabel: "Timeline",
-      mobileRender: (job) => (
-        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-2">
-          <span className="text-gray-600 text-sm">Timeline:</span>
-          <span className="font-medium text-gray-900 text-sm">
-            {job.timeline} days
-          </span>
-        </div>
-      ),
-      hideOnMobile: true,
-    });
-
-    return baseColumns;
-  }, [formatPostedDate]);
+          </div>
+        ),
+      },
+      {
+        key: "timeline",
+        header: "Timeline",
+        render: (job) => (
+          <span className="text-gray-700">{job.timeline} days</span>
+        ),
+        mobileLabel: "Timeline",
+        mobileRender: (job) => (
+          <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-2">
+            <span className="text-gray-600 text-sm">Timeline:</span>
+            <span className="font-medium text-gray-900 text-sm">
+              {job.timeline} days
+            </span>
+          </div>
+        ),
+        hideOnMobile: true,
+      },
+    ];
+  }, []);
 
   // Pagination info
   const paginationInfo = useMemo<PaginationInfo | undefined>(() => {
@@ -292,7 +277,7 @@ const ContractorJobs: React.FC = memo(() => {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
             <div className="min-w-0 flex-1">
               <h2 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 truncate">
-                Job Requests
+                Available Jobs
               </h2>
               {membershipInfo && (
                 <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-1">
@@ -325,30 +310,6 @@ const ContractorJobs: React.FC = memo(() => {
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Tabs */}
-          <div className="flex border-b border-gray-200 -mb-3 sm:-mb-4">
-            <button
-              onClick={() => setActiveTab("available")}
-              className={`flex-1 px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors text-center ${
-                activeTab === "available"
-                  ? "text-accent-600 border-b-2 border-accent-600"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              Available Jobs
-            </button>
-            <button
-              onClick={() => setActiveTab("started")}
-              className={`flex-1 px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors text-center ${
-                activeTab === "started"
-                  ? "text-accent-600 border-b-2 border-accent-600"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              Started Jobs
-            </button>
           </div>
         </div>
 
@@ -410,11 +371,7 @@ const ContractorJobs: React.FC = memo(() => {
               columns={columns}
               loading={jobsLoading}
               error={jobsError}
-              emptyMessage={
-                activeTab === "available"
-                  ? "No available jobs found."
-                  : "No started jobs found."
-              }
+              emptyMessage="No available jobs found."
               onRowClick={handleViewJob}
               pagination={paginationInfo}
               onPageChange={handlePageChange}
@@ -436,12 +393,12 @@ const ContractorJobs: React.FC = memo(() => {
         loading={jobDetailsLoading}
         leadInfo={selectedJobLeadInfo}
         onBidSubmitted={handleBidSubmitted}
-        activeTab={activeTab}
+        activeTab="available"
       />
     </div>
   );
 });
 
-ContractorJobs.displayName = "ContractorJobs";
+AvailableJobs.displayName = "AvailableJobs";
 
-export default ContractorJobs;
+export default AvailableJobs;

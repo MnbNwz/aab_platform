@@ -51,6 +51,8 @@ JobRequestSchema.index({ createdBy: 1, status: 1, createdAt: -1 });
 // Index 2: Contractor queries (status + service + sort)
 // - { status: "open", service: {$in: [...]} } sorted by createdAt ✅
 JobRequestSchema.index({ status: 1, service: 1, createdAt: -1 });
+// Index 4: Contractor queries with type filter (for off_market filtering)
+JobRequestSchema.index({ status: 1, service: 1, type: 1, createdAt: -1 });
 
 // Index 3: Property queries (simple single-field index is sufficient)
 // - Used for: property validation, job lookup by property
