@@ -17,14 +17,19 @@ import JobCreate from "../JobCreate";
 import JobDetailViewModal from "../JobDetailViewModal";
 import JobViewEditModal from "../JobViewEditModal";
 import ConfirmModal from "../ui/ConfirmModal";
-import { JOB_STATUSES, SORT_OPTIONS } from "../../constants";
-import { Search, Filter } from "lucide-react";
+import { JOB_STATUSES, SORT_OPTIONS, SERVICES } from "../../constants";
 import DataTable, { TableColumn } from "../ui/DataTable";
 import type { PaginationInfo } from "../ui/DataTable";
 import {
   getJobStatusBadge,
   formatJobStatusText,
 } from "../../utils/badgeColors";
+import FilterPanel from "../ui/FilterPanel";
+import {
+  createSelectFieldWithAll,
+  createInputField,
+  createSelectField,
+} from "../ui/FilterPanel.utils";
 
 // Job type for table
 interface TableJob extends Record<string, unknown> {
@@ -60,6 +65,10 @@ const JobManagementTable: React.FC = memo(() => {
 
   const isAdmin = user?.role === "admin";
   const isCustomer = user?.role === "customer";
+
+  useEffect(() => {
+    setSearchTerm(filters.search || "");
+  }, [filters.search]);
 
   useEffect(() => {
     dispatch(getJobsThunk(filters));
@@ -104,6 +113,13 @@ const JobManagementTable: React.FC = memo(() => {
     },
     [dispatch]
   );
+
+  type JobFilterPanelValues = {
+    status: string;
+    category?: string;
+    sortBy?: string;
+    search: string;
+  };
 
   const handlePageChange = useCallback(
     (page: number) => {
@@ -275,6 +291,119 @@ const JobManagementTable: React.FC = memo(() => {
   );
 
   // Format pagination for DataTable
+  const filterFields = useMemo(() => {
+    const statusOptions = JOB_STATUSES.map((status) => ({
+      label: formatJobStatusText(status),
+      value: status,
+    }));
+
+    const baseFields = [
+      createSelectFieldWithAll(
+        "status",
+        "Status",
+        statusOptions,
+        filters.status || ""
+      ),
+    ];
+
+    if (isAdmin) {
+      const serviceOptions = SERVICES.map((service) => ({
+        label: service.charAt(0).toUpperCase() + service.slice(1),
+        value: service,
+      }));
+      const sortOptions = SORT_OPTIONS.map((option) => ({
+        label: option.label,
+        value: option.value,
+      }));
+
+      baseFields.push(
+        createSelectFieldWithAll(
+          "category",
+          "Service",
+          serviceOptions,
+          filters.category || ""
+        )
+      );
+
+      baseFields.push(
+        createSelectField(
+          "sortBy",
+          "Sort By",
+          sortOptions,
+          filters.sortBy || "createdAt"
+        )
+      );
+    }
+
+    baseFields.push(
+      createInputField("search", "Search", searchTerm, "Search jobs...")
+    );
+
+    return baseFields;
+  }, [filters.status, filters.category, filters.sortBy, isAdmin, searchTerm]);
+
+  const filterValues = useMemo<JobFilterPanelValues>(() => {
+    const values: JobFilterPanelValues = {
+      status: filters.status || "",
+      search: searchTerm,
+    };
+
+    if (isAdmin) {
+      values.category = filters.category || "";
+      values.sortBy = filters.sortBy || "createdAt";
+    }
+
+    return values;
+  }, [filters.status, filters.category, filters.sortBy, isAdmin, searchTerm]);
+
+  const filterColumns = useMemo(
+    () => ({
+      mobile: 1,
+      tablet: isAdmin ? 2 : 1,
+      desktop: isAdmin ? 4 : 2,
+    }),
+    [isAdmin]
+  );
+
+  const handleFilterPanelChange = useCallback(
+    (newValues: Record<string, any>) => {
+      const nextValues = newValues as JobFilterPanelValues;
+      const updates: Partial<typeof filters> = {};
+
+      if ((nextValues.status || "") !== (filters.status || "")) {
+        updates.status = nextValues.status || "";
+      }
+
+      if (isAdmin) {
+        if ((nextValues.category || "") !== (filters.category || "")) {
+          updates.category = nextValues.category || "";
+        }
+
+        if ((nextValues.sortBy || "") !== (filters.sortBy || "")) {
+          updates.sortBy = nextValues.sortBy || "createdAt";
+        }
+      }
+
+      const nextSearch = nextValues.search ?? "";
+      if (nextSearch !== searchTerm) {
+        handleSearchChange(nextSearch);
+      }
+
+      if (Object.keys(updates).length > 0) {
+        handleFilterChange(updates);
+      }
+    },
+    [
+      filters.status,
+      filters.category,
+      filters.sortBy,
+      handleFilterChange,
+      handleSearchChange,
+      isAdmin,
+      searchTerm,
+    ]
+  );
+
   const tablePagination = useMemo<PaginationInfo | undefined>(() => {
     if (!pagination) return undefined;
     const paginationAny = pagination as any;
@@ -317,117 +446,14 @@ const JobManagementTable: React.FC = memo(() => {
         </div>
 
         {/* Filters */}
-        <div className="px-4 sm:px-6 py-4 border-b border-gray-200 bg-white">
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2">
-              <Filter className="h-5 w-5 text-gray-400" />
-              <span className="text-sm font-medium text-gray-700">
-                Filters:
-              </span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Status Filter */}
-              <div>
-                <label
-                  className="block text-sm font-medium text-gray-700 mb-1.5"
-                  htmlFor="status"
-                >
-                  Status
-                </label>
-                <select
-                  id="status"
-                  value={filters.status || ""}
-                  onChange={(e) =>
-                    handleFilterChange({ status: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm transition-colors"
-                >
-                  <option value="">All</option>
-                  {JOB_STATUSES.map((status) => (
-                    <option key={status} value={status}>
-                      {status}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Search with Icon */}
-              <div>
-                <label
-                  className="block text-sm font-medium text-gray-700 mb-1.5"
-                  htmlFor="search"
-                >
-                  Search
-                </label>
-                <div className="relative">
-                  <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <input
-                    id="search"
-                    type="text"
-                    placeholder="Search jobs..."
-                    value={searchTerm}
-                    onChange={(e) => handleSearchChange(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm transition-colors placeholder-gray-300"
-                  />
-                </div>
-              </div>
-
-              {/* Admin Filters */}
-              {isAdmin && (
-                <>
-                  <div>
-                    <label
-                      className="block text-sm font-medium text-gray-700 mb-1.5"
-                      htmlFor="category"
-                    >
-                      Service
-                    </label>
-                    <select
-                      id="category"
-                      value={filters.category || ""}
-                      onChange={(e) =>
-                        handleFilterChange({ category: e.target.value })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm transition-colors"
-                    >
-                      <option value="">All</option>
-                      <option value="plumbing">Plumbing</option>
-                      <option value="electrical">Electrical</option>
-                      <option value="hvac">HVAC</option>
-                      <option value="painting">Painting</option>
-                      <option value="flooring">Flooring</option>
-                      <option value="roofing">Roofing</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label
-                      className="block text-sm font-medium text-gray-700 mb-1.5"
-                      htmlFor="sortBy"
-                    >
-                      Sort By
-                    </label>
-                    <select
-                      id="sortBy"
-                      value={filters.sortBy || "createdAt"}
-                      onChange={(e) =>
-                        handleFilterChange({ sortBy: e.target.value })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm transition-colors"
-                    >
-                      {SORT_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
+        <FilterPanel
+          mode="inline"
+          fields={filterFields}
+          values={filterValues}
+          onChange={handleFilterPanelChange}
+          columns={filterColumns}
+          showFilterIcon
+        />
       </div>
 
       {/* Jobs List Card */}
