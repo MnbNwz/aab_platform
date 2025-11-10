@@ -16,6 +16,7 @@ import {
 } from "@middlewares/constants";
 import { CONTROLLER_CONSTANTS, FIELD_CONSTANTS } from "@controllers/constants";
 import { ENV_CONFIG } from "@config/env";
+import { clearAuthCookies } from "@middlewares/utils/cookies";
 
 export const signupController = async (req: Request & { files?: any[] }, res: Response) => {
   try {
@@ -87,12 +88,7 @@ export const signinController = async (req: Request, res: Response) => {
 };
 
 export const logout = async (req: Request, res: Response) => {
-  // Clear the authentication cookies with smart configuration
-  const cookieConfig = getCookieConfig(ENV_CONFIG.SECURE_COOKIES);
-
-  res.clearCookie(AUTHORIZATION_CONSTANTS.ACCESS_TOKEN_COOKIE, cookieConfig);
-  res.clearCookie(AUTHORIZATION_CONSTANTS.REFRESH_TOKEN_COOKIE, cookieConfig);
-
+  clearAuthCookies(res);
   res.status(200).json({
     message: "Logout successful",
   });

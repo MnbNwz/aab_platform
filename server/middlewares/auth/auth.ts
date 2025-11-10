@@ -2,6 +2,7 @@ import { Response, NextFunction } from "express";
 import { verifyToken } from "@services/auth";
 import { User } from "@models/user";
 import { MIDDLEWARE_ERROR_MESSAGES, HTTP_STATUS, AUTHORIZATION_CONSTANTS } from "../constants";
+import { clearAuthCookies } from "@middlewares/utils/cookies";
 
 export const authenticate = async (req: any, res: Response, next: NextFunction) => {
   try {
@@ -20,6 +21,7 @@ export const authenticate = async (req: any, res: Response, next: NextFunction) 
     }
 
     if (!token) {
+      clearAuthCookies(res);
       res
         .status(HTTP_STATUS.UNAUTHORIZED)
         .json({ error: MIDDLEWARE_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
@@ -29,6 +31,7 @@ export const authenticate = async (req: any, res: Response, next: NextFunction) 
     // Verify token
     const decoded = verifyToken(token);
     if (!decoded) {
+      clearAuthCookies(res);
       res.status(HTTP_STATUS.UNAUTHORIZED).json({ error: MIDDLEWARE_ERROR_MESSAGES.INVALID_TOKEN });
       return;
     }
@@ -36,6 +39,7 @@ export const authenticate = async (req: any, res: Response, next: NextFunction) 
     // Get user from database
     const user = await User.findById(decoded.userId);
     if (!user) {
+      clearAuthCookies(res);
       res
         .status(HTTP_STATUS.UNAUTHORIZED)
         .json({ error: MIDDLEWARE_ERROR_MESSAGES.USER_NOT_FOUND });
@@ -56,6 +60,7 @@ export const authenticate = async (req: any, res: Response, next: NextFunction) 
     next();
   } catch (error) {
     console.error(MIDDLEWARE_ERROR_MESSAGES.AUTHENTICATION_ERROR, error);
+    clearAuthCookies(res);
     res.status(HTTP_STATUS.UNAUTHORIZED).json({ error: MIDDLEWARE_ERROR_MESSAGES.INVALID_TOKEN });
   }
 };
