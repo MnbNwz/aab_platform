@@ -22,6 +22,16 @@ export interface PaymentMembershipDetails {
   cycleEnd: Date | null;
 }
 
+export interface PaymentMetadata {
+  jobRequestId?: string;
+  jobId?: string;
+  contractorId?: string;
+  contractorID?: string;
+  bidId?: string;
+  paymentType?: string;
+  [key: string]: unknown;
+}
+
 export interface PaymentJobParticipant {
   id: string | null;
   name: string | null;
@@ -40,17 +50,6 @@ export interface PaymentJobDetails {
     contractor: PaymentJobParticipant | null;
     customer: PaymentJobParticipant | null;
   };
-  refunds: Array<{
-    amount: number;
-    amountFormatted: string;
-    reason: string;
-    processedAt: Date;
-  }>;
-  milestones: Array<{
-    name: string;
-    status: string;
-    completedAt: Date | null;
-  }>;
 }
 
 export interface PersonNameLike {

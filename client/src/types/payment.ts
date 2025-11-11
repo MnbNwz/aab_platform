@@ -32,29 +32,77 @@ export interface PaymentJobDetails {
 
 export interface Payment {
   _id: string;
-  userId: string;
-  email: string;
+  userId?: string | null;
+  email?: string | null;
   amount: number;
   currency: string;
   status: "succeeded" | "pending" | "failed" | "cancelled" | "refunded";
-  stripeCustomerId: string;
-  stripePaymentIntentId: string;
-  stripeSessionId?: string;
-  stripeSubscriptionId?: string;
+  type?: "job" | "membership" | string;
+  purpose?: string | null;
+  failureReason?: string | null;
   billingPeriod?: "monthly" | "yearly";
-  failureReason?: string;
-  planId?: string;
-  purpose?: string;
-  metadata: Record<string, any>;
+  metadata?: Record<string, any> | null;
+  stripeCustomerId?: string | null;
+  stripePaymentIntentId?: string | null;
+  stripeSessionId?: string | null;
+  stripeSubscriptionId?: string | null;
+  planId?: string | null;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
   membership?: PaymentMembership | null;
   jobDetails?: PaymentJobDetails | null;
-  details?: {
-    type: string;
-    data?: Record<string, any>;
+  details?: PaymentDetailInfo | null;
+}
+
+export interface PaymentJobSummary {
+  title: string;
+  service: string;
+  status: string;
+  referenceNumber?: string | null;
+}
+
+export interface PaymentJobParticipants {
+  contractor?: {
+    id?: string;
+    name?: string;
+    companyName?: string | null;
+  } | null;
+  customer?: {
+    id?: string;
+    name?: string;
   } | null;
 }
+
+export interface PaymentJobDetailData {
+  jobId?: string;
+  jobSummary?: PaymentJobSummary | null;
+  participants?: PaymentJobParticipants | null;
+}
+
+export interface PaymentMembershipDetailData {
+  planName?: string;
+  planTier?: string;
+  status?: string;
+  cycleStart?: string;
+  cycleEnd?: string;
+  renewalDate?: string;
+  billingPeriod?: string;
+  isAutoRenew?: boolean;
+}
+
+export type PaymentDetailInfo =
+  | {
+      type: "job";
+      data?: PaymentJobDetailData | null;
+    }
+  | {
+      type: "membership";
+      data?: PaymentMembershipDetailData | null;
+    }
+  | {
+      type: string;
+      data?: Record<string, any>;
+    };
 
 export interface PaymentHistoryResponse {
   data: Payment[];

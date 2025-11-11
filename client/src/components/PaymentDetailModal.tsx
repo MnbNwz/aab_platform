@@ -41,6 +41,28 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
   const [jobDetail, setJobDetail] = React.useState<Job | null>(null);
   const [jobLoading, setJobLoading] = React.useState(false);
 
+  const detailType =
+    payment?.details?.type && typeof payment.details.type === "string"
+      ? payment.details.type.toLowerCase()
+      : "";
+  const isMembership = detailType === "membership";
+  const isJob = detailType === "job";
+  let membershipTypeLabel = "";
+  if (isMembership) {
+    const detailData = (payment?.details?.data as any) || {};
+    const planName =
+      detailData?.planName || payment?.membership?.plan?.name || "";
+    const planTier =
+      detailData?.planTier || payment?.membership?.plan?.tier || "";
+    if (planName) {
+      membershipTypeLabel = planTier ? `${planName} (${planTier})` : planName;
+    } else if (planTier) {
+      membershipTypeLabel = planTier;
+    }
+  }
+
+  const showCustomerCard = isJob && Boolean(payment?.email || payment?.userId);
+
   useEffect(() => {
     if (!isOpen) {
       dispatch(clearPaymentDetail());
@@ -74,6 +96,11 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
     });
   }, []);
 
+  const placeholderDateTimeLabel = useMemo(
+    () => formatDate(new Date().toISOString()),
+    [formatDate]
+  );
+
   const getStatusColor = useCallback((status: string) => {
     switch (status) {
       case "succeeded":
@@ -92,22 +119,240 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
   const paymentTypeLabel = useMemo(() => {
     if (!payment) return "None";
 
-    const normalized = payment.details?.type?.toLowerCase();
-    if (normalized === "membership") return "Membership";
-    if (normalized === "job") return "Job";
+    if (detailType === "membership") return "Membership";
+    if (detailType === "job") return "Job";
 
     if (payment.membership) return "Membership";
     if (payment.jobDetails) return "Job";
 
-    if (payment.purpose?.toLowerCase().includes("membership")) {
+    const purpose = payment.purpose?.toLowerCase() || "";
+    if (purpose.includes("membership")) {
       return "Membership";
     }
-    if (payment.purpose?.toLowerCase().includes("job")) {
+    if (purpose.includes("job")) {
       return "Job";
     }
 
     return "None";
-  }, [payment]);
+  }, [payment, detailType]);
+
+  const handleOpenJobDetail = useCallback(async () => {
+    if (jobLoading || detailType !== "job") return;
+    const jobId =
+      payment?.jobDetails?._id ||
+      (detailType === "job"
+        ? (payment?.details?.data as any)?.jobId
+        : undefined);
+    if (!jobId) return;
+
+    setJobLoading(true);
+    try {
+      const response = await jobApi.getJobById(jobId);
+      const jobData =
+        response.data?.job || response.data?.data || response.data;
+
+      if (jobData) {
+        setJobDetail(jobData as Job);
+        setJobModalOpen(true);
+      } else {
+        showToast.error("Job details are not available.");
+      }
+    } catch (error: any) {
+      showToast.error(
+        error?.message || "Failed to load job details. Please try again."
+      );
+    } finally {
+      setJobLoading(false);
+    }
+  }, [payment?.jobDetails?._id, payment?.details, jobLoading, detailType]);
+
+  const jobSection = useMemo(() => {
+    if (!payment) return null;
+
+    const legacyJob = payment.jobDetails;
+    const detailsData =
+      detailType === "job" ? (payment.details?.data as any) || {} : null;
+
+    if (!legacyJob && !detailsData) {
+      return null;
+    }
+
+    const jobSummary = detailsData?.jobSummary;
+    const jobTitle = legacyJob?.title || jobSummary?.title || "Job";
+    const jobService = legacyJob?.service || jobSummary?.service || "—";
+    const jobStatus = legacyJob?.status || jobSummary?.status || "";
+
+    const contractor = detailsData?.participants?.contractor;
+    const customer = detailsData?.participants?.customer;
+
+    const statusBadge = getJobStatusBadge(jobStatus || "");
+    const statusLabel = formatJobStatusText(jobStatus || "");
+
+    const paymentStageLabel =
+      payment?.purpose && payment.purpose.trim().length > 0
+        ? payment.purpose
+        : paymentTypeLabel === "Job"
+        ? "Job Payment"
+        : "";
+    const transactionId = payment?._id ?? "";
+    const hasTransactionId = Boolean(transactionId);
+    const transactionDisplay = transactionId;
+    const jobInfoCardCount =
+      1 + (paymentStageLabel ? 1 : 0) + (hasTransactionId ? 1 : 0);
+    const jobInfoGridClass =
+      jobInfoCardCount >= 3
+        ? "sm:grid-cols-2 lg:grid-cols-3"
+        : jobInfoCardCount === 2
+        ? "sm:grid-cols-2 lg:grid-cols-2"
+        : "sm:grid-cols-1 lg:grid-cols-1";
+
+    return (
+      <div className="bg-white border border-gray-200 rounded-2xl p-5 sm:p-6 shadow-sm space-y-7 sm:space-y-8">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+          <div className="space-y-3 max-w-2xl">
+            <div className="inline-flex items-center gap-2 text-accent-600">
+              <Briefcase className="h-5 w-5" />
+              <span className="text-xs font-semibold tracking-widest uppercase">
+                Job Billing
+              </span>
+            </div>
+            <div className="space-y-2">
+              <h4 className="text-xl font-semibold text-gray-900">
+                {jobTitle}
+              </h4>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600">
+                <span className="inline-flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-gray-400" />
+                  <span className="capitalize font-medium text-gray-800">
+                    {jobService}
+                  </span>
+                </span>
+                {paymentStageLabel && (
+                  <span className="inline-flex items-center gap-2">
+                    <Tag className="h-4 w-4 text-gray-400" />
+                    <span className="font-medium text-gray-700">
+                      {paymentStageLabel}
+                    </span>
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            {statusLabel && (
+              <span
+                className={`inline-flex px-3 py-1.5 text-xs font-semibold rounded-full ${statusBadge}`}
+              >
+                {statusLabel}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={handleOpenJobDetail}
+              disabled={jobLoading}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent-500 text-white px-4 py-2 text-sm font-medium hover:bg-accent-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-400 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {jobLoading ? (
+                <>
+                  <span className="h-4 w-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                <>View Job Details</>
+              )}
+            </button>
+          </div>
+        </div>
+
+        <div className={`grid grid-cols-1 ${jobInfoGridClass} gap-4 lg:gap-5`}>
+          <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
+            <p className="text-xs uppercase tracking-wide text-gray-500">
+              Service
+            </p>
+            <p className="text-base font-semibold text-gray-900 capitalize mt-1">
+              {jobService}
+            </p>
+          </div>
+          {paymentStageLabel && (
+            <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
+              <p className="text-xs uppercase tracking-wide text-gray-500">
+                Billing Stage
+              </p>
+              <p className="text-base font-semibold text-gray-900 mt-1">
+                {paymentStageLabel}
+              </p>
+            </div>
+          )}
+          {hasTransactionId && (
+            <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
+              <p className="text-xs uppercase tracking-wide text-gray-500">
+                Transaction
+              </p>
+              <p className="text-sm font-mono text-gray-800 mt-1 break-all">
+                {transactionDisplay}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {(customer || contractor) && (
+          <div className="space-y-4 pt-4 border-t border-gray-200">
+            <p className="text-xs uppercase tracking-wide text-gray-500">
+              Participants
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {customer && (
+                <div className="flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                  <div className="h-10 w-10 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center">
+                    <UserIcon className="h-5 w-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-gray-900">
+                      {customer.name || "Customer"}
+                    </p>
+                    <p className="text-xs uppercase tracking-wide text-gray-500">
+                      Customer
+                    </p>
+                    {customer.id && (
+                      <p className="text-xs font-mono text-gray-400 break-all">
+                        ID: {customer.id}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {contractor && (
+                <div className="flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                  <div className="h-10 w-10 rounded-full bg-accent-50 text-accent-600 flex items-center justify-center">
+                    <UserIcon className="h-5 w-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-gray-900">
+                      {contractor.name || "Contractor"}
+                    </p>
+                    <p className="text-xs uppercase tracking-wide text-gray-500">
+                      Contractor
+                    </p>
+                    {contractor.companyName && (
+                      <p className="text-xs text-gray-500">
+                        {contractor.companyName}
+                      </p>
+                    )}
+                    {contractor.id && (
+                      <p className="text-xs font-mono text-gray-400 break-all">
+                        ID: {contractor.id}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }, [payment, paymentTypeLabel, jobLoading, handleOpenJobDetail, detailType]);
 
   const statusLabel = useMemo(() => {
     if (!payment?.status) return "";
@@ -130,7 +375,15 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
     return formatDate(payment.updatedAt);
   }, [payment?.updatedAt, payment?.createdAt, formatDate]);
 
-  const renderMetadata = () => {
+  const headerCreatedLabel = payment
+    ? createdAtLabel || placeholderDateTimeLabel
+    : placeholderDateTimeLabel;
+  const headerUpdatedLabel = payment
+    ? updatedAtLabel || placeholderDateTimeLabel
+    : placeholderDateTimeLabel;
+  const showHeaderUpdatedLabel = payment ? Boolean(updatedAtLabel) : true;
+
+  const metadataSection = useMemo(() => {
     if (!payment?.metadata) return null;
 
     const metadataEntries = Object.entries(payment.metadata).filter(
@@ -158,9 +411,9 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
         </div>
       </div>
     );
-  };
+  }, [payment?.metadata]);
 
-  const renderTransactionDetails = () => {
+  const transactionSection = useMemo(() => {
     if (!payment) return null;
 
     const {
@@ -225,187 +478,7 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
         )}
       </div>
     );
-  };
-
-  const renderMembershipInfo = () => {
-    if (!payment) return null;
-
-    const membership = payment.membership;
-    const detailsData =
-      payment.details && payment.details.type === "membership"
-        ? payment.details.data || {}
-        : null;
-
-    if (!membership && !detailsData) {
-      return null;
-    }
-
-    const formatDateShort = (value?: string) =>
-      value
-        ? new Date(value).toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-          })
-        : "—";
-
-    const planName =
-      membership?.plan?.name || detailsData?.planName || "Membership Plan";
-    const planTier =
-      membership?.plan?.tier ||
-      detailsData?.planTier ||
-      (detailsData?.planName ? "" : undefined);
-    const autoRenew =
-      membership?.isAutoRenew !== undefined
-        ? membership.isAutoRenew
-        : detailsData?.isAutoRenew;
-    const endDate =
-      membership?.endDate ||
-      detailsData?.endDate ||
-      detailsData?.cycleEnd ||
-      detailsData?.renewalDate;
-
-    return (
-      <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 shadow-sm">
-        <div className="flex flex-col gap-3 mb-4">
-          <h4 className="text-base font-semibold text-gray-900">
-            Membership Details
-          </h4>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm sm:text-base">
-          <div className="space-y-1.5">
-            <p className="text-gray-500 text-xs uppercase tracking-wide">
-              Plan
-            </p>
-            <p className="text-gray-900 font-medium">
-              {planName}
-              {planTier ? ` (${planTier})` : ""}
-            </p>
-          </div>
-          {autoRenew !== undefined && (
-            <div className="space-y-1.5">
-              <p className="text-gray-500 text-xs uppercase tracking-wide">
-                Auto Renewal
-              </p>
-              <p className="text-gray-900 font-medium">
-                {autoRenew ? "Enabled" : "Disabled"}
-              </p>
-            </div>
-          )}
-          <div className="space-y-1.5">
-            <p className="text-gray-500 text-xs uppercase tracking-wide">
-              Cycle End
-            </p>
-            <p className="text-gray-900 font-medium">
-              {formatDateShort(endDate)}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderJobInfo = () => {
-    if (!payment?.jobDetails) return null;
-
-    const job = payment.jobDetails;
-    const statusBadge = getJobStatusBadge(job.status || "");
-    const statusLabel = formatJobStatusText(job.status || "");
-
-    return (
-      <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 shadow-sm flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-accent-50 rounded-lg">
-              <Briefcase className="h-5 w-5 text-accent-600" />
-            </div>
-            <div>
-              <h4 className="text-base font-semibold text-gray-900">
-                Job Summary
-              </h4>
-              <p className="text-sm text-gray-500">
-                Linked job for this payment
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleOpenJobDetail}
-            disabled={jobLoading}
-            className="inline-flex items-center gap-2 self-start rounded-lg bg-accent-500 text-white px-4 py-2 text-sm font-medium hover:bg-accent-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-400 disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {jobLoading ? (
-              <>
-                <span className="h-4 w-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin" />
-                Loading...
-              </>
-            ) : (
-              <>View Job</>
-            )}
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm sm:text-base">
-          <div className="space-y-1.5">
-            <p className="text-gray-500 text-xs uppercase tracking-wide">
-              Job Title
-            </p>
-            <p className="text-gray-900 font-medium">{job.title || "—"}</p>
-          </div>
-          <div className="space-y-1.5">
-            <p className="text-gray-500 text-xs uppercase tracking-wide">
-              Job ID
-            </p>
-            <p className="text-gray-900 font-mono text-sm break-all">
-              {job._id}
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            <p className="text-gray-500 text-xs uppercase tracking-wide">
-              Service
-            </p>
-            <p className="text-gray-900 font-medium capitalize">
-              {job.service || "—"}
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            <p className="text-gray-500 text-xs uppercase tracking-wide">
-              Status
-            </p>
-            <span
-              className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${statusBadge}`}
-            >
-              {statusLabel}
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const handleOpenJobDetail = useCallback(async () => {
-    if (!payment?.jobDetails?._id || jobLoading) return;
-
-    setJobLoading(true);
-    try {
-      const response = await jobApi.getJobById(payment.jobDetails._id);
-      const jobData =
-        response.data?.job || response.data?.data || response.data;
-
-      if (jobData) {
-        setJobDetail(jobData as Job);
-        setJobModalOpen(true);
-      } else {
-        showToast.error("Job details are not available.");
-      }
-    } catch (error: any) {
-      showToast.error(
-        error?.message || "Failed to load job details. Please try again."
-      );
-    } finally {
-      setJobLoading(false);
-    }
-  }, [payment?.jobDetails?._id, jobLoading]);
+  }, [payment]);
 
   const handleCloseJobModal = useCallback(() => {
     setJobModalOpen(false);
@@ -418,65 +491,7 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
     }
   };
 
-  const summaryItems = useMemo(() => {
-    if (!payment) return [];
-    const items = [
-      {
-        icon: <UserIcon className="h-4 w-4 text-gray-500" />,
-        label: "Customer",
-        value: payment.email || "—",
-      },
-      {
-        icon: <Hash className="h-4 w-4 text-gray-500" />,
-        label: "User ID",
-        value: payment.userId || "—",
-      },
-      {
-        icon: <Tag className="h-4 w-4 text-gray-500" />,
-        label: "Type",
-        value: paymentTypeLabel || "—",
-      },
-      {
-        icon: <DollarSign className="h-4 w-4 text-gray-500" />,
-        label: "Purpose",
-        value: payment.purpose || "Payment",
-      },
-      {
-        icon: <Calendar className="h-4 w-4 text-gray-500" />,
-        label: "Billing Period",
-        value: payment.billingPeriod
-          ? payment.billingPeriod === "monthly"
-            ? "Monthly"
-            : "Yearly"
-          : "—",
-      },
-    ];
-
-    if (createdAtLabel) {
-      items.push({
-        icon: <Calendar className="h-4 w-4 text-gray-500" />,
-        label: "Created",
-        value: createdAtLabel,
-      });
-    }
-
-    if (updatedAtLabel) {
-      items.push({
-        icon: <Clock className="h-4 w-4 text-gray-500" />,
-        label: "Updated",
-        value: updatedAtLabel,
-      });
-    }
-
-    return items.filter((item) => item.value && item.value !== "—");
-  }, [payment, paymentTypeLabel, createdAtLabel, updatedAtLabel]);
-
   if (!isOpen) return null;
-
-  const membershipSection = renderMembershipInfo();
-  const jobSection = renderJobInfo();
-  const transactionSection = renderTransactionDetails();
-  const metadataSection = renderMetadata();
 
   return (
     <div
@@ -487,7 +502,7 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
         className="bg-white rounded-xl shadow-2xl w-full max-w-5xl mx-auto relative flex flex-col max-h-[95vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex flex-col gap-4 sm:gap-6 p-4 sm:p-6 border-b border-gray-200 bg-white">
+        <div className="flex flex-col gap-4 sm:gap-6 p-4 sm:p-6 bg-white">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div className="flex items-center gap-3 sm:gap-4">
               <div className="p-3 sm:p-4 bg-primary-100 text-primary-600 rounded-xl shadow-inner">
@@ -536,12 +551,12 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
               <div className="flex flex-wrap items-center gap-4 text-sm sm:text-base text-gray-600">
                 <span className="inline-flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-gray-400" />
-                  <span>{createdAtLabel || "—"}</span>
+                  <span>{headerCreatedLabel}</span>
                 </span>
-                {updatedAtLabel && (
+                {showHeaderUpdatedLabel && (
                   <span className="inline-flex items-center gap-2">
                     <Clock className="h-4 w-4 text-gray-400" />
-                    <span>Updated {updatedAtLabel}</span>
+                    <span>Updated {headerUpdatedLabel}</span>
                   </span>
                 )}
               </div>
@@ -549,9 +564,7 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
 
             <div
               className={`grid grid-cols-1 ${
-                payment && payment.details?.type === "membership"
-                  ? "md:grid-cols-1"
-                  : "md:grid-cols-2"
+                showCustomerCard ? "md:grid-cols-2" : "md:grid-cols-1"
               } gap-4 mt-6`}
             >
               <div className="p-4 rounded-xl bg-white/70 border border-primary-100">
@@ -571,6 +584,14 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
                       {paymentTypeLabel || "—"}
                     </dd>
                   </div>
+                  {isMembership && membershipTypeLabel && (
+                    <div className="flex justify-between gap-3">
+                      <dt className="text-gray-500">Membership Type</dt>
+                      <dd className="font-medium text-right">
+                        {membershipTypeLabel}
+                      </dd>
+                    </div>
+                  )}
                   {payment?.billingPeriod && (
                     <div className="flex justify-between gap-3">
                       <dt className="text-gray-500">Billing Period</dt>
@@ -582,30 +603,36 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
                 </dl>
               </div>
 
-              {payment?.details?.type !== "membership" && (
+              {showCustomerCard && (
                 <div className="p-4 rounded-xl bg-white/70 border border-primary-100">
                   <h4 className="text-xs uppercase tracking-wide text-gray-500 mb-2">
                     Customer
                   </h4>
                   <dl className="space-y-2 text-sm sm:text-base text-gray-900">
-                    <div className="flex justify-between gap-3">
-                      <dt className="text-gray-500">Email</dt>
-                      <dd className="font-medium text-right break-all">
-                        {payment?.email || "—"}
-                      </dd>
-                    </div>
-                    <div className="flex justify-between gap-3">
-                      <dt className="text-gray-500">User ID</dt>
-                      <dd className="font-mono text-sm text-right break-all">
-                        {payment?.userId || "—"}
-                      </dd>
-                    </div>
+                    {payment?.email && (
+                      <div className="flex justify-between gap-3">
+                        <dt className="text-gray-500">Email</dt>
+                        <dd className="font-medium text-right break-all">
+                          {payment.email}
+                        </dd>
+                      </div>
+                    )}
+                    {payment?.userId && (
+                      <div className="flex justify-between gap-3">
+                        <dt className="text-gray-500">User ID</dt>
+                        <dd className="font-mono text-sm text-right break-all">
+                          {payment.userId}
+                        </dd>
+                      </div>
+                    )}
                   </dl>
                 </div>
               )}
             </div>
           </div>
         </div>
+
+        <div className="h-px bg-gradient-to-r from-transparent via-gray-200/70 to-transparent" />
 
         <div className="flex-1 px-4 sm:px-6 pb-6 bg-gray-50">
           {detail.loading ? (
@@ -623,35 +650,9 @@ const PaymentDetailModal: React.FC<PaymentDetailModalProps> = ({
               </div>
             </div>
           ) : payment ? (
-            <div className="space-y-6 sm:space-y-7">
-              {membershipSection}
+            <div className="space-y-8 sm:space-y-10">
+              <div className="pt-4 sm:pt-6">{jobSection}</div>
 
-              {summaryItems.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                  {summaryItems.map((item) => (
-                    <div
-                      key={item.label}
-                      className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 shadow-sm hover:shadow transition-shadow duration-150"
-                    >
-                      <div className="flex items-center gap-2 mb-2">
-                        {item.icon}
-                        <h4 className="text-sm font-medium text-gray-700">
-                          {item.label}
-                        </h4>
-                      </div>
-                      <p className="text-sm sm:text-base text-gray-900">
-                        {item.value}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {jobSection && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
-                  {jobSection}
-                </div>
-              )}
               {transactionSection}
               {metadataSection}
             </div>
