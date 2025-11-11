@@ -120,7 +120,6 @@ export const paymentService = {
       if (filters.page) params.append("page", filters.page.toString());
       if (filters.limit) params.append("limit", filters.limit.toString());
       if (filters.status) params.append("status", filters.status);
-      if (filters.type) params.append("type", filters.type);
       if (filters.startDate) params.append("startDate", filters.startDate);
       if (filters.endDate) params.append("endDate", filters.endDate);
 

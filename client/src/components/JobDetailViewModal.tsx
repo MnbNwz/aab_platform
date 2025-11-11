@@ -834,29 +834,14 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                 >
                   Close
                 </button>
-                {onEditJob && (
-                  <div className="relative group">
-                    <button
-                      onClick={
-                        isAdmin || !hasAcceptedBid ? onEditJob : undefined
-                      }
-                      disabled={!isAdmin && hasAcceptedBid}
-                      className={`px-6 py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2 ${
-                        !isAdmin && hasAcceptedBid
-                          ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                          : "bg-accent-500 hover:bg-accent-600 text-white"
-                      }`}
-                    >
-                      <Edit className="h-4 w-4" />
-                      Edit Job
-                    </button>
-                    {!isAdmin && hasAcceptedBid && (
-                      <div className="absolute bottom-full mb-2 right-0 hidden group-hover:block w-64 bg-gray-900 text-white text-xs rounded-lg py-2 px-3 z-50">
-                        Cannot edit job after accepting a bid
-                        <div className="absolute top-full right-4 -mt-1 border-4 border-transparent border-t-gray-900"></div>
-                      </div>
-                    )}
-                  </div>
+                {onEditJob && (isAdmin || !hasAcceptedBid) && (
+                  <button
+                    onClick={onEditJob}
+                    className="px-6 py-2.5 rounded-lg font-medium transition-colors flex items-center gap-2 bg-accent-500 hover:bg-accent-600 text-white"
+                  >
+                    <Edit className="h-4 w-4" />
+                    Edit Job
+                  </button>
                 )}
               </div>
             </>

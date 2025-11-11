@@ -318,6 +318,13 @@ export const getPaymentDetails = async (req: AuthenticatedRequest, res: Response
 
     const payment = await paymentService.getPaymentDetails(paymentId);
 
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: "Payment not found",
+      });
+    }
+
     res.status(200).json({
       success: true,
       data: payment,

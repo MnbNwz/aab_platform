@@ -452,11 +452,7 @@ const DashboardContent = memo<DashboardContentProps>(
           ...baseProps,
           title: "Billing History",
           subtitle: "Payment history and receipts",
-          children: (
-            <BillingHistoryTable
-              userRole={user.role as "customer" | "contractor"}
-            />
-          ),
+          children: <BillingHistoryTable />,
         },
         // Contractor job requests
         ...(isContractorRole

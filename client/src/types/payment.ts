@@ -50,6 +50,10 @@ export interface Payment {
   updatedAt: string;
   membership?: PaymentMembership | null;
   jobDetails?: PaymentJobDetails | null;
+  details?: {
+    type: string;
+    data?: Record<string, any>;
+  } | null;
 }
 
 export interface PaymentHistoryResponse {
@@ -67,7 +71,6 @@ export interface PaymentFilters {
   page?: number;
   limit?: number;
   status?: Payment["status"] | "refunded" | "all";
-  type?: "membership" | "job" | "all";
   startDate?: string;
   endDate?: string;
 }

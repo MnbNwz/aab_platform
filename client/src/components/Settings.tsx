@@ -24,6 +24,7 @@ import {
 } from "../utils/imageCompression";
 import type { AppDispatch, RootState } from "../store";
 import { isAdmin, isContractor, isNotAdmin } from "../utils";
+import useContractorMembershipMetrics from "../hooks/useContractorMembershipMetrics";
 
 const Settings: React.FC<SettingsProps> = ({
   user,
@@ -51,15 +52,7 @@ const Settings: React.FC<SettingsProps> = ({
 
   const isContractorRole = useMemo(() => isContractor(user.role), [user.role]);
 
-  const settings = useMemo(
-    () => ({
-      serviceRadius: isContractorRole ? 25 : 15,
-      autoRespond: isContractorRole ? false : undefined,
-      quoteTimeframe: isContractorRole ? "24h" : undefined,
-      minJobValue: isContractorRole ? 100 : undefined,
-    }),
-    [isContractorRole]
-  );
+  const { radiusLabel, delayLabel } = useContractorMembershipMetrics();
 
   const handleEmailChangeLocal = async (oldEmail: string, newEmail: string) => {
     if (onEmailChange) {
@@ -236,30 +229,16 @@ const Settings: React.FC<SettingsProps> = ({
             id: "service-radius",
             label: "Search Radius",
             description:
-              "Distance to search for contractors (km) - Based on your membership plan",
+              "Maximum distance for new job notifications based on your membership",
             type: "info",
-            value: `${settings.serviceRadius} km`,
+            value: radiusLabel,
           },
           {
-            id: "auto-respond",
-            label: "Auto-Respond",
-            description: "Automatically respond to job requests",
+            id: "job-access-delay",
+            label: "Job Access Delay",
+            description: "Time before new jobs become available to you",
             type: "info",
-            value: settings.autoRespond ? "Enabled" : "Disabled",
-          },
-          {
-            id: "quote-timeframe",
-            label: "Quote Timeframe",
-            description: "Time to provide quotes",
-            type: "info",
-            value: settings.quoteTimeframe || "24h",
-          },
-          {
-            id: "min-job-value",
-            label: "Minimum Job Value",
-            description: "Minimum job value you accept",
-            type: "info",
-            value: `$${settings.minJobValue || 100}`,
+            value: delayLabel,
           },
         ],
       });
@@ -317,7 +296,14 @@ const Settings: React.FC<SettingsProps> = ({
     }
 
     return baseSections;
-  }, [user, settings, onProfileEdit, currentMembership, isContractorRole]);
+  }, [
+    user,
+    onProfileEdit,
+    currentMembership,
+    isContractorRole,
+    radiusLabel,
+    delayLabel,
+  ]);
 
   const activeSectionData = settingsSections.find(
     (section) => section.id === activeSection

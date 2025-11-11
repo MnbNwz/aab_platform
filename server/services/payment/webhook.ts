@@ -353,6 +353,7 @@ export const createNewMembership = async (
     stripeSessionId: session.id,
     stripePaymentIntentId: session.payment_intent as string,
     billingPeriod,
+    planId: new Types.ObjectId(planId),
   });
   await payment.save();
 

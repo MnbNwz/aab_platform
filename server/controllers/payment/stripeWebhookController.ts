@@ -235,6 +235,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
       stripeInvoiceId: invoice.id,
       stripePaymentIntentId: (invoice as any).payment_intent as string,
       billingPeriod: membership.billingPeriod,
+      planId: membership.planId,
     });
     await payment.save();
 

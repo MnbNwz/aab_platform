@@ -21,6 +21,13 @@ import { getMembershipEndDate } from "@utils/core";
 import { Types } from "@models/types";
 import mongoose from "mongoose";
 import { stripe } from "@config/stripe";
+import {
+  PaymentDetailsPayload,
+  PaymentMembershipDetails,
+  PaymentJobDetails,
+  PaymentDetailType,
+} from "@services/payment/types/paymentDetails";
+import { formatAmountCents, formatPersonName } from "@services/payment/helpers";
 
 // MEMBERSHIP PAYMENTS
 export const createMembershipCheckout = async (
@@ -82,6 +89,7 @@ export const createMembershipCheckout = async (
       stripeCustomerId,
       stripePaymentIntentId: paymentIntent.id,
       billingPeriod,
+      planId: membershipPlan._id,
     });
 
     await payment.save();
@@ -152,6 +160,7 @@ export const createOneTimeMembershipCheckout = async (
       stripeCustomerId,
       stripeSessionId: session.id,
       billingPeriod,
+      planId: membershipPlan._id,
     });
 
     await payment.save();
@@ -176,12 +185,24 @@ export const confirmMembershipPayment = async (paymentIntentId: string) => {
 
     // Update payment status
     payment.status = "succeeded";
-    await payment.save();
+    let membershipPlan =
+      payment.planId != null
+        ? await MembershipPlan.findById(payment.planId)
+        : await MembershipPlan.findOne({
+            $or: [{ monthlyPrice: payment.amount }, { yearlyPrice: payment.amount }],
+          });
 
-    // Get the membership plan to get the correct planId
-    const membershipPlan = await MembershipPlan.findOne({
-      $or: [{ monthlyPrice: payment.amount }, { yearlyPrice: payment.amount }],
-    });
+    if (!membershipPlan) {
+      membershipPlan = await MembershipPlan.findOne({
+        $or: [{ monthlyPrice: payment.amount }, { yearlyPrice: payment.amount }],
+      });
+    }
+
+    if (membershipPlan && !payment.planId) {
+      payment.planId = membershipPlan._id;
+    }
+
+    await payment.save();
 
     if (!membershipPlan) {
       throw new Error("Membership plan not found for this payment");
@@ -228,6 +249,13 @@ export const confirmOneTimeMembershipPayment = async (sessionId: string) => {
     // Update payment status
     payment.status = "succeeded";
     payment.stripePaymentIntentId = session.payment_intent as string;
+    if (
+      !payment.planId &&
+      session.metadata?.planId &&
+      mongoose.Types.ObjectId.isValid(session.metadata.planId)
+    ) {
+      payment.planId = new mongoose.Types.ObjectId(session.metadata.planId as string);
+    }
     await payment.save();
 
     // Get membership plan details
@@ -563,14 +591,279 @@ export const getPaymentHistory = async (
   }
 };
 
-export const getPaymentDetails = async (paymentId: string) => {
+export const getPaymentDetails = async (
+  paymentId: string,
+): Promise<
+  | PaymentDetailsPayload<"membership", PaymentMembershipDetails>
+  | PaymentDetailsPayload<"job", PaymentJobDetails>
+  | PaymentDetailsPayload<"general", null>
+  | null
+> => {
   try {
-    const payment = await Payment.findById(paymentId);
-    if (!payment) {
-      throw new Error("Payment not found");
+    if (!mongoose.Types.ObjectId.isValid(paymentId)) {
+      return null;
     }
 
-    return payment;
+    const [paymentAggregation] = await Payment.aggregate([
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(paymentId),
+        },
+      },
+      {
+        $lookup: {
+          from: "usermemberships",
+          let: { paymentId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$paymentId", "$$paymentId"],
+                },
+              },
+            },
+            { $sort: { createdAt: -1 } },
+            { $limit: 1 },
+            {
+              $lookup: {
+                from: "membershipplans",
+                localField: "planId",
+                foreignField: "_id",
+                as: "plan",
+                pipeline: [{ $project: { name: 1 } }],
+              },
+            },
+            {
+              $addFields: {
+                plan: { $arrayElemAt: ["$plan", 0] },
+              },
+            },
+          ],
+          as: "membership",
+        },
+      },
+      {
+        $lookup: {
+          from: "membershipplans",
+          localField: "planId",
+          foreignField: "_id",
+          as: "paymentPlan",
+          pipeline: [{ $project: { name: 1 } }],
+        },
+      },
+      {
+        $addFields: {
+          membership: { $arrayElemAt: ["$membership", 0] },
+          paymentPlan: { $arrayElemAt: ["$paymentPlan", 0] },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          userId: 1,
+          amount: 1,
+          currency: 1,
+          status: 1,
+          billingPeriod: 1,
+          failureReason: 1,
+          email: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          membership: 1,
+          paymentPlan: 1,
+        },
+      },
+    ]);
+
+    if (paymentAggregation) {
+      const isMembershipPayment =
+        !!paymentAggregation.membership || !!paymentAggregation.billingPeriod;
+
+      const baseResponse = {
+        id: paymentAggregation._id.toString(),
+        type: (isMembershipPayment ? "membership" : "general") as PaymentDetailType,
+        status: paymentAggregation.status,
+        amount: paymentAggregation.amount,
+        amountFormatted: formatAmountCents(paymentAggregation.amount),
+        currency: paymentAggregation.currency,
+        failureReason: paymentAggregation.failureReason ?? null,
+        createdAt: paymentAggregation.createdAt,
+        updatedAt: paymentAggregation.updatedAt,
+      };
+
+      if (isMembershipPayment) {
+        let computedCycleEnd = paymentAggregation.membership?.endDate ?? null;
+        if (!computedCycleEnd && paymentAggregation.billingPeriod && paymentAggregation.createdAt) {
+          const start = new Date(paymentAggregation.createdAt);
+          if (paymentAggregation.billingPeriod === "monthly") {
+            start.setMonth(start.getMonth() + 1);
+          } else if (paymentAggregation.billingPeriod === "yearly") {
+            start.setFullYear(start.getFullYear() + 1);
+          }
+          computedCycleEnd = start;
+        }
+
+        let planName =
+          paymentAggregation.membership?.plan?.name ?? paymentAggregation.paymentPlan?.name ?? null;
+
+        if (!planName && paymentAggregation.userId) {
+          const latestMembership = await UserMembership.findOne({
+            userId: paymentAggregation.userId,
+          })
+            .sort({ updatedAt: -1 })
+            .populate({ path: "planId", select: "name" })
+            .lean<{ planId?: { name?: string } } | null>();
+
+          planName = (latestMembership as any)?.planId?.name ?? null;
+        }
+
+        return {
+          ...baseResponse,
+          type: "membership",
+          details: {
+            type: "membership",
+            data: {
+              planName,
+              status: paymentAggregation.membership?.status ?? paymentAggregation.status,
+              cycleEnd: computedCycleEnd,
+            },
+          },
+        };
+      }
+
+      return {
+        ...baseResponse,
+        type: "general",
+        details: {
+          type: "general",
+          data: null,
+        },
+      };
+    }
+
+    const [jobPaymentAggregation] = await JobPayment.aggregate([
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(paymentId),
+        },
+      },
+      {
+        $lookup: {
+          from: "jobrequests",
+          localField: "jobRequestId",
+          foreignField: "_id",
+          as: "jobRequest",
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                title: 1,
+                service: 1,
+                status: 1,
+                referenceNumber: 1,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "contractorId",
+          foreignField: "_id",
+          as: "contractor",
+          pipeline: [{ $project: { firstName: 1, lastName: 1, companyName: 1 } }],
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "customerId",
+          foreignField: "_id",
+          as: "customer",
+          pipeline: [{ $project: { firstName: 1, lastName: 1 } }],
+        },
+      },
+      {
+        $addFields: {
+          jobRequest: { $arrayElemAt: ["$jobRequest", 0] },
+          contractor: { $arrayElemAt: ["$contractor", 0] },
+          customer: { $arrayElemAt: ["$customer", 0] },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          totalAmount: 1,
+          jobStatus: 1,
+          jobRequest: 1,
+          contractor: 1,
+          customer: 1,
+          refunds: 1,
+          milestones: 1,
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      },
+    ]);
+
+    if (jobPaymentAggregation) {
+      return {
+        id: jobPaymentAggregation._id.toString(),
+        type: "job",
+        status: jobPaymentAggregation.jobStatus,
+        amount: jobPaymentAggregation.totalAmount,
+        amountFormatted: formatAmountCents(jobPaymentAggregation.totalAmount),
+        currency: "usd",
+        failureReason: null,
+        createdAt: jobPaymentAggregation.createdAt,
+        updatedAt: jobPaymentAggregation.updatedAt,
+        details: {
+          type: "job",
+          data: {
+            jobId: jobPaymentAggregation.jobRequest?._id?.toString() ?? null,
+            jobSummary: jobPaymentAggregation.jobRequest
+              ? {
+                  title: jobPaymentAggregation.jobRequest.title ?? null,
+                  service: jobPaymentAggregation.jobRequest.service ?? null,
+                  status: jobPaymentAggregation.jobRequest.status ?? null,
+                  referenceNumber: jobPaymentAggregation.jobRequest.referenceNumber ?? null,
+                }
+              : null,
+            participants: {
+              contractor: jobPaymentAggregation.contractor
+                ? {
+                    id: jobPaymentAggregation.contractor._id?.toString() ?? null,
+                    name: formatPersonName(jobPaymentAggregation.contractor),
+                    companyName: jobPaymentAggregation.contractor.companyName ?? null,
+                  }
+                : null,
+              customer: jobPaymentAggregation.customer
+                ? {
+                    id: jobPaymentAggregation.customer._id?.toString() ?? null,
+                    name: formatPersonName(jobPaymentAggregation.customer),
+                  }
+                : null,
+            },
+            refunds:
+              jobPaymentAggregation.refunds?.map((refund: any) => ({
+                amount: refund.amount,
+                amountFormatted: formatAmountCents(refund.amount),
+                reason: refund.reason,
+                processedAt: refund.processedAt,
+              })) ?? [],
+            milestones:
+              jobPaymentAggregation.milestones?.map((milestone: any) => ({
+                name: milestone.name,
+                status: milestone.status,
+                completedAt: milestone.completedAt ?? null,
+              })) ?? [],
+          },
+        },
+      };
+    }
+
+    return null;
   } catch (error) {
     console.error("Error getting payment details:", error);
     throw error;
