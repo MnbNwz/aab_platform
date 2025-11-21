@@ -38,6 +38,7 @@ export interface JobState {
   loading: boolean;
   error: string | null;
   createLoading: boolean;
+  createError: string | null;
   updateLoading: boolean;
   cancelLoading: boolean;
   pagination: {

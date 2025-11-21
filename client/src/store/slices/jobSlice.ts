@@ -16,6 +16,7 @@ const initialState: JobState = {
   loading: false,
   error: null,
   createLoading: false,
+  createError: null,
   updateLoading: false,
   cancelLoading: false,
   pagination: {
@@ -76,18 +77,18 @@ const jobSlice = createSlice({
       // Create Job
       .addCase(createJobThunk.pending, (state) => {
         state.createLoading = true;
-        state.error = null;
+        state.createError = null;
       })
       .addCase(createJobThunk.fulfilled, (state, action) => {
         state.createLoading = false;
-        state.error = null;
+        state.createError = null;
         if (action.payload.success) {
           state.jobs.unshift(action.payload.job);
         }
       })
       .addCase(createJobThunk.rejected, (state, action) => {
         state.createLoading = false;
-        state.error = action.payload as string;
+        state.createError = action.payload as string;
       })
 
       // Get Jobs

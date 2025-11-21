@@ -232,7 +232,11 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
 
   const modalFooter = (
     <div className="flex justify-end items-center gap-3">
-      <Button variant="secondary" onClick={onClose} leftIcon={<X className="h-4 w-4" />}>
+      <Button
+        variant="secondary"
+        onClick={onClose}
+        leftIcon={<X className="h-4 w-4" />}
+      >
         Close
       </Button>
       {onEditJob && (isAdmin || !hasAcceptedBid) && (

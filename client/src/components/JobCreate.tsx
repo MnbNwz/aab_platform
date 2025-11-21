@@ -38,7 +38,7 @@ const JobCreate: React.FC<JobCreateProps> = ({
   const [selectedPropertyForView, setSelectedPropertyForView] =
     useState<any>(null);
 
-  const { createLoading, error } = useSelector((state: RootState) => state.job);
+  const { createLoading } = useSelector((state: RootState) => state.job);
 
   const {
     control,
@@ -254,6 +254,11 @@ const JobCreate: React.FC<JobCreateProps> = ({
       showToast.success("Job request created successfully!");
       reset();
       onClose?.(); // Close the modal
+    } else if (createJobThunk.rejected.match(result)) {
+      // Show error in toast - the error message comes from the API
+      const errorMessage =
+        (result.payload as string) || "Failed to create job request";
+      showToast.error(errorMessage);
     }
   };
 
@@ -290,21 +295,6 @@ const JobCreate: React.FC<JobCreateProps> = ({
         onSubmit={handleSubmit(onSubmit)}
         className="space-y-4 sm:space-y-6"
       >
-        {error && (
-          <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-5 py-4 rounded-lg text-sm shadow-sm">
-            <div className="flex items-center gap-2">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <span>{error}</span>
-            </div>
-          </div>
-        )}
-
         {/* Job Title - Full Width */}
         <Controller
           name="title"
@@ -521,13 +511,7 @@ const JobCreate: React.FC<JobCreateProps> = ({
 
         {/* Submit Button */}
         <div className="flex gap-4 pt-4">
-          <Button
-            type="button"
-            variant="secondary"
-            fullWidth
-            onClick={onClose}
-            size="lg"
-          >
+          <Button type="button" variant="secondary" fullWidth onClick={onClose}>
             Cancel
           </Button>
           <Button
@@ -536,7 +520,6 @@ const JobCreate: React.FC<JobCreateProps> = ({
             fullWidth
             disabled={createLoading}
             loading={createLoading}
-            size="lg"
           >
             Create Job Request
           </Button>
