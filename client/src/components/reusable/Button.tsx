@@ -29,13 +29,13 @@ const Button: React.FC<ButtonProps> = ({
   disabled,
   ...props
 }) => {
-  const baseClasses = "font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2";
+  const baseClasses = "font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-1 xs:gap-2";
 
   const variantClasses = {
     primary:
       "bg-primary-600 text-white hover:bg-primary-700 focus:ring-2 focus:ring-primary-500",
     secondary:
-      "bg-white text-gray-700 border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400",
+      "bg-white text-primary-700 border-2 border-primary-300 hover:bg-primary-50 hover:border-primary-400",
     accent:
       "bg-gradient-to-r from-accent-500 to-accent-600 text-white hover:from-accent-600 hover:to-accent-700 focus:ring-2 focus:ring-accent-500",
     danger:
@@ -48,9 +48,9 @@ const Button: React.FC<ButtonProps> = ({
 
   const sizeClasses = {
     xs: iconOnly || circular ? "p-1" : "px-2 py-1 text-xs",
-    sm: iconOnly || circular ? "p-1.5" : "px-3 py-1.5 text-sm",
-    md: iconOnly || circular ? "p-2" : "px-4 py-2.5 text-base",
-    lg: iconOnly || circular ? "p-3" : "px-6 py-3.5 text-lg",
+    sm: iconOnly || circular ? "p-1 xs:p-1.5" : "px-2 xs:px-3 py-1 xs:py-1.5 text-xs xs:text-sm",
+    md: iconOnly || circular ? "p-1.5 xs:p-2" : "px-3 xs:px-4 py-1.5 xs:py-2.5 text-sm xs:text-base",
+    lg: iconOnly || circular ? "p-2 xs:p-3" : "px-4 xs:px-6 py-2 xs:py-3.5 text-base xs:text-lg",
   };
 
   const widthClass = fullWidth ? "w-full" : "";

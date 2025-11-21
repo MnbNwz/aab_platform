@@ -93,7 +93,7 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
         <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-lg">
           <div className="flex flex-col items-center space-y-3">
             <div className="w-8 h-8 border-4 border-accent-500 border-t-transparent rounded-full animate-spin"></div>
-            <Text size="sm" className="text-gray-600 font-medium">
+            <Text size="sm" className="text-primary-600 font-medium">
               Loading profile details...
             </Text>
           </div>
@@ -129,7 +129,7 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
             </div>
           </div>
           <div className="flex-1 min-w-0">
-            <Text size="lg" weight="bold" className="text-gray-900 truncate">
+            <Text size="lg" weight="bold" className="text-primary-900 truncate">
               {user.firstName} {user.lastName}
             </Text>
             <div className="flex items-center space-x-2 mt-1 flex-wrap">
@@ -153,7 +153,7 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
           <Text
             size="lg"
             weight="semibold"
-            className="text-gray-900 border-b border-gray-200 pb-2"
+            className="text-primary-900 border-b border-primary-200 pb-2"
           >
             Contact Information
           </Text>
@@ -162,18 +162,18 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
             <InfoField
               label="Email"
               value={user.email}
-              containerClassName="p-2 xs:p-3 bg-gray-50 rounded-lg"
-              labelClassName="text-xs xs:text-sm text-gray-600"
-              valueClassName="font-medium text-gray-900 text-sm xs:text-base truncate"
+              containerClassName="p-2 xs:p-3 bg-primary-50 rounded-lg"
+              labelClassName="text-xs xs:text-sm text-primary-600"
+              valueClassName="font-medium text-primary-900 text-sm xs:text-base truncate"
             />
 
             {user.phone && (
               <InfoField
                 label="Phone"
                 value={user.phone}
-                containerClassName="p-2 xs:p-3 bg-gray-50 rounded-lg"
-                labelClassName="text-xs xs:text-sm text-gray-600"
-                valueClassName="font-medium text-gray-900 text-sm xs:text-base"
+                containerClassName="p-2 xs:p-3 bg-primary-50 rounded-lg"
+                labelClassName="text-xs xs:text-sm text-primary-600"
+                valueClassName="font-medium text-primary-900 text-sm xs:text-base"
               />
             )}
 
@@ -193,9 +193,9 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
                     )}, ${user.geoHome.coordinates[0].toFixed(4)}`
                   )
                 }
-                containerClassName="p-2 xs:p-3 bg-gray-50 rounded-lg sm:col-span-2"
-                labelClassName="text-xs xs:text-sm text-gray-600"
-                valueClassName="font-medium text-gray-900 text-xs xs:text-sm break-all"
+                containerClassName="p-2 xs:p-3 bg-primary-50 rounded-lg sm:col-span-2"
+                labelClassName="text-xs xs:text-sm text-primary-600"
+                valueClassName="font-medium text-primary-900 text-xs xs:text-sm break-all"
               />
             )}
           </div>
@@ -206,7 +206,7 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
           <Text
             size="lg"
             weight="semibold"
-            className="text-gray-900 border-b border-gray-200 pb-2"
+            className="text-primary-900 border-b border-primary-200 pb-2"
           >
             Account Status
           </Text>
@@ -219,8 +219,8 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
                   {capitalizeFirst(user.status || "")}
                 </Badge>
               }
-              containerClassName="p-2 xs:p-3 bg-gray-50 rounded-lg"
-              labelClassName="text-xs xs:text-sm text-gray-600"
+              containerClassName="p-2 xs:p-3 bg-primary-50 rounded-lg"
+              labelClassName="text-xs xs:text-sm text-primary-600"
             />
 
             {user.approval && (
@@ -231,9 +231,9 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
                     ? "Approved"
                     : capitalizeFirst(user.approval || "")
                 }
-                containerClassName="p-2 xs:p-3 bg-gray-50 rounded-lg"
-                labelClassName="text-xs xs:text-sm text-gray-600"
-                valueClassName="font-medium text-gray-900 text-sm xs:text-base"
+                containerClassName="p-2 xs:p-3 bg-primary-50 rounded-lg"
+                labelClassName="text-xs xs:text-sm text-primary-600"
+                valueClassName="font-medium text-primary-900 text-sm xs:text-base"
               />
             )}
           </div>
@@ -245,7 +245,7 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
             <Text
               size="lg"
               weight="semibold"
-              className="text-gray-900 border-b border-gray-200 pb-2"
+              className="text-primary-900 border-b border-primary-200 pb-2"
             >
               Business Information
             </Text>
@@ -255,9 +255,9 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
                 <InfoField
                   label="Company Name"
                   value={user.contractor.companyName}
-                  containerClassName="p-2 xs:p-3 bg-gray-50 rounded-lg"
-                  labelClassName="text-xs xs:text-sm text-gray-600"
-                  valueClassName="font-medium text-gray-900 text-sm xs:text-base truncate"
+                  containerClassName="p-2 xs:p-3 bg-primary-50 rounded-lg"
+                  labelClassName="text-xs xs:text-sm text-primary-600"
+                  valueClassName="font-medium text-primary-900 text-sm xs:text-base truncate"
                 />
               )}
 
@@ -265,16 +265,16 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
                 <InfoField
                   label="License"
                   value={user.contractor.license}
-                  containerClassName="p-2 xs:p-3 bg-gray-50 rounded-lg"
-                  labelClassName="text-xs xs:text-sm text-gray-600"
-                  valueClassName="font-medium text-gray-900 text-sm xs:text-base"
+                  containerClassName="p-2 xs:p-3 bg-primary-50 rounded-lg"
+                  labelClassName="text-xs xs:text-sm text-primary-600"
+                  valueClassName="font-medium text-primary-900 text-sm xs:text-base"
                 />
               )}
 
               {user.contractor.services &&
                 user.contractor.services.length > 0 && (
-                  <div className="p-2 xs:p-3 bg-gray-50 rounded-lg sm:col-span-2">
-                    <Text size="sm" className="text-gray-600 mb-1">
+                  <div className="p-2 xs:p-3 bg-primary-50 rounded-lg sm:col-span-2">
+                    <Text size="sm" className="text-primary-600 mb-1">
                       Services
                     </Text>
                     <div className="flex flex-wrap gap-1 xs:gap-2 mt-1">
@@ -288,8 +288,8 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
                 )}
 
               {user.contractor.docs && user.contractor.docs.length > 0 && (
-                <div className="p-2 xs:p-3 bg-gray-50 rounded-lg sm:col-span-2">
-                  <Text size="sm" className="text-gray-600 mb-2">
+                <div className="p-2 xs:p-3 bg-primary-50 rounded-lg sm:col-span-2">
+                  <Text size="sm" className="text-primary-600 mb-2">
                     Documents
                   </Text>
                   <div className="mt-2 space-y-2">
@@ -300,7 +300,7 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
                       >
                         <Text
                           size="sm"
-                          className="text-gray-700 truncate flex-1 mr-2"
+                          className="text-primary-700 truncate flex-1 mr-2"
                         >
                           Attachment
                         </Text>
@@ -326,7 +326,7 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
             <Text
               size="lg"
               weight="semibold"
-              className="text-gray-900 border-b border-gray-200 pb-2"
+              className="text-primary-900 border-b border-primary-200 pb-2"
             >
               Customer Information
             </Text>
@@ -334,9 +334,9 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
             <InfoField
               label="Default Property Type"
               value={user.customer.defaultPropertyType}
-              containerClassName="p-2 xs:p-3 bg-gray-50 rounded-lg"
-              labelClassName="text-xs xs:text-sm text-gray-600"
-              valueClassName="font-medium text-gray-900 text-sm xs:text-base capitalize"
+              containerClassName="p-2 xs:p-3 bg-primary-50 rounded-lg"
+              labelClassName="text-xs xs:text-sm text-primary-600"
+              valueClassName="font-medium text-primary-900 text-sm xs:text-base capitalize"
             />
           </div>
         )}

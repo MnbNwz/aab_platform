@@ -8,6 +8,7 @@ import { showToast } from "../utils/toast";
 import type { JobCreateProps } from "../types/component";
 import type { JobFormInputs } from "../types/job";
 import { isCustomer, isAdmin, isContractor } from "../utils";
+import { calculateBudgetFromSelection } from "../utils/budgetCalculation";
 import PropertyViewModal from "./dashboard/PropertyViewModal";
 import {
   TextInput,
@@ -26,6 +27,7 @@ const JobCreate: React.FC<JobCreateProps> = ({
   const dispatch = useDispatch<AppDispatch>();
   const {
     services,
+    extended: extendedServices,
     isLoading: servicesLoading,
     isInitialized,
   } = useSelector((state: RootState) => state.services);
@@ -37,13 +39,6 @@ const JobCreate: React.FC<JobCreateProps> = ({
     useState<any>(null);
 
   const { createLoading, error } = useSelector((state: RootState) => state.job);
-
-  const calculatedBudget = useMemo(() => {
-    if (initialEstimate !== null && initialEstimate !== undefined) {
-      return initialEstimate > 1000 ? initialEstimate / 100 : initialEstimate;
-    }
-    return 5000.0;
-  }, [initialEstimate]);
 
   const {
     control,
@@ -57,11 +52,60 @@ const JobCreate: React.FC<JobCreateProps> = ({
       title: "",
       description: "",
       category: "",
-      estimate: calculatedBudget.toFixed(2),
+      estimate: initialEstimate
+        ? initialEstimate > 1000
+          ? (initialEstimate / 100).toFixed(2)
+          : initialEstimate.toFixed(2)
+        : "0.00",
       property: "",
       timeline: "",
     },
   });
+
+  // Watch property and category for dynamic budget calculation
+  const selectedPropertyId = watch("property");
+  const selectedCategory = watch("category");
+
+  // Get selected property details - recalculates when property changes
+  const selectedProperty = useMemo(() => {
+    if (!selectedPropertyId || properties.length === 0) return null;
+    return properties.find((p) => p._id === selectedPropertyId) || null;
+  }, [selectedPropertyId, properties]);
+
+  // Calculate budget dynamically based on property area and service category
+  // This recalculates whenever property, category, or extendedServices change
+  const calculatedBudget = useMemo(() => {
+    // If property and category are selected, always calculate dynamically
+    // This ensures fresh calculation when property changes
+    if (selectedProperty && selectedCategory && extendedServices) {
+      const budget = calculateBudgetFromSelection(
+        selectedProperty.area,
+        selectedProperty.areaUnit,
+        selectedCategory,
+        extendedServices
+      );
+      // Return calculated budget or 0 if calculation fails
+      return budget > 0 ? budget : 0;
+    }
+
+    // Only use initialEstimate if no property is selected (backward compatibility)
+    if (
+      !selectedPropertyId &&
+      initialEstimate !== null &&
+      initialEstimate !== undefined
+    ) {
+      return initialEstimate > 1000 ? initialEstimate / 100 : initialEstimate;
+    }
+
+    // Default fallback
+    return 0;
+  }, [
+    selectedProperty,
+    selectedCategory,
+    extendedServices,
+    selectedPropertyId,
+    initialEstimate,
+  ]);
 
   useEffect(() => {
     if (!isInitialized && !servicesLoading) {
@@ -96,9 +140,13 @@ const JobCreate: React.FC<JobCreateProps> = ({
     }
   }, [initialProperty, setValue]);
 
-  // Set calculated budget in form
+  // Set calculated budget in form - updates immediately when property or category changes
+  // This ensures fresh budget calculation whenever property or service category changes
   useEffect(() => {
-    setValue("estimate", calculatedBudget.toFixed(2));
+    setValue("estimate", calculatedBudget.toFixed(2), {
+      shouldValidate: false,
+      shouldDirty: false,
+    });
   }, [calculatedBudget, setValue]);
 
   const onSubmit = async (data: JobFormInputs) => {
@@ -391,8 +439,12 @@ const JobCreate: React.FC<JobCreateProps> = ({
             value={calculatedBudget.toFixed(2)}
             readOnly
             disabled
-            leftIcon={<span className="text-primary-600 font-medium">$</span>}
-            helperText="Enter your estimated budget"
+            rightIcon={<span className="text-primary-600 font-medium">$</span>}
+            helperText={
+              selectedProperty && selectedCategory
+                ? "Calculated based on property area and service category"
+                : "Select property and service category to calculate budget"
+            }
             inputClassName="bg-primary-50 cursor-not-allowed"
           />
         </div>

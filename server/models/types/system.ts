@@ -10,3 +10,13 @@ export interface IContractorServices extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface IContractorServicesExtended extends Document {
+  _id: Types.ObjectId;
+  name: string; // Scope
+  materialUnit?: number; // Material ur
+  laborUnit?: number; // Labor unit
+  comment?: string; // Comment/
+  createdAt: Date;
+  updatedAt: Date;
+}

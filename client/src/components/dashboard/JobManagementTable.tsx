@@ -480,7 +480,7 @@ const JobManagementTable: React.FC = memo(() => {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         title="Create New Job"
-        maxWidth="2xl"
+        maxWidth="4xl"
         showFooter={false}
       >
         <JobCreate

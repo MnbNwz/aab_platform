@@ -76,9 +76,9 @@ const Text: React.FC<TextProps> = ({
   // Color-based styles (overrides variant if specified)
   const colorClasses = {
     primary: "text-primary-600",
-    secondary: "text-gray-600",
+    secondary: "text-primary-600",
     accent: "text-accent-600",
-    gray: "text-gray-500",
+    gray: "text-primary-500",
     error: "text-red-500",
     success: "text-green-600",
     warning: "text-orange-600",

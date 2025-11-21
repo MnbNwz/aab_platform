@@ -53,14 +53,14 @@ const SelectInput = forwardRef<HTMLSelectElement, SelectInputProps>(
     };
 
     const baseSelectClasses =
-      "w-full rounded-lg px-3 py-2 sm:py-3 border border-primary-300 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 text-sm sm:text-base bg-white text-primary-900 appearance-none transition-all duration-200";
+      "w-full rounded-lg px-2 xs:px-3 py-1.5 xs:py-2 sm:py-3 border border-primary-300 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 text-xs xs:text-sm sm:text-base bg-white text-primary-900 appearance-none transition-all duration-200";
 
     const errorSelectClasses = error
       ? "border-red-300 focus:border-red-500 focus:ring-red-500"
       : "";
 
     const disabledClasses = props.disabled
-      ? "bg-gray-50 cursor-not-allowed opacity-60"
+      ? "bg-primary-50 cursor-not-allowed opacity-60"
       : "";
 
     const finalSelectClasses = `${baseSelectClasses} ${errorSelectClasses} ${disabledClasses} ${selectClassName} ${className}`;
@@ -70,7 +70,7 @@ const SelectInput = forwardRef<HTMLSelectElement, SelectInputProps>(
         {label && (
           <label
             htmlFor={props.id || props.name}
-            className={`block text-primary-700 font-medium mb-1 text-sm sm:text-base ${labelClassName}`}
+            className={`block text-primary-700 font-medium mb-1 text-xs xs:text-sm sm:text-base ${labelClassName}`}
           >
             {label}
             {required && <span className="text-accent-500 ml-1">*</span>}

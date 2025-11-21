@@ -52,15 +52,28 @@ const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
       return widthClasses[width] || "w-full";
     };
 
+    // Build padding classes based on icon presence
+    const getPaddingClasses = () => {
+      if (leftIcon && rightIcon) {
+        return "pl-8 xs:pl-10 pr-8 xs:pr-10";
+      } else if (leftIcon) {
+        return "pl-8 xs:pl-10 pr-2 xs:pr-3";
+      } else if (rightIcon) {
+        return "pl-2 xs:pl-3 pr-8 xs:pr-10";
+      } else {
+        return "px-2 xs:px-3";
+      }
+    };
+
     const baseInputClasses =
-      "w-full rounded-lg px-3 py-2 sm:py-3 border border-primary-300 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 text-sm sm:text-base bg-white text-primary-900 placeholder-gray-300 transition-all duration-200";
+      `w-full rounded-lg ${getPaddingClasses()} py-1.5 xs:py-2 sm:py-3 border border-primary-300 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 text-xs xs:text-sm sm:text-base bg-white text-primary-900 placeholder-primary-400 transition-all duration-200`;
 
     const errorInputClasses = error
       ? "border-red-300 focus:border-red-500 focus:ring-red-500"
       : "";
 
     const disabledClasses = props.disabled
-      ? "bg-gray-50 cursor-not-allowed opacity-60"
+      ? "bg-primary-50 cursor-not-allowed opacity-60"
       : "";
 
     const finalInputClasses = `${baseInputClasses} ${errorInputClasses} ${disabledClasses} ${inputClassName} ${className}`;
@@ -70,7 +83,7 @@ const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
         {label && (
           <label
             htmlFor={props.id || props.name}
-            className={`block text-primary-700 font-medium mb-1 text-sm sm:text-base ${labelClassName}`}
+            className={`block text-primary-700 font-medium mb-1 text-xs xs:text-sm sm:text-base ${labelClassName}`}
           >
             {label}
             {required && <span className="text-accent-500 ml-1">*</span>}
@@ -78,7 +91,7 @@ const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
         )}
         <div className="relative">
           {leftIcon && (
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-primary-600 pointer-events-none">
+            <div className="absolute left-2 xs:left-3 top-1/2 -translate-y-1/2 text-primary-600 pointer-events-none z-10 flex items-center">
               {leftIcon}
             </div>
           )}
@@ -88,13 +101,11 @@ const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
             min={min}
             max={max}
             step={step}
-            className={`${finalInputClasses} ${leftIcon ? "pl-10" : ""} ${
-              rightIcon ? "pr-10" : ""
-            }`}
+            className={finalInputClasses}
             {...props}
           />
           {rightIcon && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-primary-600 pointer-events-none">
+            <div className="absolute right-2 xs:right-3 top-1/2 -translate-y-1/2 text-primary-600 pointer-events-none z-10 flex items-center">
               {rightIcon}
             </div>
           )}

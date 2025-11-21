@@ -6,6 +6,7 @@ const initialState: ServicesState = {
   services: [],
   version: null,
   lastUpdated: null,
+  extended: null,
   isLoading: false,
   error: null,
   isInitialized: false,
@@ -31,6 +32,7 @@ const servicesSlice = createSlice({
         state.services = action.payload?.services;
         state.version = action.payload?.version;
         state.lastUpdated = action.payload?.lastUpdated;
+        state.extended = action.payload?.extended || null;
         state.isInitialized = true;
         state.error = null;
       })

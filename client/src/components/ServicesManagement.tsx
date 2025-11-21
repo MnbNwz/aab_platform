@@ -1,29 +1,33 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Plus, Check, Settings } from "lucide-react";
+import { Plus, Settings } from "lucide-react";
 import { api } from "../services/apiService";
 import { getServicesThunk } from "../store/thunks/servicesThunks";
 import { showToast } from "../utils/toast";
-import ConfirmModal from "./ui/ConfirmModal";
 import type { RootState, AppDispatch } from "../store";
+import type { CreateServiceRequest } from "../types/service";
+import {
+  BaseModal,
+  TextInput,
+  NumberInput,
+  TextareaInput,
+  Button,
+} from "./reusable";
 
 const ServicesManagement: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { services, isLoading } = useSelector(
     (state: RootState) => state.services
   );
-  const [localServices, setLocalServices] = useState<string[]>([]);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [newService, setNewService] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-
-  const hasChanges = useMemo(() => {
-    return (
-      JSON.stringify([...localServices].sort()) !==
-      JSON.stringify([...services].sort())
-    );
-  }, [localServices, services]);
+  const [formData, setFormData] = useState<CreateServiceRequest>({
+    name: "",
+    materialUnit: 0,
+    laborUnit: 0,
+    comment: "",
+  });
+  const [errors, setErrors] = useState<Partial<Record<keyof CreateServiceRequest, string>>>({});
 
   useEffect(() => {
     if (services.length === 0 && !isLoading) {
@@ -31,128 +35,120 @@ const ServicesManagement: React.FC = () => {
     }
   }, [dispatch, isLoading, services.length]);
 
-  useEffect(() => {
-    if (services.length > 0 && localServices.length === 0) {
-      setLocalServices(services);
-    }
-  }, [services, localServices.length]);
+  const validateForm = useCallback((): boolean => {
+    const newErrors: Partial<Record<keyof CreateServiceRequest, string>> = {};
 
-  const validateService = useCallback(
-    (service: string): string | null => {
-      if (!service.trim()) {
-        return "Service name is required";
-      }
-      if (service.trim().length < 2) {
-        return "Service name must be at least 2 characters";
-      }
-      if (service.trim().length > 50) {
-        return "Service name must be less than 50 characters";
-      }
-      const trimmedService = service.trim().toLowerCase();
-      if (localServices.includes(trimmedService)) {
-        return "Service already exists";
-      }
-      return null;
-    },
-    [localServices]
+    if (!formData.name.trim()) {
+      newErrors.name = "Service name is required";
+    } else if (formData.name.trim().length < 2) {
+      newErrors.name = "Service name must be at least 2 characters";
+    } else if (formData.name.trim().length > 50) {
+      newErrors.name = "Service name must be less than 50 characters";
+    }
+
+    if (formData.materialUnit <= 0) {
+      newErrors.materialUnit = "Material unit must be greater than 0";
+    }
+
+    if (formData.laborUnit <= 0) {
+      newErrors.laborUnit = "Labor unit must be greater than 0";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, [formData]);
+
+  const handleInputChange = useCallback(
+    (field: keyof CreateServiceRequest) =>
+      (
+        e: React.ChangeEvent<
+          HTMLInputElement | HTMLTextAreaElement
+        >
+      ) => {
+        const inputValue = e.target.value;
+        const value =
+          field === "materialUnit" || field === "laborUnit"
+            ? parseFloat(inputValue) || 0
+            : inputValue;
+        setFormData((prev) => ({ ...prev, [field]: value }));
+        if (errors[field]) {
+          setErrors((prev) => ({ ...prev, [field]: undefined }));
+        }
+      },
+    [errors]
   );
 
-  const handleCreateService = useCallback(() => {
-    const validationError = validateService(newService);
-    if (validationError) {
-      setError(validationError);
+  const handleSubmit = useCallback(async () => {
+    if (!validateForm()) {
       return;
     }
 
-    setError(null);
-    setLocalServices((prev) => [...prev, newService.trim().toLowerCase()]);
-    setNewService("");
-  }, [newService, validateService]);
-
-  const handleInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      setNewService(e.target.value);
-      setError(null);
-    },
-    []
-  );
-
-  const handleKeyPress = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Enter") {
-        handleCreateService();
-      }
-    },
-    [handleCreateService]
-  );
-
-  const handleSaveClick = useCallback(() => {
-    setShowConfirmModal(true);
-  }, []);
-
-  const confirmSave = useCallback(async () => {
-    setShowConfirmModal(false);
     setIsSubmitting(true);
-    setError(null);
-
     try {
-      await api.services.createServices(localServices);
+      const response = await api.services.createService({
+        name: formData.name.trim(),
+        materialUnit: formData.materialUnit,
+        laborUnit: formData.laborUnit,
+        comment: formData.comment.trim(),
+      });
+
+      showToast.success(response.message || "Service created successfully!");
       await dispatch(getServicesThunk());
-      showToast.success("Services updated successfully!");
+      setShowCreateModal(false);
+      setFormData({
+        name: "",
+        materialUnit: 0,
+        laborUnit: 0,
+        comment: "",
+      });
+      setErrors({});
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to update services";
-      setError(errorMessage);
+        err instanceof Error ? err.message : "Failed to create service";
       showToast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
-  }, [localServices, dispatch]);
+  }, [formData, validateForm, dispatch]);
 
-  const cancelSave = useCallback(() => {
-    setShowConfirmModal(false);
-  }, []);
-
-  const handleCancel = useCallback(() => {
-    setLocalServices(services);
-    setError(null);
-    setNewService("");
-  }, [services]);
+  const handleCloseModal = useCallback(() => {
+    if (!isSubmitting) {
+      setShowCreateModal(false);
+      setFormData({
+        name: "",
+        materialUnit: 0,
+        laborUnit: 0,
+        comment: "",
+      });
+      setErrors({});
+    }
+  }, [isSubmitting]);
 
   return (
     <div className="space-y-6">
-      <div className="bg-primary-50 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-primary-900 mb-3">
-          Add New Service
-        </h4>
-        <div className="flex space-x-3">
-          <div className="flex-1">
-            <input
-              type="text"
-              value={newService}
-              onChange={handleInputChange}
-              onKeyPress={handleKeyPress}
-              placeholder="Enter service name (e.g., Plumbing, Electrical)"
-              className="w-full px-3 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 text-sm placeholder-gray-300"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={handleCreateService}
-            disabled={!newService.trim()}
-            className="px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 flex items-center space-x-2"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="text-sm">Add</span>
-          </button>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg sm:text-xl font-semibold text-primary-900">
+            Services Management
+          </h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Manage service categories and their pricing rates
+          </p>
         </div>
-        {error && <p className="text-red-500 text-xs mt-2">{error}</p>}
+        <Button
+          variant="accent"
+          size="md"
+          onClick={() => setShowCreateModal(true)}
+          leftIcon={<Plus className="h-4 w-4" />}
+        >
+          Create New Service
+        </Button>
       </div>
 
       <div className="bg-white border border-primary-200 rounded-lg">
         <div className="px-4 py-3 border-b border-primary-200">
           <h4 className="text-sm font-medium text-primary-900">
-            Current Services ({localServices.length})
+            Current Services ({services.length})
           </h4>
         </div>
 
@@ -161,15 +157,15 @@ const ServicesManagement: React.FC = () => {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-500 mx-auto"></div>
             <p className="text-primary-500 text-sm mt-2">Loading services...</p>
           </div>
-        ) : localServices.length === 0 ? (
+        ) : services.length === 0 ? (
           <div className="p-8 text-center text-primary-500">
             <Settings className="h-12 w-12 mx-auto mb-4 text-primary-300" />
             <p className="text-lg">No services found</p>
-            <p className="text-sm">Add your first service above</p>
+            <p className="text-sm">Create your first service to get started</p>
           </div>
         ) : (
           <div className="divide-y divide-primary-200">
-            {localServices.map((service) => (
+            {services.map((service) => (
               <div
                 key={service}
                 className="px-4 py-3 flex items-center justify-between"
@@ -195,51 +191,87 @@ const ServicesManagement: React.FC = () => {
               About Services
             </h4>
             <p className="text-sm text-blue-700 mt-1">
-              Services can only be added, not modified or removed. Once added,
-              they will be available for contractors to categorize their skills
-              and for customers to find relevant contractors.
+              Services define the categories of work available on the platform.
+              Each service includes material and labor unit rates used for budget
+              calculations. Once created, services cannot be modified or removed.
             </p>
           </div>
         </div>
       </div>
-      <div className="flex items-center justify-end space-x-3 pt-4 border-t border-primary-200">
-        <button
-          type="button"
-          onClick={handleCancel}
-          disabled={isSubmitting}
-          className="px-4 py-2 text-primary-600 hover:text-primary-800 hover:bg-primary-100 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={handleSaveClick}
-          disabled={!hasChanges || isSubmitting}
-          className="flex items-center space-x-2 px-6 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isSubmitting ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-              <span>Updating...</span>
-            </>
-          ) : (
-            <>
-              <Check className="h-4 w-4" />
-              <span>Save Changes</span>
-            </>
-          )}
-        </button>
-      </div>
 
-      <ConfirmModal
-        isOpen={showConfirmModal}
-        title="Confirm Service Addition"
-        message="Once saved, these services cannot be undone. Are you sure you want to add them permanently?"
-        confirmText="Confirm"
-        cancelText="Cancel"
-        onConfirm={confirmSave}
-        onCancel={cancelSave}
-      />
+      {/* Create Service Modal */}
+      <BaseModal
+        isOpen={showCreateModal}
+        onClose={handleCloseModal}
+        title="Create New Service"
+        maxWidth="2xl"
+        showFooter={false}
+      >
+        <div className="space-y-4 sm:space-y-6">
+          <TextInput
+            label="Service Name"
+            required
+            value={formData.name}
+            onChange={handleInputChange("name")}
+            placeholder="e.g., HVAC Installation"
+            error={errors.name}
+            helperText="Enter a descriptive name for the service"
+          />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            <NumberInput
+              label="Material Unit"
+              required
+              value={formData.materialUnit || ""}
+              onChange={handleInputChange("materialUnit")}
+              min={0}
+              step={0.1}
+              placeholder="0.0"
+              error={errors.materialUnit}
+              helperText="Material cost per unit"
+            />
+
+            <NumberInput
+              label="Labor Unit"
+              required
+              value={formData.laborUnit || ""}
+              onChange={handleInputChange("laborUnit")}
+              min={0}
+              step={0.1}
+              placeholder="0.0"
+              error={errors.laborUnit}
+              helperText="Labor cost per unit"
+            />
+          </div>
+
+          <TextareaInput
+            label="Comment"
+            value={formData.comment}
+            onChange={handleInputChange("comment")}
+            placeholder="e.g., Central air conditioning"
+            rows={3}
+            helperText="Optional description or notes about this service"
+          />
+
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-primary-200">
+            <Button
+              variant="secondary"
+              onClick={handleCloseModal}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="accent"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              loading={isSubmitting}
+            >
+              Create Service
+            </Button>
+          </div>
+        </div>
+      </BaseModal>
     </div>
   );
 };

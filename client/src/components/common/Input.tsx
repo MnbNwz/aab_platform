@@ -40,7 +40,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     };
 
     const baseInputClasses =
-      "w-full rounded-lg px-3 py-2 sm:py-3 border border-primary-300 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 text-sm sm:text-base bg-white text-primary-900 placeholder-gray-300 transition-all duration-200";
+      "w-full rounded-lg px-2 xs:px-3 py-1.5 xs:py-2 sm:py-3 border border-primary-300 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 text-xs xs:text-sm sm:text-base bg-white text-primary-900 placeholder-primary-400 transition-all duration-200";
 
     const errorInputClasses = error
       ? "border-red-300 focus:border-red-500 focus:ring-red-500"
@@ -52,7 +52,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
       <div className={`${widthClasses[width]} ${containerClassName}`}>
         {label && (
           <label
-            className={`block text-primary-700 font-medium mb-1 text-sm sm:text-base ${labelClassName}`}
+            className={`block text-primary-700 font-medium mb-1 text-xs xs:text-sm sm:text-base ${labelClassName}`}
           >
             {label}
             {required && <span className="text-accent-500 ml-1">*</span>}

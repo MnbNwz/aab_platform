@@ -51,30 +51,30 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 z-[9999] flex items-center justify-center transition-colors ${
-        darkOverlay ? "bg-black bg-opacity-60" : "bg-black bg-opacity-30"
+      className={`fixed inset-0 z-[9999] flex items-center justify-center transition-colors p-2 xs:p-4 ${
+        darkOverlay ? "bg-primary-900/60" : "bg-primary-900/40"
       }`}
       onClick={handleOverlayClick}
     >
       <div
         ref={modalRef}
-        className="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 p-6 relative flex flex-col items-center border border-gray-200"
+        className="bg-white rounded-xl shadow-xl w-full max-w-sm mx-2 xs:mx-4 p-4 xs:p-6 relative flex flex-col items-center border border-primary-200"
         style={{ boxShadow: "0 6px 32px 0 rgba(0,0,0,0.10)" }}
         role="dialog"
         aria-modal="true"
         aria-busy={loading}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-xl font-semibold text-accent-600 mb-3 text-center tracking-tight">
+        <h2 className="text-lg xs:text-xl font-semibold text-accent-600 mb-2 xs:mb-3 text-center tracking-tight">
           {title}
         </h2>
-        <div className="text-gray-600 mb-7 text-center text-base leading-relaxed w-full">
+        <div className="text-primary-600 mb-5 xs:mb-7 text-center text-sm xs:text-base leading-relaxed w-full">
           {message}
         </div>
-        <div className="flex w-full gap-3">
+        <div className="flex flex-col xs:flex-row w-full gap-2 xs:gap-3">
           {!isDefault && (
             <button
-              className="flex-1 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-colors"
+              className="flex-1 py-2 rounded-lg bg-primary-100 hover:bg-primary-200 text-primary-700 font-medium transition-colors text-sm xs:text-base"
               onClick={onCancel}
               disabled={loading}
               tabIndex={0}
@@ -85,7 +85,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
           <button
             className={`${
               isDefault ? "w-full" : "flex-1"
-            } py-2 rounded-lg bg-accent-500 hover:bg-accent-600 disabled:bg-accent-400 text-white font-semibold shadow-sm transition-colors flex items-center justify-center`}
+            } py-2 rounded-lg bg-accent-500 hover:bg-accent-600 disabled:bg-accent-400 text-white font-semibold shadow-sm transition-colors flex items-center justify-center text-sm xs:text-base`}
             onClick={onConfirm}
             disabled={loading}
             tabIndex={0}

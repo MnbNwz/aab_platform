@@ -10,7 +10,11 @@ import type {
   UserUpdateData,
 } from "../types";
 import type { ApiError } from "../types/api";
-import type { ServicesResponse } from "../types/service";
+import type {
+  ServicesResponse,
+  CreateServiceRequest,
+  CreateServiceResponse,
+} from "../types/service";
 
 // Simple error messages
 const ERROR_MESSAGES = {
@@ -395,6 +399,15 @@ const servicesApi = {
     const response = await post<ServicesResponse>("/api/services", {
       services,
     });
+    // Invalidate services cache after creation
+    invalidateCaches("services");
+    return response.data!;
+  },
+
+  createService: async (
+    serviceData: CreateServiceRequest
+  ): Promise<CreateServiceResponse> => {
+    const response = await post<CreateServiceResponse>("/api/services", serviceData);
     // Invalidate services cache after creation
     invalidateCaches("services");
     return response.data!;

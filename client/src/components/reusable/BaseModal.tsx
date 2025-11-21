@@ -1,7 +1,8 @@
 import React, { ReactNode, useEffect, useRef, useState, memo } from "react";
+import { createPortal } from "react-dom";
 
-// Z-index manager for modal stacking
-let modalZIndex = 1000;
+// Start at 9999 to ensure modals appear above all other UI elements (sidebar z-40, etc.)
+let modalZIndex = 9999;
 const activeModals: Set<number> = new Set();
 
 const getNextZIndex = (): number => {
@@ -13,7 +14,7 @@ const getNextZIndex = (): number => {
 const releaseZIndex = (zIndex: number): void => {
   activeModals.delete(zIndex);
   if (activeModals.size === 0) {
-    modalZIndex = 1000; // Reset when no modals are open
+    modalZIndex = 9999;
   }
 };
 
@@ -70,7 +71,6 @@ const BaseModal: React.FC<BaseModalProps> = ({
   const overlayRef = useRef<HTMLDivElement>(null);
   const [zIndex, setZIndex] = useState<number>(0);
 
-  // Manage z-index for modal stacking
   useEffect(() => {
     if (isOpen) {
       const newZIndex = getNextZIndex();
@@ -102,9 +102,6 @@ const BaseModal: React.FC<BaseModalProps> = ({
     return () => window.removeEventListener("keydown", handleEsc);
   }, [isOpen, onClose, closeOnEscape, zIndex]);
 
-  console.log("Modal is open:", isOpen, "title:", title);
-
-  // Click outside to close
   useEffect(() => {
     if (!closeOnOverlayClick || !isOpen) return;
 
@@ -130,7 +127,6 @@ const BaseModal: React.FC<BaseModalProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen, onClose, closeOnOverlayClick, zIndex]);
 
-  // Focus trap (optional enhancement)
   useEffect(() => {
     if (isOpen && modalRef.current) {
       const firstFocusable = modalRef.current.querySelector(
@@ -140,7 +136,6 @@ const BaseModal: React.FC<BaseModalProps> = ({
     }
   }, [isOpen]);
 
-  // Prevent body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -149,8 +144,6 @@ const BaseModal: React.FC<BaseModalProps> = ({
       };
     }
   }, [isOpen]);
-
-  if (!isOpen) return null;
 
   const maxWidthClasses = {
     sm: "max-w-sm",
@@ -163,7 +156,6 @@ const BaseModal: React.FC<BaseModalProps> = ({
     full: "max-w-full",
   };
 
-  // Render footer buttons
   const renderFooter = () => {
     if (!showFooter) return null;
 
@@ -247,7 +239,9 @@ const BaseModal: React.FC<BaseModalProps> = ({
     );
   };
 
-  return (
+  if (!isOpen) return null;
+
+  const modalContent = (
     <div
       ref={overlayRef}
       className={`fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 p-4 ${overlayClassName}`}
@@ -309,6 +303,8 @@ const BaseModal: React.FC<BaseModalProps> = ({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default memo(BaseModal);

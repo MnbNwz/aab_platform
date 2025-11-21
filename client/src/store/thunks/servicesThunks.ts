@@ -2,9 +2,11 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import { api, handleApiError } from "../../services/apiService";
 import { showToast } from "../../utils/toast";
 
+import type { ServicesResponse } from "../../types/service";
+
 // Services thunks
 export const getServicesThunk = createAsyncThunk<
-  { services: string[]; version: number; lastUpdated: string },
+  ServicesResponse,
   void,
   { rejectValue: string }
 >("services/getServices", async (_, { rejectWithValue }) => {
