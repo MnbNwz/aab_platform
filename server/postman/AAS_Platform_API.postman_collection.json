@@ -577,11 +577,11 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "services"]
             },
-            "description": "Get current available contractor services - Public endpoint, returns latest version of services array with version number and last updated timestamp. Use this endpoint to get valid service options for contractor registration."
+            "description": "Get current available contractor services - Public endpoint, returns latest version of services array with version number, last updated timestamp, and extended services array (with materialUnit, laborUnit, comment). Use this endpoint to get valid service options for contractor registration. Response includes both legacy services (string array) and extended services (objects with full details)."
           }
         },
         {
-          "name": "Create Services Version",
+          "name": "Create Service (Admin)",
           "request": {
             "method": "POST",
             "header": [
@@ -592,14 +592,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"services\": [\n    \"plumbing\",\n    \"electrical\",\n    \"hvac\",\n    \"general\",\n    \"roofing\",\n    \"carpentry\",\n    \"painting\",\n    \"landscaping\",\n    \"cleaning\",\n    \"pest control\",\n    \"flooring\",\n    \"windows\",\n    \"doors\"\n  ]\n}"
+              "raw": "{\n  \"name\": \"HVAC Installation\",\n  \"materialUnit\": 3.5,\n  \"laborUnit\": 2.8,\n  \"comment\": \"Central air conditioning installation\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/services",
               "host": ["{{baseUrl}}"],
               "path": ["api", "services"]
             },
-            "description": "Create new services version - Admin only. Creates a new document with incremented version number. All service names are normalized to lowercase and deduplicated."
+            "description": "Create a new service (admin only). Accepts 4 fields: name (required), materialUnit (optional), laborUnit (optional), comment (optional). Creates entry in both legacy services (string array) and extended services (full object with all details). Service name must be unique."
           }
         }
       ]
@@ -661,11 +661,11 @@
               "raw": "{\n  \"planId\": \"PLAN_ID_HERE\",\n  \"billingPeriod\": \"monthly\",\n  \"url\": \"{{baseUrl}}/membership/success\",\n  \"isAutoRenew\": false\n}\n\n// Required: planId, billingPeriod, url\n// Optional: isAutoRenew (default: false)\n// billingPeriod: \"monthly\" or \"yearly\"\n// isAutoRenew: true = subscription (auto-renew), false = one-time payment"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/payment/create-stripe-session",
+              "raw": "{{baseUrl}}/api/membership/checkout",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "create-stripe-session"]
+              "path": ["api", "membership", "checkout"]
             },
-            "description": "Create Stripe checkout session with optional auto-renewal. Set isAutoRenew to true for subscriptions."
+            "description": "Create Stripe checkout session for membership purchase with optional auto-renewal. Set isAutoRenew to true for subscriptions. Route: POST /api/membership/checkout"
           }
         },
         {
@@ -983,6 +983,28 @@
               "path": ["api", "job", "requests", "{{jobRequestId}}"]
             },
             "description": "Update an existing job request. Only updatable fields: title, description, service, estimate, timeline. Cannot edit if a bid has already been accepted (admin can override)."
+          }
+        },
+        {
+          "name": "Cancel Job Request",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Optional cancellation reason\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/job/requests/{{jobRequestId}}/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "job", "requests", "{{jobRequestId}}", "cancel"]
+            },
+            "description": "Cancel a job request. Sets job status to 'cancelled'. Only the job owner or admin can cancel."
           }
         }
       ]
@@ -1697,7 +1719,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"accepted\",\n  \"adminNote\": \"Contractor profile matches our requirements\"\n}\n\n// status: \"pending\", \"accepted\", \"rejected\""
+              "raw": "{\n  \"status\": \"accepted\",\n  \"adminNotes\": \"Contractor profile matches our requirements\"\n}\n\n// status: \"pending\", \"accepted\", \"rejected\" (optional)\n// contactStatus: \"pending\", \"accepted\", \"rejected\" (optional)\n// adminNotes: string (optional)\n// At least one of status, contactStatus, or adminNotes must be provided"
             },
             "url": {
               "raw": "{{baseUrl}}/api/investment/opportunities/{{opportunityId}}/interests/{{contractorId}}",
@@ -1795,7 +1817,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "services"]
             },
-            "description": "Get all available services (public endpoint). Returns list of services like plumbing, painting, electrical, etc."
+            "description": "Get all available services (public endpoint). Returns legacy services array (strings), version number, last updated timestamp, and extended services array (objects with name, materialUnit, laborUnit, comment). Use this endpoint to get valid service options for contractor registration."
           }
         },
         {
@@ -1810,14 +1832,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"services\": [\n    {\n      \"name\": \"Plumbing\",\n      \"description\": \"Plumbing services including repairs and installations\"\n    },\n    {\n      \"name\": \"Electrical\",\n      \"description\": \"Electrical work and installations\"\n    },\n    {\n      \"name\": \"Painting\",\n      \"description\": \"Interior and exterior painting services\"\n    }\n  ]\n}"
+              "raw": "{\n  \"name\": \"HVAC Installation\",\n  \"materialUnit\": 3.5,\n  \"laborUnit\": 2.8,\n  \"comment\": \"Central air conditioning installation\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/services",
               "host": ["{{baseUrl}}"],
               "path": ["api", "services"]
             },
-            "description": "Create multiple services (admin only). Provide array of services with name and description."
+            "description": "Create a new service (admin only). Accepts 4 fields in request body: name (required, string), materialUnit (optional, number >= 0), laborUnit (optional, number >= 0), comment (optional, string). Creates entry in both legacy ContractorServices (string array) and ContractorServicesExtended (full object). Service name must be unique. Returns both created entries in response."
           }
         }
       ]
