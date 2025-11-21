@@ -38,14 +38,10 @@ const JobCreate: React.FC<JobCreateProps> = ({
 
   const { createLoading, error } = useSelector((state: RootState) => state.job);
 
-  // Calculate budget (static for now - will be replaced with actual calculation)
   const calculatedBudget = useMemo(() => {
-    // Static calculation - will be replaced with actual calculator logic
-    // For now, use initialEstimate if provided, otherwise show a default
     if (initialEstimate !== null && initialEstimate !== undefined) {
       return initialEstimate > 1000 ? initialEstimate / 100 : initialEstimate;
     }
-    // Default static value
     return 5000.0;
   }, [initialEstimate]);
 
@@ -396,7 +392,7 @@ const JobCreate: React.FC<JobCreateProps> = ({
             readOnly
             disabled
             leftIcon={<span className="text-primary-600 font-medium">$</span>}
-            helperText="Calculated automatically from calculator"
+            helperText="Enter your estimated budget"
             inputClassName="bg-primary-50 cursor-not-allowed"
           />
         </div>
