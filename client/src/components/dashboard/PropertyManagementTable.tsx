@@ -18,6 +18,7 @@ import { isApiError } from "../../services/apiService";
 import { Search, Filter } from "lucide-react";
 import DataTable, { TableColumn, TableAction } from "../ui/DataTable";
 import type { PaginationInfo } from "../ui/DataTable";
+import { TextInput, SelectInput, Badge, Text, Button } from "../reusable";
 
 interface Property {
   _id: string;
@@ -234,31 +235,28 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = memo(
           key: "title",
           header: "Title",
           render: (property) => (
-            <span className="block truncate max-w-xs" title={property.title}>
+            <Text truncate className="block max-w-xs" title={property.title}>
               {property.title.length > 40
                 ? `${property.title.substring(0, 40)}...`
                 : property.title}
-            </span>
+            </Text>
           ),
           mobileLabel: "Title",
           mobileRender: (property) => (
             <div>
               <h3 className="font-semibold text-gray-900 text-sm flex-1 min-w-0">
-                <span className="block truncate" title={property.title}>
+                <Text truncate className="block" title={property.title}>
                   {property.title.length > 30
                     ? `${property.title.substring(0, 30)}...`
                     : property.title}
-                </span>
+                </Text>
               </h3>
-              <span
-                className={`px-2 py-1 rounded text-xs font-bold mt-2 inline-block ${
-                  property.isActive
-                    ? "bg-green-100 text-green-700"
-                    : "bg-orange-100 text-orange-700"
-                }`}
+              <Badge
+                variant={property.isActive ? "success" : "warning"}
+                className="mt-2"
               >
                 {property.isActive ? "Active" : "Inactive"}
-              </span>
+              </Badge>
             </div>
           ),
         },
@@ -266,17 +264,24 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = memo(
           key: "propertyType",
           header: "Type",
           render: (property) => (
-            <span className="text-gray-700">{property.propertyType}</span>
+            <Text color="secondary">{property.propertyType}</Text>
           ),
           mobileLabel: "Type",
           mobileRender: (property) => (
             <div className="text-sm text-gray-600">
-              <span className="font-medium">Type:</span>{" "}
-              <span className="truncate block" title={property.propertyType}>
+              <Text size="sm" weight="medium" className="inline">
+                Type:
+              </Text>{" "}
+              <Text
+                size="sm"
+                truncate
+                className="block"
+                title={property.propertyType}
+              >
                 {property.propertyType.length > 25
                   ? `${property.propertyType.substring(0, 25)}...`
                   : property.propertyType}
-              </span>
+              </Text>
             </div>
           ),
         },
@@ -284,15 +289,9 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = memo(
           key: "status",
           header: "Status",
           render: (property) => (
-            <span
-              className={`px-2 py-1 rounded text-xs font-bold ${
-                property.isActive
-                  ? "bg-green-100 text-green-700"
-                  : "bg-orange-100 text-orange-700"
-              }`}
-            >
+            <Badge variant={property.isActive ? "success" : "warning"}>
               {property.isActive ? "Active" : "Inactive"}
-            </span>
+            </Badge>
           ),
           mobileLabel: "Status",
           hideOnDesktop: true,
@@ -358,13 +357,15 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = memo(
               </p>
             </div>
             {/* Create Button */}
-            <button
-              className="flex-shrink-0 flex items-center px-4 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition"
+            <Button
+              variant="accent"
+              size="md"
               onClick={onCreateNew}
               title="Create Property"
+              className="flex-shrink-0"
             >
               Create Property
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -373,51 +374,29 @@ const PropertyManagementTable: React.FC<PropertyManagementTableProps> = memo(
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <Filter className="h-5 w-5 text-gray-400" />
-              <span className="text-sm font-medium text-gray-700">
-                Filters:
-              </span>
+              <p className="text-sm font-medium text-gray-700">Filters:</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Status Filter */}
-              <div>
-                <label
-                  className="block text-sm font-medium text-gray-700 mb-1.5"
-                  htmlFor="status"
-                >
-                  Status
-                </label>
-                <select
-                  id="status"
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value as any)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm transition-colors"
-                >
-                  <option value="all">All</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
+              <SelectInput
+                label="Status"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value as any)}
+                options={[
+                  { value: "all", label: "All" },
+                  { value: "active", label: "Active" },
+                  { value: "inactive", label: "Inactive" },
+                ]}
+              />
 
               {/* Search with Icon */}
-              <div>
-                <label
-                  className="block text-sm font-medium text-gray-700 mb-1.5"
-                  htmlFor="search"
-                >
-                  Search
-                </label>
-                <div className="relative">
-                  <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <input
-                    id="search"
-                    type="text"
-                    placeholder="Search properties..."
-                    value={search}
-                    onChange={(e) => handleSearchChange(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm transition-colors placeholder-gray-300"
-                  />
-                </div>
-              </div>
+              <TextInput
+                label="Search"
+                placeholder="Search properties..."
+                value={search}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                leftIcon={<Search className="h-4 w-4 text-gray-400" />}
+              />
             </div>
           </div>
         </div>

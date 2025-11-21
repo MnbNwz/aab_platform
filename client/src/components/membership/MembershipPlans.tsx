@@ -3,7 +3,7 @@ import UserDropdown from "../ui/UserDropdown";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../../store";
 import { logoutThunk } from "../../store/thunks/authThunks";
-import ProfileModal from "../ProfileModal";
+import ProfileEditModal from "../ProfileEditModal";
 import { membershipService } from "../../services/membershipService";
 // import ConfirmModal from "../ui/ConfirmModal";
 import type { User, CurrentMembership } from "../../types";
@@ -341,7 +341,7 @@ const MembershipPlans: React.FC = () => {
         .animate-fadein { animation: fadein 0.7s cubic-bezier(.4,2,.6,1) both; }
       `}</style>
       {/* Profile Modal */}
-      <ProfileModal
+      <ProfileEditModal
         user={user as User}
         isOpen={profileModalOpen}
         onClose={() => setProfileModalOpen(false)}

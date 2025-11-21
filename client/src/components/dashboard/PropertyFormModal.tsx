@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../store";
 import { createPropertyThunk } from "../../store/thunks/propertyThunks";
 import LocationSelector from "../LocationSelector";
-import { MapPin } from "lucide-react";
+import { MapPin, X, Plus } from "lucide-react";
 import {
   compressMultipleImages,
   PROPERTY_IMAGE_OPTIONS,
@@ -11,6 +11,17 @@ import {
 import { useGeocoding } from "../../hooks/useGeocoding";
 import { getCurrentLocation } from "../../utils/geocoding";
 import { showToast } from "../../utils/toast";
+import {
+  BaseModal,
+  type ModalButton,
+  TextInput,
+  NumberInput,
+  TextareaInput,
+  FormField,
+  Text,
+  Button,
+} from "../reusable";
+import { PropertyTypeSelect } from "../reusable/dropdowns";
 
 interface PropertyFormProps {
   isOpen: boolean;
@@ -66,45 +77,39 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
 
   // Reset form and fetch location when modal opens
   useEffect(() => {
-    if (isOpen) {
-      if (initialData) {
-        setForm({ ...initialState, ...initialData });
-      } else {
-        // For new property, start with initial state
-        setForm(initialState);
+    if (!isOpen) return;
 
-        // Fetch current location for new properties only
-        const fetchLocation = async () => {
-          setFetchingLocation(true);
-          try {
-            const location = await getCurrentLocation();
-            setForm((prev: PropertyFormState) => ({
-              ...prev,
-              location: {
-                type: "Point",
-                coordinates: [location.lng, location.lat],
-                address: location.address || "",
-              },
-            }));
-          } catch (_error) {
-            // Silently fail, user can set location manually
-          } finally {
-            setFetchingLocation(false);
-          }
-        };
-
-        fetchLocation();
-      }
-      // Reset all other states
-      setImageFiles([]);
-      setCarouselIndex(0);
-      setImageError("");
-      setFormError("");
+    if (initialData) {
+      setForm({ ...initialState, ...initialData, areaUnit: "sqft" });
+    } else {
+      setForm(initialState);
+      const fetchLocation = async () => {
+        setFetchingLocation(true);
+        try {
+          const location = await getCurrentLocation();
+          setForm((prev: PropertyFormState) => ({
+            ...prev,
+            location: {
+              type: "Point",
+              coordinates: [location.lng, location.lat],
+              address: location.address || "",
+            },
+          }));
+        } catch {
+          // Silently fail, user can set location manually
+        } finally {
+          setFetchingLocation(false);
+        }
+      };
+      fetchLocation();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
 
-  // Get readable address from coordinates (only when modal is open)
+    setImageFiles([]);
+    setCarouselIndex(0);
+    setImageError("");
+    setFormError("");
+  }, [isOpen, initialData]);
+
   const { address: locationAddress, loading: addressLoading } = useGeocoding(
     isOpen &&
       (form.location.coordinates[0] !== 0 || form.location.coordinates[1] !== 0)
@@ -118,85 +123,64 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
     >
   ) => {
     const { name, value } = e.target;
-    if (name === "isActive") {
-      const checked = (e.target as HTMLInputElement).checked;
-      setForm((prev: PropertyFormState) => ({ ...prev, isActive: checked }));
-    } else if (name === "area" || name === "areaUnit") {
-      setForm((prev: PropertyFormState) => ({
-        ...prev,
-        [name]: name === "area" ? Number(value) : value,
-      }));
-    } else if (name.startsWith("location.")) {
-      const idx = name.endsWith("0") ? 0 : 1;
-      setForm((prev: PropertyFormState) => ({
-        ...prev,
-        location: {
-          ...prev.location,
-          coordinates:
-            idx === 0
-              ? [Number(value), prev.location.coordinates[1]]
-              : [prev.location.coordinates[0], Number(value)],
-        },
-      }));
-    } else if (
-      ["totalRooms", "bedrooms", "bathrooms", "kitchens"].includes(name)
-    ) {
-      setForm((prev: PropertyFormState) => ({
-        ...prev,
-        [name]: Number(value),
-      }));
-    } else {
-      setForm((prev: PropertyFormState) => ({ ...prev, [name]: value }));
-    }
+    const numberFields = [
+      "area",
+      "totalRooms",
+      "bedrooms",
+      "bathrooms",
+      "kitchens",
+    ];
+
+    setForm((prev: PropertyFormState) => {
+      if (name === "area") {
+        return { ...prev, area: Number(value), areaUnit: "sqft" };
+      }
+      if (numberFields.includes(name)) {
+        return { ...prev, [name]: Number(value) };
+      }
+      return { ...prev, [name]: value };
+    });
   };
 
-  // Remove image from carousel
   const handleRemoveImage = (idx: number) => {
     const newFiles = imageFiles.filter((_, i) => i !== idx);
     setImageFiles(newFiles);
-    setCarouselIndex((prev: number) => (prev > 0 ? prev - 1 : 0));
+    setCarouselIndex((prev) => Math.max(0, prev - (prev >= idx ? 1 : 0)));
     setForm((prev: PropertyFormState) => ({
       ...prev,
       images: newFiles.map(() => ""),
     }));
   };
 
-  // When picking new images, replace all
   const handleReplaceImages = async (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
-    const files = e.target.files ? Array.from(e.target.files) : [];
+    const files = Array.from(e.target.files || []);
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+    ];
+    const maxSize = 5 * 1024 * 1024;
 
     if (files.length > 15) {
       setImageError("You can only select up to 15 images.");
       return;
     }
 
-    // Check file types
-    const validImages = files.filter((file) => {
-      if (!file.type.startsWith("image/")) {
-        return false;
-      }
-      // Check for specific image types
-      const allowedTypes = [
-        "image/jpeg",
-        "image/jpg",
-        "image/png",
-        "image/webp",
-        "image/gif",
-      ];
-      return allowedTypes.includes(file.type);
-    });
+    const validImages = files.filter(
+      (file) =>
+        file.type.startsWith("image/") && allowedTypes.includes(file.type)
+    );
 
     if (validImages.length !== files.length) {
       setImageError("Only image files (JPEG, PNG, WebP, GIF) are allowed.");
       return;
     }
 
-    // Check file sizes (max 5MB per image)
-    const oversizedFiles = validImages.filter(
-      (file) => file.size > 5 * 1024 * 1024
-    );
+    const oversizedFiles = validImages.filter((file) => file.size > maxSize);
     if (oversizedFiles.length > 0) {
       setImageError("Each image must be smaller than 5MB.");
       return;
@@ -204,18 +188,13 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
 
     try {
       setImageError("");
-
-      // Compress all images silently
       const compressionResults = await compressMultipleImages(
         validImages,
         PROPERTY_IMAGE_OPTIONS
       );
-
-      // Extract compressed files
       const compressedFiles = compressionResults.map(
         (result) => result.compressedFile
       );
-
       setImageFiles(compressedFiles);
       setCarouselIndex(0);
       setForm((prev: PropertyFormState) => ({
@@ -229,11 +208,11 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     setFormError("");
-    // Validation: area must be > 0, location must have valid lat/lng
     const [lng, lat] = form.location.coordinates;
+
     if (!form.area || form.area <= 0) {
       setFormError("Area must be greater than zero.");
       return;
@@ -242,354 +221,287 @@ const PropertyFormModal: React.FC<PropertyFormProps> = ({
       setFormError("Please select a valid location on the map.");
       return;
     }
-    // Attach images to form data
+
     const submitData = {
       ...form,
       images: imageFiles,
       propertyType: form.propertyType as "apartment" | "house" | "villa",
-      areaUnit: form.areaUnit as "sqft" | "sqm" | "marla" | "kanal",
+      areaUnit: "sqft" as const,
       location: {
         ...form.location,
         type: "Point" as const,
-        coordinates: [
-          Number(form.location.coordinates[0]) || 0,
-          Number(form.location.coordinates[1]) || 0,
-        ] as [number, number],
+        coordinates: [Number(lng) || 0, Number(lat) || 0] as [number, number],
       },
     };
 
-    await dispatch(createPropertyThunk(submitData))
-      .unwrap()
-      .then(() => {
-        setForm(initialState);
-        setImageFiles([]);
-        onClose();
-      })
-      .catch(() => {
-        // error handled by redux state
-      });
-  };
-
-  useEffect(() => {
-    if (!isOpen) {
+    try {
+      await dispatch(createPropertyThunk(submitData)).unwrap();
       setForm(initialState);
       setImageFiles([]);
-      setCarouselIndex(0);
-      setImageError("");
+      onClose();
+    } catch {
+      // error handled by redux state
     }
-  }, [isOpen]);
+  };
 
-  if (!isOpen) return null;
-
-  const getInputClassName = () =>
-    "w-full rounded-lg px-3 py-2 sm:py-3 border border-primary-300 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 text-sm sm:text-base bg-white text-primary-900 placeholder-gray-300";
+  // Footer buttons
+  const footerButtons: ModalButton[] = [
+    {
+      label: "Cancel",
+      onClick: onClose,
+      variant: "secondary",
+      disabled: loading,
+      leftIcon: <X className="h-4 w-4" />,
+    },
+    {
+      label: "Create Property",
+      onClick: () => handleSubmit(),
+      variant: "primary",
+      loading: loading,
+      disabled: loading,
+      leftIcon: <Plus className="h-4 w-4" />,
+    },
+  ];
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Create New Property"
+      maxWidth="4xl"
+      footer={footerButtons}
     >
-      <div
-        className="bg-white rounded-lg shadow-2xl w-full max-w-4xl mx-auto relative flex flex-col max-h-[95vh]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-primary-200">
-          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-primary-900">
-            Create New Property
-          </h2>
-          <button
-            className="text-primary-400 hover:text-primary-600 text-2xl sm:text-3xl font-bold p-2"
-            onClick={onClose}
-          >
-            &#10005;
-          </button>
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+        {/* Title - Full Width */}
+        <TextInput
+          label="Title"
+          name="title"
+          value={form.title}
+          onChange={handleChange}
+          required
+        />
+
+        {/* Area and Type - Same Line */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+          <NumberInput
+            label="Area (sqft)"
+            name="area"
+            value={form.area}
+            onChange={handleChange}
+            min={0}
+            placeholder="Enter area in square feet"
+            required
+          />
+          <PropertyTypeSelect
+            value={form.propertyType}
+            onChange={(value) =>
+              setForm((prev: PropertyFormState) => ({
+                ...prev,
+                propertyType: value,
+              }))
+            }
+            required
+          />
         </div>
-        {/* Form Content */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-              <div>
-                <label className="block text-primary-700 font-medium mb-1 text-sm sm:text-base">
-                  Title
-                </label>
-                <input
-                  name="title"
-                  value={form.title}
-                  onChange={handleChange}
-                  required
-                  className={getInputClassName()}
-                />
-              </div>
-              <div>
-                <label className="block text-primary-900 font-medium mb-1">
-                  Type
-                </label>
-                <select
-                  name="propertyType"
-                  value={form.propertyType}
-                  onChange={handleChange}
-                  required
-                  className={getInputClassName() + " appearance-none"}
+
+        {/* Location - Full Width */}
+        <FormField
+          label={
+            <>
+              Location
+              {fetchingLocation && (
+                <Text
+                  size="xs"
+                  color="accent"
+                  weight="normal"
+                  className="ml-2 inline"
+                  as="span"
                 >
-                  <option value="apartment">Apartment</option>
-                  <option value="house">House</option>
-                  <option value="villa">Villa</option>
-                </select>
-              </div>
-              {/* Address field removed */}
-              <div className="md:col-span-2">
-                <label className="block text-primary-900 font-medium mb-1">
-                  Location
-                  {fetchingLocation && (
-                    <span className="ml-2 text-xs text-accent-600 font-normal">
-                      (Auto-detecting from IP...)
-                    </span>
-                  )}
-                </label>
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => setShowLocationModal(true)}
-                    className="w-full flex items-center justify-between rounded-lg px-4 py-3 border border-primary-200 bg-primary-50 text-primary-900 hover:bg-primary-100 transition-colors"
-                  >
-                    <span className="text-left">
-                      {fetchingLocation ? (
-                        <span className="flex items-center space-x-2">
-                          <div className="w-4 h-4 border-2 border-accent-600 border-t-transparent rounded-full animate-spin"></div>
-                          <span>Detecting your location...</span>
-                        </span>
-                      ) : addressLoading ? (
-                        <span className="flex items-center space-x-2">
-                          <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
-                          <span>Loading address...</span>
-                        </span>
-                      ) : locationAddress ? (
-                        locationAddress
-                      ) : form.location.coordinates[1] !== 0 ||
-                        form.location.coordinates[0] !== 0 ? (
-                        `${form.location.coordinates[1].toFixed(
-                          4
-                        )}, ${form.location.coordinates[0].toFixed(4)}`
-                      ) : (
-                        "Choose on Map"
-                      )}
-                    </span>
-                    <span className="text-accent-500">
-                      <MapPin className="h-5 w-5" />
-                    </span>
-                  </button>
+                  (Auto-detecting from IP...)
+                </Text>
+              )}
+            </>
+          }
+        >
+          <Button
+            type="button"
+            onClick={() => setShowLocationModal(true)}
+            variant="ghost"
+            fullWidth
+            className="justify-between px-4 py-3 border border-primary-200 bg-primary-50 text-primary-900 hover:bg-primary-100"
+          >
+            <div className="text-left">
+              {fetchingLocation ? (
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-accent-600 border-t-transparent rounded-full animate-spin"></div>
+                  <Text size="sm">Detecting your location...</Text>
                 </div>
-                <LocationSelector
-                  isOpen={showLocationModal}
-                  onClose={() => setShowLocationModal(false)}
-                  onLocationSelect={({ lat, lng }) => {
-                    setForm((prev: PropertyFormState) => ({
-                      ...prev,
-                      location: {
-                        ...prev.location,
-                        coordinates: [lng, lat],
-                      },
-                    }));
-                    setShowLocationModal(false);
-                  }}
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-primary-900 font-medium mb-1">
-                  Area
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    name="area"
-                    type="number"
-                    min={0}
-                    value={form.area}
-                    onChange={handleChange}
-                    className={getInputClassName() + " w-1/2"}
-                    placeholder="Enter area"
-                    required
-                  />
-                  <select
-                    name="areaUnit"
-                    value={form.areaUnit}
-                    onChange={handleChange}
-                    required
-                    className={getInputClassName() + " w-1/2 appearance-none"}
-                  >
-                    <option value="sqft">Square Feet (sqft)</option>
-                    <option value="sqm">Square Meters (sqm)</option>
-                    <option value="marla">Marla</option>
-                    <option value="kanal">Kanal</option>
-                  </select>
+              ) : addressLoading ? (
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+                  <Text size="sm">Loading address...</Text>
                 </div>
-              </div>
-              <div>
-                <label className="block text-primary-900 font-medium mb-1">
-                  Total Rooms
-                </label>
-                <input
-                  name="totalRooms"
-                  type="number"
-                  value={form.totalRooms}
-                  onChange={handleChange}
-                  className={getInputClassName()}
-                />
-              </div>
-              <div>
-                <label className="block text-primary-900 font-medium mb-1">
-                  Bedrooms
-                </label>
-                <input
-                  name="bedrooms"
-                  type="number"
-                  value={form.bedrooms}
-                  onChange={handleChange}
-                  className={getInputClassName()}
-                />
-              </div>
-              <div>
-                <label className="block text-primary-900 font-medium mb-1">
-                  Bathrooms
-                </label>
-                <input
-                  name="bathrooms"
-                  type="number"
-                  value={form.bathrooms}
-                  onChange={handleChange}
-                  className={getInputClassName()}
-                />
-              </div>
-              <div>
-                <label className="block text-primary-900 font-medium mb-1">
-                  Kitchens
-                </label>
-                <input
-                  name="kitchens"
-                  type="number"
-                  value={form.kitchens}
-                  onChange={handleChange}
-                  className={getInputClassName()}
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-primary-900 font-medium mb-1">
-                  Description
-                </label>
-                <textarea
-                  name="description"
-                  value={form.description}
-                  onChange={handleChange}
-                  rows={2}
-                  required
-                  className={getInputClassName()}
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-primary-900 font-medium mb-1">
-                  Images (max 15, max 5MB each, JPEG/PNG/WebP/GIF only)
-                </label>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-                  multiple
-                  required
-                  onChange={handleReplaceImages}
-                  className={
-                    getInputClassName() +
-                    " file:bg-accent-500 file:text-white file:rounded file:px-2 file:py-1 file:text-sm file:font-semibold file:border-0 file:mr-2 file:cursor-pointer file:hover:bg-accent-600"
-                  }
-                />
-                {imageError && (
-                  <div className="text-red-500 text-xs mt-1">{imageError}</div>
-                )}
-                {imageFiles.length > 0 && (
-                  <div className="mt-4 flex flex-col items-center">
-                    <div className="relative w-full max-w-xl flex items-center justify-center bg-primary-100 rounded-lg overflow-hidden py-4">
-                      <button
-                        type="button"
-                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-70 rounded-full p-1 shadow"
-                        onClick={() =>
-                          setCarouselIndex((prev) => Math.max(prev - 1, 0))
-                        }
-                        disabled={carouselIndex === 0}
-                      >
-                        &#8592;
-                      </button>
-                      <div className="flex gap-4 w-full justify-center">
-                        {imageFiles
-                          .slice(carouselIndex, carouselIndex + 3)
-                          .map((file, idx) => (
-                            <div
-                              key={carouselIndex + idx}
-                              className="relative w-32 h-24 flex-shrink-0"
-                            >
-                              <img
-                                src={URL.createObjectURL(file)}
-                                alt={`Selected ${carouselIndex + idx + 1}`}
-                                className="object-contain w-full h-full rounded border border-primary-200"
-                              />
-                              <button
-                                type="button"
-                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center shadow hover:bg-red-600 transition-colors border-2 border-white"
-                                style={{ aspectRatio: "1/1" }}
-                                onClick={() =>
-                                  handleRemoveImage(carouselIndex + idx)
-                                }
-                              >
-                                <span className="text-lg leading-none">
-                                  &times;
-                                </span>
-                              </button>
-                            </div>
-                          ))}
-                      </div>
-                      <button
-                        type="button"
-                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-70 rounded-full p-1 shadow"
-                        onClick={() =>
-                          setCarouselIndex((prev) =>
-                            Math.min(prev + 1, imageFiles.length - 3)
-                          )
-                        }
-                        disabled={
-                          carouselIndex >= imageFiles.length - 3 ||
-                          imageFiles.length <= 3
-                        }
-                      >
-                        &#8594;
-                      </button>
-                    </div>
-                    <div className="mt-2 text-xs text-primary-700">
-                      Showing {carouselIndex + 1} -{" "}
-                      {Math.min(carouselIndex + 3, imageFiles.length)} of{" "}
-                      {imageFiles.length}
-                    </div>
-                  </div>
-                )}
-              </div>
-              {/* Active checkbox removed: property is always active by default */}
-            </div>
-            <div className="pt-4 sm:pt-6">
-              <button
-                type="submit"
-                className="w-full px-4 py-2 sm:py-3 rounded-lg bg-accent-500 text-white font-semibold hover:bg-accent-600 transition-colors disabled:opacity-60 text-sm sm:text-base"
-                disabled={loading}
-              >
-                {loading ? "Creating Property..." : "Create Property"}
-              </button>
-              {(formError || error) && (
-                <div className="text-red-500 text-center mt-2 text-sm">
-                  {formError || error}
-                </div>
+              ) : locationAddress ? (
+                <Text>{locationAddress}</Text>
+              ) : form.location.coordinates[1] !== 0 ||
+                form.location.coordinates[0] !== 0 ? (
+                <Text>
+                  {`${form.location.coordinates[1].toFixed(
+                    4
+                  )}, ${form.location.coordinates[0].toFixed(4)}`}
+                </Text>
+              ) : (
+                <Text>Choose on Map</Text>
               )}
             </div>
-          </form>
+            <div className="text-accent-500">
+              <MapPin className="h-5 w-5" />
+            </div>
+          </Button>
+          <LocationSelector
+            isOpen={showLocationModal}
+            onClose={() => setShowLocationModal(false)}
+            onLocationSelect={({ lat, lng }) => {
+              setForm((prev: PropertyFormState) => ({
+                ...prev,
+                location: {
+                  ...prev.location,
+                  coordinates: [lng, lat],
+                },
+              }));
+              setShowLocationModal(false);
+            }}
+          />
+        </FormField>
+
+        {/* Rest of the form fields */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          {(["Total Rooms", "Bedrooms", "Bathrooms", "Kitchens"] as const).map(
+            (label) => (
+              <NumberInput
+                key={label}
+                label={label}
+                name={
+                  label
+                    .toLowerCase()
+                    .replace(" ", "") as keyof PropertyFormState
+                }
+                value={
+                  form[
+                    label
+                      .toLowerCase()
+                      .replace(" ", "") as keyof PropertyFormState
+                  ] as number
+                }
+                onChange={handleChange}
+              />
+            )
+          )}
+          <div className="md:col-span-2">
+            <TextareaInput
+              label="Description"
+              name="description"
+              value={form.description}
+              onChange={handleChange}
+              rows={2}
+              required
+            />
+          </div>
+          <div className="md:col-span-2">
+            <FormField
+              label="Images (max 15, max 5MB each, JPEG/PNG/WebP/GIF only)"
+              error={imageError}
+            >
+              <input
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                multiple
+                required
+                onChange={handleReplaceImages}
+                className="w-full rounded-lg px-3 py-2 sm:py-3 border border-primary-300 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 text-sm sm:text-base bg-white text-primary-900 placeholder-gray-300 file:bg-accent-500 file:text-white file:rounded file:px-2 file:py-1 file:text-sm file:font-semibold file:border-0 file:mr-2 file:cursor-pointer file:hover:bg-accent-600"
+              />
+            </FormField>
+            {imageFiles.length > 0 && (
+              <div className="mt-4 flex flex-col items-center">
+                <div className="relative w-full max-w-xl flex items-center justify-center bg-primary-100 rounded-lg overflow-hidden py-4">
+                  {carouselIndex > 0 && (
+                    <Button
+                      type="button"
+                      variant="icon"
+                      size="sm"
+                      circular
+                      iconOnly
+                      className="absolute left-2 top-1/2 -translate-y-1/2"
+                      onClick={() => setCarouselIndex((prev) => prev - 1)}
+                      aria-label="Previous image"
+                    >
+                      <Text size="base">&#8592;</Text>
+                    </Button>
+                  )}
+                  <div className="flex gap-4 w-full justify-center">
+                    {imageFiles
+                      .slice(carouselIndex, carouselIndex + 3)
+                      .map((file, idx) => (
+                        <div
+                          key={carouselIndex + idx}
+                          className="relative w-32 h-24 flex-shrink-0"
+                        >
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={`Selected ${carouselIndex + idx + 1}`}
+                            className="object-contain w-full h-full rounded border border-primary-200"
+                          />
+                          <Button
+                            type="button"
+                            variant="danger"
+                            size="xs"
+                            circular
+                            iconOnly
+                            className="absolute top-1 right-1 w-7 h-7 border-2 border-white"
+                            onClick={() =>
+                              handleRemoveImage(carouselIndex + idx)
+                            }
+                            aria-label="Remove image"
+                          >
+                            <Text size="sm" weight="bold">
+                              &times;
+                            </Text>
+                          </Button>
+                        </div>
+                      ))}
+                  </div>
+                  {carouselIndex < imageFiles.length - 3 && (
+                    <Button
+                      type="button"
+                      variant="icon"
+                      size="sm"
+                      circular
+                      iconOnly
+                      className="absolute right-2 top-1/2 -translate-y-1/2"
+                      onClick={() => setCarouselIndex((prev) => prev + 1)}
+                      aria-label="Next image"
+                    >
+                      <Text size="base">&#8594;</Text>
+                    </Button>
+                  )}
+                </div>
+                <Text size="xs" color="primary" className="mt-2" align="center">
+                  Showing {carouselIndex + 1} -{" "}
+                  {Math.min(carouselIndex + 3, imageFiles.length)} of{" "}
+                  {imageFiles.length}
+                </Text>
+              </div>
+            )}
+          </div>
+          {/* Active checkbox removed: property is always active by default */}
         </div>
-      </div>
-    </div>
+        {(formError || error) && (
+          <Text variant="error" size="sm" align="center" className="mt-2">
+            {formError || error}
+          </Text>
+        )}
+      </form>
+    </BaseModal>
   );
 };
 

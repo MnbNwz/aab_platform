@@ -27,7 +27,7 @@ import { fetchDashboardThunk } from "../store/thunks/dashboardThunks";
 import { useDashboardRefresh } from "../hooks/useDashboardRefresh";
 import { AppDispatch, RootState } from "../store";
 import { fetchInvestmentStatisticsThunk } from "../store/slices/investmentOpportunitySlice";
-import ProfileModal from "./ProfileModal";
+import ProfileEditModal from "./ProfileEditModal";
 import {
   isAdmin,
   isCustomer,
@@ -789,7 +789,7 @@ const Dashboard: React.FC = () => {
         user={userData}
       />
 
-      <ProfileModal
+      <ProfileEditModal
         isOpen={profileOpen}
         onClose={handleProfileClose}
         onSave={handleSaveProfile}

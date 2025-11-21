@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState, AppDispatch } from "../../store";
 import {
@@ -14,7 +14,6 @@ import type { ContactStatus, User } from "../../types";
 import Loader from "../ui/Loader";
 import ProfileViewModal from "../ProfileViewModal";
 import {
-  X,
   MapPin,
   DollarSign,
   TrendingUp,
@@ -42,6 +41,8 @@ import {
 } from "../../utils/investmentOpportunity";
 import { showToast } from "../../utils/toast";
 import { useGeocoding } from "../../hooks/useGeocoding";
+import { BaseModal, Button, Text } from "../reusable";
+import ImageViewerModal from "./ImageViewerModal";
 
 interface InvestmentOpportunityDetailsModalProps {
   isOpen: boolean;
@@ -68,8 +69,6 @@ const InvestmentOpportunityDetailsModal: React.FC<
   );
   const user = useSelector((state: RootState) => state.auth.user);
   const isAdmin = user?.role === "admin";
-  const modalRef = useRef<HTMLDivElement>(null);
-  const interestModalRef = useRef<HTMLDivElement>(null);
 
   const [activeTab, setActiveTab] = useState<"details" | "interests">(
     "details"
@@ -121,22 +120,6 @@ const InvestmentOpportunityDetailsModal: React.FC<
   const closeImageViewer = useCallback(() => {
     setImageViewerOpen(false);
   }, []);
-
-  const nextImage = useCallback(() => {
-    const photos = selectedOpportunity?.photos;
-    if (photos && photos.length > 0) {
-      setSelectedImageIndex((prev) => (prev + 1) % photos.length);
-    }
-  }, [selectedOpportunity]);
-
-  const prevImage = useCallback(() => {
-    const photos = selectedOpportunity?.photos;
-    if (photos && photos.length > 0) {
-      setSelectedImageIndex((prev) =>
-        prev === 0 ? photos.length - 1 : prev - 1
-      );
-    }
-  }, [selectedOpportunity]);
 
   useEffect(() => {
     if (opportunityId) {
@@ -324,82 +307,42 @@ const InvestmentOpportunityDetailsModal: React.FC<
     dispatch(clearSelectedOpportunity());
   }, [onClose, dispatch]);
 
-  // Click outside to close (only when sub-modals are not open)
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      // Don't close main modal if any sub-modal is open
-      if (
-        imageViewerOpen ||
-        showInterestModal ||
-        showSuccessModal ||
-        profileViewOpen
-      )
-        return;
-
-      if (
-        modalRef.current &&
-        !modalRef.current.contains(event.target as Node)
-      ) {
-        handleClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [
-    isOpen,
-    imageViewerOpen,
-    showInterestModal,
-    showSuccessModal,
-    profileViewOpen,
-    handleClose,
-  ]);
-
   if (!isOpen) return null;
 
   if (detailsLoading || !selectedOpportunity) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-8">
+      <BaseModal
+        isOpen={isOpen}
+        onClose={onClose}
+        title="Loading..."
+        maxWidth="sm"
+        showFooter={false}
+      >
+        <div className="flex justify-center p-8">
           <Loader size="large" color="accent" />
         </div>
-      </div>
+      </BaseModal>
     );
   }
 
   const opportunity = selectedOpportunity;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div
-        ref={modalRef}
-        className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+    <>
+      <BaseModal
+        isOpen={isOpen}
+        onClose={handleClose}
+        title={opportunity.title}
+        subtitle={opportunity.propertyType}
+        maxWidth="6xl"
+        showFooter={false}
+        closeOnOverlayClick={
+          !imageViewerOpen &&
+          !showInterestModal &&
+          !showSuccessModal &&
+          !profileViewOpen
+        }
       >
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div className="flex-1">
-            <h2 className="text-2xl font-bold text-primary-900">
-              {opportunity.title}
-            </h2>
-            <div className="text-sm text-gray-600 mt-1 capitalize">
-              {opportunity.propertyType}
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleClose}
-              className="text-gray-400 hover:text-gray-600 transition"
-            >
-              <X className="h-6 w-6" />
-            </button>
-          </div>
-        </div>
-
         {/* Admin Actions Bar */}
         {isAdmin && onStatusChange && opportunity.status !== "sold" && (
           <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4">
@@ -409,30 +352,33 @@ const InvestmentOpportunityDetailsModal: React.FC<
               </span>
               <div className="flex items-center gap-2 flex-wrap">
                 {opportunity.status !== "available" && (
-                  <button
+                  <Button
                     onClick={() => onStatusChange("available")}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600 active:bg-green-700 transition-all font-semibold shadow-sm hover:shadow"
+                    size="sm"
+                    className="bg-green-500 hover:bg-green-600 active:bg-green-700 text-white"
+                    leftIcon={<CheckCircle className="h-4 w-4" />}
                   >
-                    <CheckCircle className="h-4 w-4" />
                     Set Available
-                  </button>
+                  </Button>
                 )}
                 {opportunity.status !== "under_offer" && (
-                  <button
+                  <Button
                     onClick={() => onStatusChange("under_offer")}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 text-sm bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 active:bg-yellow-700 transition-all font-semibold shadow-sm hover:shadow"
+                    size="sm"
+                    className="bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-white"
+                    leftIcon={<AlertCircle className="h-4 w-4" />}
                   >
-                    <AlertCircle className="h-4 w-4" />
                     Set Under Offer
-                  </button>
+                  </Button>
                 )}
-                <button
+                <Button
                   onClick={() => onStatusChange("sold")}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 active:bg-gray-800 transition-all font-semibold shadow-sm hover:shadow"
+                  size="sm"
+                  className="bg-gray-600 hover:bg-gray-700 active:bg-gray-800 text-white"
+                  leftIcon={<CheckCircle className="h-4 w-4" />}
                 >
-                  <CheckCircle className="h-4 w-4" />
                   Mark as Sold
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -1113,75 +1059,21 @@ const InvestmentOpportunityDetailsModal: React.FC<
               );
             })()}
         </div>
-      </div>
+      </BaseModal>
 
       {/* Full-Screen Image Viewer */}
       {imageViewerOpen &&
         opportunity.photos &&
         opportunity.photos.length > 0 && (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-95 z-[60] flex items-center justify-center"
-            onClick={closeImageViewer}
-          >
-            <div className="relative w-full h-full flex items-center justify-center p-4">
-              {/* Close button */}
-              <button
-                onClick={closeImageViewer}
-                className="absolute top-4 right-4 text-white hover:text-gray-300 transition z-10"
-              >
-                <X className="h-8 w-8" />
-              </button>
-
-              {/* Previous button */}
-              {opportunity.photos.length > 1 && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    prevImage();
-                  }}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 bg-black bg-opacity-50 rounded-full p-3 transition z-10"
-                >
-                  <span className="text-2xl">‹</span>
-                </button>
-              )}
-
-              {/* Image */}
-              <div
-                className="relative max-w-7xl max-h-full"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <img
-                  src={opportunity.photos[selectedImageIndex].url}
-                  alt={
-                    opportunity.photos[selectedImageIndex].caption ||
-                    `Photo ${selectedImageIndex + 1}`
-                  }
-                  className="max-w-full max-h-[85vh] object-contain rounded-lg"
-                />
-                {opportunity.photos[selectedImageIndex].caption && (
-                  <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-75 text-white p-4 text-center">
-                    {opportunity.photos[selectedImageIndex].caption}
-                  </div>
-                )}
-                <div className="absolute top-4 left-4 bg-black bg-opacity-75 text-white px-3 py-1 rounded-full text-sm">
-                  {selectedImageIndex + 1} / {opportunity.photos.length}
-                </div>
-              </div>
-
-              {/* Next button */}
-              {opportunity.photos.length > 1 && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    nextImage();
-                  }}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:text-gray-300 bg-black bg-opacity-50 rounded-full p-3 transition z-10"
-                >
-                  <span className="text-2xl">›</span>
-                </button>
-              )}
-            </div>
-          </div>
+          <ImageViewerModal
+            isOpen={imageViewerOpen}
+            onClose={closeImageViewer}
+            imageUrl={opportunity.photos[selectedImageIndex].url}
+            altText={
+              opportunity.photos[selectedImageIndex].caption ||
+              `Photo ${selectedImageIndex + 1}`
+            }
+          />
         )}
 
       {/* Contractor Profile View Modal */}
@@ -1194,88 +1086,71 @@ const InvestmentOpportunityDetailsModal: React.FC<
       )}
 
       {/* Express Interest Modal - For Contractors */}
-      {showInterestModal && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4"
-          onClick={() => {
-            setShowInterestModal(false);
-            setInterestMessage("");
-          }}
-        >
-          <div
-            ref={interestModalRef}
-            className="bg-white rounded-lg shadow-xl max-w-md w-full p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900">
-                Express Interest
-              </h3>
-              <button
-                onClick={() => {
-                  setShowInterestModal(false);
-                  setInterestMessage("");
-                }}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Message (Optional)
-                </label>
-                <textarea
-                  value={interestMessage}
-                  onChange={(e) => setInterestMessage(e.target.value)}
-                  placeholder="Add a message to stand out from other contractors..."
-                  rows={4}
-                  className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 resize-none"
-                  maxLength={500}
-                  disabled={submittingInterest}
-                />
-                <p className="text-xs text-gray-500 mt-2">
-                  {interestMessage.length}/500 characters
-                </p>
-              </div>
-
-              <button
-                onClick={handleExpressInterest}
-                disabled={submittingInterest}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
-              >
-                <Send className="h-5 w-5" />
-                {submittingInterest ? "Submitting..." : "Submit Interest"}
-              </button>
-            </div>
+      <BaseModal
+        isOpen={showInterestModal}
+        onClose={() => {
+          setShowInterestModal(false);
+          setInterestMessage("");
+        }}
+        title="Express Interest"
+        maxWidth="md"
+        showFooter={false}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Message (Optional)
+            </label>
+            <textarea
+              value={interestMessage}
+              onChange={(e) => setInterestMessage(e.target.value)}
+              placeholder="Add a message to stand out from other contractors..."
+              rows={4}
+              className="w-full px-4 py-3 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 resize-none"
+              maxLength={500}
+              disabled={submittingInterest}
+            />
+            <p className="text-xs text-gray-500 mt-2">
+              {interestMessage.length}/500 characters
+            </p>
           </div>
+
+          <Button
+            variant="accent"
+            fullWidth
+            onClick={handleExpressInterest}
+            disabled={submittingInterest}
+            loading={submittingInterest}
+            leftIcon={<Send className="h-5 w-5" />}
+          >
+            {submittingInterest ? "Submitting..." : "Submit Interest"}
+          </Button>
         </div>
-      )}
+      </BaseModal>
 
       {/* Success Modal - For Contractors */}
-      {showSuccessModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-[70] flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-8 text-center animate-fade-in">
-            <div className="mb-4">
-              <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                <CheckCircle className="h-10 w-10 text-green-600" />
-              </div>
+      <BaseModal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        title="Interest Submitted!"
+        maxWidth="md"
+        showFooter={false}
+      >
+        <div className="text-center">
+          <div className="mb-4">
+            <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+              <CheckCircle className="h-10 w-10 text-green-600" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">
-              Interest Submitted!
-            </h3>
-            <p className="text-gray-600 mb-1">
-              Your interest has been successfully submitted.
-            </p>
-            <p className="text-sm text-gray-500">
-              The property has been moved to your Interested Properties list.
-            </p>
           </div>
+          <Text size="base" className="text-gray-600 mb-1">
+            Your interest has been successfully submitted.
+          </Text>
+          <Text size="sm" className="text-gray-500">
+            The property has been moved to your Interested Properties list.
+          </Text>
         </div>
-      )}
-    </div>
+      </BaseModal>
+    </>
   );
 };
 

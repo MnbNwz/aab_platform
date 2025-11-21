@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState, AppDispatch } from "../store";
 import { createJobThunk } from "../store/thunks/jobThunks";
@@ -8,8 +8,21 @@ import { showToast } from "../utils/toast";
 import type { JobCreateProps } from "../types/component";
 import type { JobFormInputs } from "../types/job";
 import { isCustomer, isAdmin, isContractor } from "../utils";
+import PropertyViewModal from "./dashboard/PropertyViewModal";
+import {
+  TextInput,
+  TextareaInput,
+  SelectInput,
+  NumberInput,
+  Button,
+} from "./reusable";
 
-const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
+const JobCreate: React.FC<JobCreateProps> = ({
+  properties = [],
+  onClose,
+  initialProperty,
+  initialEstimate,
+}) => {
   const dispatch = useDispatch<AppDispatch>();
   const {
     services,
@@ -19,21 +32,36 @@ const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
   // Properties are passed as props from parent component
   const user = useSelector((state: RootState) => state.auth.user);
   const [jobType, setJobType] = useState<string>("");
+  const [propertyViewModalOpen, setPropertyViewModalOpen] = useState(false);
+  const [selectedPropertyForView, setSelectedPropertyForView] =
+    useState<any>(null);
 
   const { createLoading, error } = useSelector((state: RootState) => state.job);
+
+  // Calculate budget (static for now - will be replaced with actual calculation)
+  const calculatedBudget = useMemo(() => {
+    // Static calculation - will be replaced with actual calculator logic
+    // For now, use initialEstimate if provided, otherwise show a default
+    if (initialEstimate !== null && initialEstimate !== undefined) {
+      return initialEstimate > 1000 ? initialEstimate / 100 : initialEstimate;
+    }
+    // Default static value
+    return 5000.0;
+  }, [initialEstimate]);
 
   const {
     control,
     handleSubmit,
     setValue,
     reset,
+    watch,
     formState: { errors },
   } = useForm<JobFormInputs>({
     defaultValues: {
       title: "",
       description: "",
       category: "",
-      estimate: "",
+      estimate: calculatedBudget.toFixed(2),
       property: "",
       timeline: "",
     },
@@ -46,9 +74,6 @@ const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
         .catch(() => {});
     }
   }, [isInitialized, servicesLoading, dispatch]);
-
-  // Properties are loaded by the parent component (JobManagementTable)
-  // No need to fetch properties here
 
   useEffect(() => {
     if (services.length > 0) {
@@ -67,6 +92,18 @@ const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
       setJobType("");
     }
   }, [user]);
+
+  // Pre-fill form when initialProperty is provided
+  useEffect(() => {
+    if (initialProperty && initialProperty._id) {
+      setValue("property", initialProperty._id);
+    }
+  }, [initialProperty, setValue]);
+
+  // Set calculated budget in form
+  useEffect(() => {
+    setValue("estimate", calculatedBudget.toFixed(2));
+  }, [calculatedBudget, setValue]);
 
   const onSubmit = async (data: JobFormInputs) => {
     if (!jobType) {
@@ -105,6 +142,13 @@ const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
     }
 
     // Validate required fields
+    if (
+      properties.length > 0 &&
+      (!data.property || data.property.trim() === "")
+    ) {
+      showToast.error("Please select a property");
+      return;
+    }
     if (!data.category || data.category.trim() === "") {
       showToast.error("Please select a service category");
       return;
@@ -136,6 +180,7 @@ const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
       // Convert dollars to cents for backend (multiply by 100)
       jobData.estimate = Math.round(parseFloat(data.estimate) * 100);
     }
+    // Property is now required
     if (data.property) {
       // Handle both string and object property values
       if (typeof data.property === "string" && data.property.trim() !== "") {
@@ -147,6 +192,10 @@ const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
       ) {
         jobData.property = (data.property as any)._id;
       }
+    } else if (properties.length > 0) {
+      // If properties exist but none selected, this should be caught by validation
+      showToast.error("Property is required");
+      return;
     }
     if (
       data.timeline &&
@@ -184,273 +233,277 @@ const JobCreate: React.FC<JobCreateProps> = ({ properties = [], onClose }) => {
 
   return (
     <div className="w-full max-w-4xl mx-auto">
-      <h2 className="text-2xl sm:text-3xl font-bold text-primary-900 mb-6 text-center">
-        Create Job Request
-      </h2>
+      <div className="mb-6">
+        <h2 className="text-xl sm:text-2xl font-bold text-primary-900 mb-2">
+          Create Job Request
+        </h2>
+        <p className="text-sm text-gray-600">
+          Fill in the details below to post your job request
+        </p>
+      </div>
+
       <form
         onSubmit={handleSubmit(onSubmit)}
         className="space-y-4 sm:space-y-6"
       >
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm font-medium text-center">
-            {error}
+          <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-5 py-4 rounded-lg text-sm shadow-sm">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <span>{error}</span>
+            </div>
           </div>
         )}
-        <div>
-          <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
-            Title <span className="text-red-500">*</span>
-          </label>
-          <Controller
-            name="title"
-            control={control}
-            rules={{
-              required: "Title is required",
-              minLength: { value: 5, message: "Min 5 characters" },
-              maxLength: { value: 100, message: "Max 100 characters" },
-            }}
-            render={({ field }) => (
-              <input
-                {...field}
-                className="w-full rounded-lg px-3 py-2 sm:py-3 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm sm:text-base text-primary-900 placeholder-gray-300"
-                minLength={5}
-                maxLength={100}
-                required
-                placeholder="Enter job title"
-              />
-            )}
-          />
-          {errors.title && (
-            <span className="text-red-500 text-xs mt-1">
-              {errors.title.message}
-            </span>
+
+        {/* Job Title - Full Width */}
+        <Controller
+          name="title"
+          control={control}
+          rules={{
+            required: "Title is required",
+            minLength: { value: 5, message: "Min 5 characters" },
+            maxLength: { value: 100, message: "Max 100 characters" },
+          }}
+          render={({ field }) => (
+            <TextInput
+              {...field}
+              label="Job Title"
+              required
+              placeholder="e.g., Kitchen Renovation"
+              minLength={5}
+              maxLength={100}
+              error={errors.title?.message}
+            />
           )}
-        </div>
-        <div>
-          <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
-            Description <span className="text-red-500">*</span>
-          </label>
-          <Controller
-            name="description"
-            control={control}
-            rules={{
-              required: "Description is required",
-              minLength: { value: 10, message: "Min 10 characters" },
-              maxLength: { value: 2000, message: "Max 2000 characters" },
-            }}
-            render={({ field }) => (
-              <textarea
-                {...field}
-                className="w-full rounded-lg px-3 py-2 sm:py-3 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm sm:text-base resize-none text-primary-900 placeholder-gray-300"
-                minLength={10}
-                maxLength={2000}
-                required
-                placeholder="Describe the job in detail"
-                rows={4}
-              />
-            )}
-          />
-          {errors.description && (
-            <span className="text-red-500 text-xs mt-1">
-              {errors.description.message}
-            </span>
+        />
+
+        {/* Description - Full Width */}
+        <Controller
+          name="description"
+          control={control}
+          rules={{
+            required: "Description is required",
+            minLength: { value: 10, message: "Min 10 characters" },
+            maxLength: { value: 2000, message: "Max 2000 characters" },
+          }}
+          render={({ field }) => (
+            <TextareaInput
+              {...field}
+              label="Description"
+              required
+              placeholder="Describe what needs to be done in detail..."
+              minLength={10}
+              maxLength={2000}
+              rows={4}
+              error={errors.description?.message}
+            />
           )}
-        </div>
-        {/* Property Selection */}
+        />
+
+        {/* Property Selection - Full Width */}
         {properties.length > 0 && (
           <div>
-            <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
-              Select Property
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <span className="block text-primary-700 font-medium text-sm sm:text-base">
+                Property <span className="text-accent-500">*</span>
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const selectedPropertyId = watch("property");
+                  if (!selectedPropertyId) {
+                    showToast.error("Please select a property first");
+                    return;
+                  }
+                  const propertyToView = properties.find(
+                    (p) => p._id === selectedPropertyId
+                  );
+                  if (propertyToView) {
+                    setSelectedPropertyForView(propertyToView);
+                    setPropertyViewModalOpen(true);
+                  } else {
+                    showToast.error("Property not found");
+                  }
+                }}
+                disabled={!watch("property")}
+                className="text-xs sm:text-sm"
+              >
+                View Property
+              </Button>
+            </div>
             <Controller
               name="property"
               control={control}
+              rules={{ required: "Property is required" }}
               render={({ field }) => (
-                <select
+                <SelectInput
                   {...field}
-                  className="w-full rounded-lg px-3 py-2 sm:py-3 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm sm:text-base text-primary-900"
-                >
-                  <option value="">
-                    No specific property - General job request
-                  </option>
-                  {properties
-                    .filter((property) => property.isActive === true)
-                    .map((property) => (
-                      <option key={property._id} value={property._id}>
-                        {property.title} | {property.propertyType} |{" "}
-                        {property.bedrooms}bed/{property.bathrooms}bath/
-                        {property.kitchens}kitchen
-                        {property.area && property.areaUnit
-                          ? ` | ${property.area}${property.areaUnit}`
-                          : ""}
-                      </option>
-                    ))}
-                </select>
-              )}
-            />
-            <p className="text-xs text-gray-600 mt-1">
-              Format: Title | Type | Rooms | Area (Only active properties shown)
-            </p>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
-              Service Category <span className="text-red-500">*</span>
-            </label>
-            <Controller
-              name="category"
-              control={control}
-              rules={{ required: "Category is required" }}
-              render={({ field }) => (
-                <select
-                  {...field}
-                  className="w-full rounded-lg px-3 py-2 sm:py-3 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm sm:text-base text-primary-900"
                   required
-                  disabled={servicesLoading}
-                >
-                  <option value="">
-                    {servicesLoading
-                      ? "Loading services..."
-                      : "Select service category"}
-                  </option>
-                  {services.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              )}
-            />
-            {errors.category && (
-              <span className="text-red-500 text-xs mt-1">
-                {errors.category.message}
-              </span>
-            )}
-            <p className="text-xs text-gray-600 mt-1">
-              Categories will be mapped to contractor services (e.g., "solar" →
-              "electrical")
-            </p>
-          </div>
-          <div>
-            <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
-              Estimated Budget <span className="text-red-500">*</span>
-            </label>
-            <Controller
-              name="estimate"
-              control={control}
-              rules={{
-                required: "Estimated budget is required",
-                validate: (value) => {
-                  if (!value || value.trim() === "") {
-                    return "Estimated budget is required";
-                  }
-                  const num = parseFloat(value);
-                  if (isNaN(num) || num <= 0) {
-                    return "Budget must be a positive number";
-                  }
-                  return true;
-                },
-              }}
-              render={({ field }) => (
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
-                    $
-                  </span>
-                  <input
-                    {...field}
-                    className="w-full rounded-lg pl-8 pr-3 py-2 sm:py-3 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm sm:text-base text-primary-900 placeholder-gray-300"
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    placeholder="5000.00"
-                  />
-                </div>
-              )}
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Enter amount in dollars (will be stored in cents)
-            </p>
-            {errors.estimate && (
-              <span className="text-red-500 text-xs mt-1 block">
-                {errors.estimate.message}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
-              Timeline (Days) <span className="text-red-500">*</span>
-            </label>
-            <Controller
-              name="timeline"
-              control={control}
-              rules={{
-                required: "Timeline is required",
-                validate: (value) => {
-                  if (!value || value.trim() === "") {
-                    return "Timeline is required";
-                  }
-                  const num = parseInt(value);
-                  if (isNaN(num) || num < 1) return "Minimum 1 day";
-                  if (num > 365) return "Maximum 365 days";
-                  return true;
-                },
-              }}
-              render={({ field }) => (
-                <input
-                  {...field}
-                  className="w-full rounded-lg px-3 py-2 sm:py-3 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm sm:text-base text-primary-900 placeholder-gray-300"
-                  type="number"
-                  min={1}
-                  max={365}
-                  placeholder="e.g., 7 days"
+                  placeholder="Select a property"
+                  options={properties
+                    .filter((property) => property.isActive === true)
+                    .map((property) => ({
+                      value: property._id || "",
+                      label: `${property.title} • ${property.propertyType} • ${
+                        property.bedrooms
+                      }bed/${property.bathrooms}bath${
+                        property.area && property.areaUnit
+                          ? ` • ${property.area}${property.areaUnit}`
+                          : ""
+                      }`,
+                    }))}
+                  error={errors.property?.message}
                 />
               )}
             />
-            {errors.timeline && (
-              <span className="text-red-500 text-xs mt-1">
-                {errors.timeline.message}
-              </span>
-            )}
-            <p className="text-xs text-gray-600 mt-1">
-              How many days do you want this job to be completed in?
-            </p>
           </div>
-          <div className="flex items-end">
-            <div className="w-full">
-              <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
-                Timeline Examples
-              </label>
-              <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600">
-                <div className="space-y-1">
-                  <div>
-                    • <span className="font-medium">1-3 days:</span> Quick
-                    fixes, small repairs
-                  </div>
-                  <div>
-                    • <span className="font-medium">1-2 weeks:</span> Room
-                    renovations, installations
-                  </div>
-                  <div>
-                    • <span className="font-medium">1-2 months:</span> Major
-                    renovations, full projects
-                  </div>
+        )}
+
+        {/* Service Category & Budget - Same Line */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+          <Controller
+            name="category"
+            control={control}
+            rules={{ required: "Category is required" }}
+            render={({ field }) => (
+              <SelectInput
+                {...field}
+                label="Service Category"
+                required
+                placeholder={servicesLoading ? "Loading..." : "Select category"}
+                disabled={servicesLoading}
+                options={services.map((cat) => ({
+                  value: cat,
+                  label: cat.charAt(0).toUpperCase() + cat.slice(1),
+                }))}
+                error={errors.category?.message}
+              />
+            )}
+          />
+
+          <TextInput
+            label="Estimated Budget"
+            required
+            value={calculatedBudget.toFixed(2)}
+            readOnly
+            disabled
+            leftIcon={<span className="text-primary-600 font-medium">$</span>}
+            helperText="Calculated automatically from calculator"
+            inputClassName="bg-primary-50 cursor-not-allowed"
+          />
+        </div>
+
+        {/* Timeline */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <Controller
+            name="timeline"
+            control={control}
+            rules={{
+              required: "Timeline is required",
+              validate: (value) => {
+                if (!value || value.trim() === "") {
+                  return "Timeline is required";
+                }
+                const num = parseInt(value);
+                if (isNaN(num) || num < 1) return "Minimum 1 day";
+                if (num > 365) return "Maximum 365 days";
+                return true;
+              },
+            }}
+            render={({ field }) => (
+              <NumberInput
+                {...field}
+                label="Completion Time (Days)"
+                required
+                min={1}
+                max={365}
+                placeholder="e.g., 7"
+                error={errors.timeline?.message}
+              />
+            )}
+          />
+
+          <div className="bg-primary-50 rounded-lg p-3 border border-primary-200">
+            <p className="text-xs font-medium text-primary-900 mb-2 flex items-center gap-2">
+              <svg
+                className="w-3 h-3 text-accent-500"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              Timeline Guide (in days)
+            </p>
+            <div className="text-xs text-primary-800 space-y-1">
+              <div className="flex items-start gap-2">
+                <span className="text-accent-500 font-bold">•</span>
+                <div>
+                  <span className="font-semibold">1-3 days:</span> Quick fixes
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-accent-500 font-bold">•</span>
+                <div>
+                  <span className="font-semibold">7-14 days:</span> Room
+                  renovations
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-accent-500 font-bold">•</span>
+                <div>
+                  <span className="font-semibold">30-60 days:</span> Major
+                  projects
                 </div>
               </div>
             </div>
           </div>
         </div>
-        <button
-          type="submit"
-          disabled={createLoading}
-          className="w-full bg-accent-500 text-white font-semibold py-2 sm:py-3 rounded-lg mt-4 hover:bg-accent-600 transition-colors duration-200 text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {createLoading ? "Creating..." : "Create Job"}
-        </button>
+
+        {/* Submit Button */}
+        <div className="flex gap-4 pt-4">
+          <Button
+            type="button"
+            variant="secondary"
+            fullWidth
+            onClick={onClose}
+            size="lg"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            variant="accent"
+            fullWidth
+            disabled={createLoading}
+            loading={createLoading}
+            size="lg"
+          >
+            Create Job Request
+          </Button>
+        </div>
       </form>
+
+      {/* Property View Modal */}
+      <PropertyViewModal
+        isOpen={propertyViewModalOpen}
+        onClose={() => {
+          setPropertyViewModalOpen(false);
+          setSelectedPropertyForView(null);
+        }}
+        property={selectedPropertyForView}
+      />
     </div>
   );
 };

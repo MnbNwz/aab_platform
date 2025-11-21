@@ -42,11 +42,19 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   }, [isOpen, onCancel, onConfirm]);
 
   if (!isOpen) return null;
+
+  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget && !loading) {
+      onCancel();
+    }
+  };
+
   return (
     <div
       className={`fixed inset-0 z-[9999] flex items-center justify-center transition-colors ${
         darkOverlay ? "bg-black bg-opacity-60" : "bg-black bg-opacity-30"
       }`}
+      onClick={handleOverlayClick}
     >
       <div
         ref={modalRef}
@@ -55,6 +63,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-busy={loading}
+        onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-xl font-semibold text-accent-600 mb-3 text-center tracking-tight">
           {title}

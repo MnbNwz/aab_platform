@@ -5,7 +5,6 @@ import { updateJobThunk } from "../store/thunks/jobThunks";
 import { getServicesThunk } from "../store/thunks/servicesThunks";
 import { useForm, Controller } from "react-hook-form";
 import { showToast } from "../utils/toast";
-import { X, Save, Settings } from "lucide-react";
 import ConfirmModal from "./ui/ConfirmModal";
 import type { Job } from "../store/slices/jobSlice";
 import type {
@@ -14,6 +13,14 @@ import type {
   ConfirmModalState,
   JobUpdateData,
 } from "../types/job";
+import { X, Save } from "lucide-react";
+import {
+  BaseModal,
+  TextInput,
+  NumberInput,
+  SelectInput,
+  TextareaInput,
+} from "./reusable";
 
 const formatJobDataForForm = (job: Job): JobFormInputs => ({
   title: job.title || "",
@@ -212,348 +219,288 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
     onClose(false);
   }, [onClose]);
 
+  const handleSaveClick = useCallback(() => {
+    const form = document.getElementById("job-edit-form") as HTMLFormElement;
+    if (form) {
+      form.requestSubmit();
+    }
+  }, []);
+
+  const modalFooter = useMemo(
+    () => [
+      {
+        label: "Cancel",
+        onClick: handleCancel,
+        variant: "secondary" as const,
+        leftIcon: <X className="h-4 w-4" />,
+      },
+      {
+        label: isDirty ? "Save Changes" : "No Changes",
+        onClick: handleSaveClick,
+        variant: "primary" as const,
+        loading: updateLoading,
+        disabled: !canEdit || !isDirty || updateLoading,
+        type: "submit" as const,
+        leftIcon: <Save className="h-4 w-4" />,
+      },
+    ],
+    [handleCancel, handleSaveClick, isDirty, updateLoading, canEdit]
+  );
+
   if (!isOpen || !job) return null;
+
+  const modalTitle = `Edit Job${isDirty ? " (Unsaved changes)" : ""}`;
 
   return (
     <>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-primary-500 to-accent-500 px-4 sm:px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-white bg-opacity-20 rounded-lg">
-                  <Settings className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-lg sm:text-xl font-bold text-white">
-                    Edit Job
-                    {isDirty && (
-                      <span className="ml-2 text-yellow-300 text-xs sm:text-sm font-normal">
-                        (Unsaved changes)
-                      </span>
-                    )}
-                  </h2>
-                  <p className="text-white text-opacity-90 text-xs sm:text-sm">
-                    Update job information
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={handleCloseModal}
-                className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-              </button>
+      <BaseModal
+        isOpen={isOpen}
+        onClose={handleCloseModal}
+        title={modalTitle}
+        subtitle="Update job information"
+        maxWidth="4xl"
+        footer={modalFooter}
+        showFooter={true}
+        closeOnOverlayClick={!isDirty}
+      >
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="space-y-4 sm:space-y-6"
+          id="job-edit-form"
+        >
+          {/* Title and Service Category */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            {/* Title */}
+            <div>
+              <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
+                Title <span className="text-red-500">*</span>
+              </label>
+              <Controller
+                name="title"
+                control={control}
+                rules={{
+                  required: "Title is required",
+                  minLength: {
+                    value: 5,
+                    message: "Title must be at least 5 characters",
+                  },
+                  maxLength: {
+                    value: 100,
+                    message: "Title must be less than 100 characters",
+                  },
+                }}
+                render={({ field }) => (
+                  <TextInput
+                    {...field}
+                    placeholder="e.g., Install new kitchen cabinets"
+                    error={errors.title?.message}
+                  />
+                )}
+              />
+            </div>
+
+            {/* Service Category */}
+            <div>
+              <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
+                Service Category <span className="text-red-500">*</span>
+              </label>
+              <Controller
+                name="category"
+                control={control}
+                rules={{ required: "Category is required" }}
+                render={({ field }) => (
+                  <SelectInput
+                    {...field}
+                    disabled={servicesLoading}
+                    placeholder={
+                      servicesLoading
+                        ? "Loading services..."
+                        : "Select service category"
+                    }
+                    options={services.map((cat) => ({
+                      value: cat,
+                      label: cat.charAt(0).toUpperCase() + cat.slice(1),
+                    }))}
+                    error={errors.category?.message}
+                  />
+                )}
+              />
             </div>
           </div>
 
-          {/* Content */}
-          <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-            <form
-              onSubmit={handleSubmit(onSubmit)}
-              className="space-y-4 sm:space-y-6"
-            >
-              {/* Title and Service Category */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                {/* Title */}
-                <div>
-                  <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
-                    Title <span className="text-red-500">*</span>
-                  </label>
-                  <Controller
-                    name="title"
-                    control={control}
-                    rules={{
-                      required: "Title is required",
-                      minLength: {
-                        value: 5,
-                        message: "Title must be at least 5 characters",
-                      },
-                      maxLength: {
-                        value: 100,
-                        message: "Title must be less than 100 characters",
-                      },
-                    }}
-                    render={({ field }) => (
-                      <input
-                        {...field}
-                        type="text"
-                        className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-primary-900 placeholder-gray-300 text-sm sm:text-base"
-                        placeholder="e.g., Install new kitchen cabinets"
-                      />
-                    )}
-                  />
-                  {errors.title && (
-                    <span className="text-red-500 text-xs mt-1 block">
-                      {errors.title.message}
-                    </span>
-                  )}
-                </div>
-
-                {/* Service Category */}
-                <div>
-                  <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
-                    Service Category <span className="text-red-500">*</span>
-                  </label>
-                  <Controller
-                    name="category"
-                    control={control}
-                    rules={{ required: "Category is required" }}
-                    render={({ field }) => (
-                      <select
-                        {...field}
-                        className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-primary-900 text-sm sm:text-base"
-                        disabled={servicesLoading}
-                      >
-                        <option value="">
-                          {servicesLoading
-                            ? "Loading services..."
-                            : "Select service category"}
-                        </option>
-                        {services.map((cat) => (
-                          <option key={cat} value={cat}>
-                            {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  />
-                  {errors.category && (
-                    <span className="text-red-500 text-xs mt-1 block">
-                      {errors.category.message}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
-                  Description <span className="text-red-500">*</span>
-                </label>
-                <Controller
-                  name="description"
-                  control={control}
-                  rules={{
-                    required: "Description is required",
-                    minLength: {
-                      value: 10,
-                      message: "Description must be at least 10 characters",
-                    },
-                    maxLength: {
-                      value: 2000,
-                      message: "Description must be less than 2000 characters",
-                    },
-                  }}
-                  render={({ field }) => (
-                    <textarea
-                      {...field}
-                      className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white resize-none text-primary-900 placeholder-gray-300 text-sm sm:text-base"
-                      placeholder="Describe the job in detail"
-                      rows={4}
-                    />
-                  )}
+          {/* Description */}
+          <div>
+            <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
+              Description <span className="text-red-500">*</span>
+            </label>
+            <Controller
+              name="description"
+              control={control}
+              rules={{
+                required: "Description is required",
+                minLength: {
+                  value: 10,
+                  message: "Description must be at least 10 characters",
+                },
+                maxLength: {
+                  value: 2000,
+                  message: "Description must be less than 2000 characters",
+                },
+              }}
+              render={({ field }) => (
+                <TextareaInput
+                  {...field}
+                  placeholder="Describe the job in detail"
+                  rows={4}
+                  error={errors.description?.message}
                 />
-                {errors.description && (
-                  <span className="text-red-500 text-xs mt-1 block">
-                    {errors.description.message}
-                  </span>
-                )}
-              </div>
-
-              {/* Budget, Timeline, and Property */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                {/* Budget */}
-                <div>
-                  <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
-                    Estimated Budget <span className="text-red-500">*</span>
-                  </label>
-                  <Controller
-                    name="estimate"
-                    control={control}
-                    rules={{
-                      required: "Budget is required",
-                      validate: (value) => {
-                        if (!value?.trim()) return "Budget is required";
-                        const num = parseFloat(value);
-                        if (isNaN(num) || num <= 0)
-                          return "Budget must be a positive number";
-                        return true;
-                      },
-                    }}
-                    render={({ field }) => (
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
-                          $
-                        </span>
-                        <input
-                          {...field}
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          className="w-full rounded-lg pl-8 pr-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-primary-900 placeholder-gray-300 text-sm sm:text-base"
-                          placeholder="5000.00"
-                        />
-                      </div>
-                    )}
-                  />
-                  {errors.estimate && (
-                    <span className="text-red-500 text-xs mt-1 block">
-                      {errors.estimate.message}
-                    </span>
-                  )}
-                </div>
-
-                {/* Timeline */}
-                <div>
-                  <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
-                    Timeline (Days) <span className="text-red-500">*</span>
-                  </label>
-                  <Controller
-                    name="timeline"
-                    control={control}
-                    rules={{
-                      required: "Timeline is required",
-                      validate: (value) => {
-                        if (!value?.trim()) return "Timeline is required";
-                        const num = parseInt(value);
-                        if (isNaN(num) || num < 1) return "Minimum 1 day";
-                        if (num > 365) return "Maximum 365 days";
-                        return true;
-                      },
-                    }}
-                    render={({ field }) => (
-                      <input
-                        {...field}
-                        type="number"
-                        min={1}
-                        max={365}
-                        className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-primary-900 placeholder-gray-300 text-sm sm:text-base"
-                        placeholder="e.g., 7"
-                      />
-                    )}
-                  />
-                  {errors.timeline && (
-                    <span className="text-red-500 text-xs mt-1 block">
-                      {errors.timeline.message}
-                    </span>
-                  )}
-                </div>
-
-                {/* Property */}
-                <div>
-                  <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
-                    Property
-                  </label>
-                  <Controller
-                    name="property"
-                    control={control}
-                    render={({ field }) => (
-                      <select
-                        {...field}
-                        className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-primary-900 text-sm sm:text-base"
-                      >
-                        <option value="">Select property (optional)</option>
-                        {properties
-                          .filter((p) => p.isActive)
-                          .map((property) => (
-                            <option key={property._id} value={property._id}>
-                              {property.title}
-                            </option>
-                          ))}
-                      </select>
-                    )}
-                  />
-                </div>
-              </div>
-
-              {canEditStatus && (
-                <div className="border-t border-gray-200 pt-4 sm:pt-6">
-                  <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
-                    Job Status <span className="text-red-500">*</span>
-                  </label>
-                  <Controller
-                    name="status"
-                    control={control}
-                    rules={{
-                      required: "Status is required",
-                      validate: (value) => {
-                        if (isCustomer && value !== "cancelled") {
-                          return "You can only cancel this job";
-                        }
-                        return true;
-                      },
-                    }}
-                    render={({ field }) => (
-                      <select
-                        {...field}
-                        className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-primary-900 text-sm sm:text-base"
-                      >
-                        {isAdmin ? (
-                          <>
-                            <option value="open">Open</option>
-                            <option value="in_progress">In Progress</option>
-                            <option value="completed">Completed</option>
-                            <option value="cancelled">Cancelled</option>
-                          </>
-                        ) : (
-                          <>
-                            <option value={displayJob.status} disabled>
-                              Open
-                            </option>
-                            <option value="cancelled">Cancelled</option>
-                          </>
-                        )}
-                      </select>
-                    )}
-                  />
-                  {errors.status && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.status.message}
-                    </p>
-                  )}
-                  <p className="text-xs text-gray-500 mt-1">
-                    {isAdmin
-                      ? "Manually change job status (Admin only)"
-                      : "You can only cancel this job. Once cancelled, it cannot be reopened."}
-                  </p>
-                </div>
               )}
-              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 sm:pt-6 border-t border-gray-200">
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="px-4 sm:px-6 py-2 sm:py-2.5 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors text-sm sm:text-base order-2 sm:order-1"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={updateLoading || !isDirty}
-                  className={`px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm sm:text-base order-1 sm:order-2 ${
-                    isDirty
-                      ? "bg-accent-500 text-white hover:bg-accent-600"
-                      : "bg-gray-300 text-gray-500"
-                  }`}
-                >
-                  {updateLoading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Saving...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      <span>{isDirty ? "Save Changes" : "No Changes"}</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
+            />
           </div>
-        </div>
-      </div>
+
+          {/* Budget, Timeline, and Property */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {/* Budget */}
+            <div>
+              <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
+                Estimated Budget <span className="text-red-500">*</span>
+              </label>
+              <Controller
+                name="estimate"
+                control={control}
+                rules={{
+                  required: "Budget is required",
+                  validate: (value) => {
+                    if (!value?.trim()) return "Budget is required";
+                    const num = parseFloat(value);
+                    if (isNaN(num) || num <= 0)
+                      return "Budget must be a positive number";
+                    return true;
+                  },
+                }}
+                render={({ field }) => (
+                  <NumberInput
+                    {...field}
+                    min={0}
+                    step={0.01}
+                    leftIcon={
+                      <span className="text-gray-500 font-medium">$</span>
+                    }
+                    error={errors.estimate?.message}
+                    placeholder="5000.00"
+                  />
+                )}
+              />
+            </div>
+
+            {/* Timeline */}
+            <div>
+              <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
+                Timeline (Days) <span className="text-red-500">*</span>
+              </label>
+              <Controller
+                name="timeline"
+                control={control}
+                rules={{
+                  required: "Timeline is required",
+                  validate: (value) => {
+                    if (!value?.trim()) return "Timeline is required";
+                    const num = parseInt(value);
+                    if (isNaN(num) || num < 1) return "Minimum 1 day";
+                    if (num > 365) return "Maximum 365 days";
+                    return true;
+                  },
+                }}
+                render={({ field }) => (
+                  <NumberInput
+                    {...field}
+                    min={1}
+                    max={365}
+                    placeholder="e.g., 7"
+                    error={errors.timeline?.message}
+                  />
+                )}
+              />
+            </div>
+
+            {/* Property */}
+            <div>
+              <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
+                Property
+              </label>
+              <Controller
+                name="property"
+                control={control}
+                render={({ field }) => (
+                  <SelectInput
+                    {...field}
+                    placeholder="Select property (optional)"
+                    options={properties
+                      .filter((p) => p.isActive)
+                      .map((property) => ({
+                        value: property._id || "",
+                        label: property.title,
+                      }))}
+                  />
+                )}
+              />
+            </div>
+          </div>
+
+          {canEditStatus && (
+            <div className="border-t border-gray-200 pt-4 sm:pt-6">
+              <label className="block text-primary-900 font-medium mb-2 text-sm sm:text-base">
+                Job Status <span className="text-red-500">*</span>
+              </label>
+              <Controller
+                name="status"
+                control={control}
+                rules={{
+                  required: "Status is required",
+                  validate: (value) => {
+                    if (isCustomer && value !== "cancelled") {
+                      return "You can only cancel this job";
+                    }
+                    return true;
+                  },
+                }}
+                render={({ field }) => (
+                  <select
+                    {...field}
+                    className="w-full rounded-lg px-3 py-2 border border-primary-200 focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-primary-900 text-sm sm:text-base"
+                  >
+                    {isAdmin ? (
+                      <>
+                        <option value="open">Open</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value={displayJob.status} disabled>
+                          Open
+                        </option>
+                        <option value="cancelled">Cancelled</option>
+                      </>
+                    )}
+                  </select>
+                )}
+              />
+              {errors.status && (
+                <p className="text-xs text-red-500 mt-1">
+                  {errors.status.message}
+                </p>
+              )}
+              <p className="text-xs text-gray-500 mt-1">
+                {isAdmin
+                  ? "Manually change job status (Admin only)"
+                  : "You can only cancel this job. Once cancelled, it cannot be reopened."}
+              </p>
+            </div>
+          )}
+        </form>
+      </BaseModal>
 
       {/* Confirm Modal */}
       <ConfirmModal

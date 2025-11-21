@@ -5,7 +5,7 @@ import { getServicesThunk } from "../store/thunks/servicesThunks";
 import ConfirmModal from "./ui/ConfirmModal";
 import { baseUserSchema } from "../schemas/authSchemas";
 import { User, UserRole } from "../types";
-import { MapPin } from "lucide-react";
+import { MapPin, X, Save } from "lucide-react";
 import LocationSelector from "./LocationSelector";
 import { ProfileFormState } from "../store/slices/userSlice";
 import { useGeocoding } from "../hooks/useGeocoding";
@@ -246,6 +246,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         onClick: () => onClose(),
         variant: "secondary" as const,
         disabled: isUpdating,
+        leftIcon: <X className="h-4 w-4" />,
       },
       {
         label: isUpdating
@@ -261,6 +262,7 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
         },
         variant: "primary" as const,
         disabled: isUpdating || !hasFormChanged(),
+        leftIcon: <Save className="h-4 w-4" />,
       },
     ],
     [isUpdating, hasFormChanged, onClose]

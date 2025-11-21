@@ -6,7 +6,6 @@ import React, {
   useMemo,
   memo,
 } from "react";
-import { createPortal } from "react-dom";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState, AppDispatch } from "../../store";
 import type { Job } from "../../store/slices/jobSlice";
@@ -30,6 +29,7 @@ import {
   createInputField,
   createSelectField,
 } from "../ui/FilterPanel.utils";
+import { BaseModal } from "../reusable";
 
 // Job type for table
 interface TableJob extends Record<string, unknown> {
@@ -452,7 +452,7 @@ const JobManagementTable: React.FC = memo(() => {
           values={filterValues}
           onChange={handleFilterPanelChange}
           columns={filterColumns}
-          showFilterIcon
+          showFilterIcon={true}
         />
       </div>
 
@@ -475,38 +475,19 @@ const JobManagementTable: React.FC = memo(() => {
         />
       </div>
 
-      {/* Job Create Modal - Rendered as Portal */}
-      {showCreateModal &&
-        createPortal(
-          <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-60 p-4"
-            style={{
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              width: "100vw",
-              height: "100vh",
-            }}
-          >
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative">
-              <button
-                className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl font-bold z-10"
-                onClick={() => setShowCreateModal(false)}
-                aria-label="Close"
-              >
-                &times;
-              </button>
-              <div className="p-4 sm:p-6 lg:p-8">
-                <JobCreate
-                  properties={properties}
-                  onClose={() => setShowCreateModal(false)}
-                />
-              </div>
-            </div>
-          </div>,
-          document.body
-        )}
+      {/* Job Create Modal */}
+      <BaseModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Create New Job"
+        maxWidth="2xl"
+        showFooter={false}
+      >
+        <JobCreate
+          properties={properties}
+          onClose={() => setShowCreateModal(false)}
+        />
+      </BaseModal>
 
       {/* Job Detail View Modal with Bids Section */}
       {jobDetailViewOpen && selectedJob && (

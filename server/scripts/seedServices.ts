@@ -6,7 +6,22 @@ import { connectDB } from "@config/db";
 import { User } from "@models/user";
 
 // Default contractor services
-const defaultServices = ["plumbing", "electrical", "hvac", "painting", "flooring"];
+const defaultServices = [
+  "Demolition",
+  "Drywall",
+  "Insulation",
+  "Painting",
+  "Flooring",
+  "Plumbing rough-in",
+  "Electrical rough-in",
+  "Finishing (trim & doors)",
+  "Excavation",
+  "Concrete",
+  "Roofing",
+  "Windows & Doors",
+  "Cabinetry / Millwork",
+  "Landscaping",
+];
 
 export const seedServices = async () => {
   try {

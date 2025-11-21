@@ -16,7 +16,7 @@ const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
   if (!isOpen) return null;
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-80"
+      className="fixed inset-0 z-[2000] flex items-center justify-center bg-black bg-opacity-80"
       onClick={onClose}
     >
       <div
@@ -30,6 +30,7 @@ const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
           &#10005;
         </button>
         <img
+          key={imageUrl}
           src={imageUrl}
           alt={altText}
           className="max-h-[80vh] max-w-full rounded-lg shadow-2xl border-4 border-white object-contain"

@@ -1,5 +1,6 @@
 import { useState, useCallback, memo, useMemo } from "react";
-import { Filter } from "lucide-react";
+import { Filter, X, Check, Search, Calendar, DollarSign } from "lucide-react";
+import { TextInput, SelectInput, NumberInput, Button } from "../reusable";
 
 // Filter field types
 export type FilterFieldType = "select" | "input" | "number" | "date";
@@ -65,7 +66,7 @@ const FilterPanel = memo(function FilterPanel<T extends Record<string, any>>({
   onClear,
   showApplyButton = false,
   showClearButton = false,
-  showFilterIcon = true,
+  showFilterIcon = true, // Always show filter icon by default
   columns = { mobile: 1, tablet: 2, desktop: 4 },
   variant: _variant = "default",
   className = "",
@@ -131,74 +132,126 @@ const FilterPanel = memo(function FilterPanel<T extends Record<string, any>>({
     )} lg:${getColClass(desktop)} gap-4`;
   }, [columns]);
 
+  // Memoize icon components to prevent recreation on each render
+  const searchIcon = useMemo(
+    () => <Search className="h-4 w-4 text-gray-400" />,
+    []
+  );
+  const dollarIcon = useMemo(
+    () => <DollarSign className="h-4 w-4 text-gray-400" />,
+    []
+  );
+  const calendarIcon = useMemo(
+    () => <Calendar className="h-4 w-4 text-gray-400 pointer-events-none" />,
+    []
+  );
+
+  // Helper functions to check field types - memoized for performance
+  const isSearchField = useCallback((fieldName: string) => {
+    return fieldName.toLowerCase().includes("search");
+  }, []);
+
+  // Memoize options transformation helper
+  const transformOptions = useCallback((options?: FilterOption[]) => {
+    return (
+      options?.map((option) => ({
+        value: String(option.value),
+        label: option.label,
+      })) || []
+    );
+  }, []);
+
   // Render filter field based on type
   const renderField = useCallback(
     (field: FilterField) => {
-      const commonClasses =
-        "w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white text-sm transition-colors placeholder-gray-300";
-
       switch (field.type) {
-        case "select":
+        case "select": {
           return (
-            <select
+            <SelectInput
+              id={field.name}
+              name={field.name}
+              label={field.label}
               value={field.value || ""}
               onChange={(e) => handleFieldChange(field.name, e.target.value)}
-              className={commonClasses}
-              aria-label={field.label}
-            >
-              {field.options?.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              options={transformOptions(field.options)}
+              containerClassName="w-full"
+            />
           );
+        }
 
-        case "input":
+        case "input": {
           return (
-            <input
-              type="text"
+            <TextInput
+              id={field.name}
+              name={field.name}
+              label={field.label}
               value={field.value || ""}
               onChange={(e) => handleFieldChange(field.name, e.target.value)}
               placeholder={field.placeholder}
-              className={commonClasses}
-              aria-label={field.label}
+              containerClassName="w-full"
+              leftIcon={isSearchField(field.name) ? searchIcon : undefined}
             />
           );
+        }
 
-        case "number":
+        case "number": {
           return (
-            <input
-              type="number"
+            <NumberInput
+              id={field.name}
+              name={field.name}
+              label={field.label}
               value={field.value || ""}
-              onChange={(e) =>
-                handleFieldChange(
-                  field.name,
-                  e.target.value ? Number(e.target.value) : ""
-                )
-              }
+              onChange={(e) => {
+                const value = e.target.value;
+                handleFieldChange(field.name, value === "" ? "" : value);
+              }}
               placeholder={field.placeholder}
-              className={commonClasses}
-              aria-label={field.label}
+              containerClassName="w-full"
+              leftIcon={dollarIcon}
             />
           );
+        }
 
-        case "date":
+        case "date": {
           return (
-            <input
-              type="date"
-              value={field.value || ""}
-              onChange={(e) => handleFieldChange(field.name, e.target.value)}
-              className={commonClasses}
-              aria-label={field.label}
-            />
+            <div className="w-full">
+              <label
+                className="block text-sm font-medium text-gray-700 mb-1.5"
+                htmlFor={field.name}
+              >
+                {field.label}
+              </label>
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                  {calendarIcon}
+                </div>
+                <input
+                  type="date"
+                  id={field.name}
+                  value={field.value || ""}
+                  onChange={(e) =>
+                    handleFieldChange(field.name, e.target.value)
+                  }
+                  className="w-full rounded-lg pl-10 pr-3 py-2 border border-primary-300 focus:outline-none focus:ring-2 focus:ring-accent-500 focus:border-accent-500 text-sm bg-white text-primary-900 placeholder-gray-300 transition-all duration-200"
+                  aria-label={field.label}
+                />
+              </div>
+            </div>
           );
+        }
 
         default:
           return null;
       }
     },
-    [handleFieldChange]
+    [
+      handleFieldChange,
+      searchIcon,
+      dollarIcon,
+      calendarIcon,
+      isSearchField,
+      transformOptions,
+    ]
   );
 
   // Inline mode (always visible)
@@ -215,13 +268,55 @@ const FilterPanel = memo(function FilterPanel<T extends Record<string, any>>({
           <div className="flex items-center gap-3">
             <Filter className="h-5 w-5 text-gray-400 flex-shrink-0" />
             <div className="flex items-center gap-2 flex-1">
-              <label
-                className="text-sm mr-2 font-medium text-gray-700 whitespace-nowrap"
-                htmlFor={field.name}
-              >
+              <span className="text-sm mr-2 font-medium text-gray-700 whitespace-nowrap">
                 {field.label}:
-              </label>
-              <div className="flex-1 max-w-xs">{renderField(field)}</div>
+              </span>
+              <div className="flex-1 max-w-xs">
+                {field.type === "select" ? (
+                  <SelectInput
+                    id={field.name}
+                    name={field.name}
+                    value={field.value || ""}
+                    onChange={(e) =>
+                      handleFieldChange(field.name, e.target.value)
+                    }
+                    options={transformOptions(field.options)}
+                    containerClassName="w-full"
+                    label=""
+                  />
+                ) : field.type === "input" ? (
+                  <TextInput
+                    id={field.name}
+                    name={field.name}
+                    value={field.value || ""}
+                    onChange={(e) =>
+                      handleFieldChange(field.name, e.target.value)
+                    }
+                    placeholder={field.placeholder}
+                    containerClassName="w-full"
+                    label=""
+                    leftIcon={
+                      isSearchField(field.name) ? searchIcon : undefined
+                    }
+                  />
+                ) : field.type === "number" ? (
+                  <NumberInput
+                    id={field.name}
+                    name={field.name}
+                    value={field.value || ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      handleFieldChange(field.name, value === "" ? "" : value);
+                    }}
+                    placeholder={field.placeholder}
+                    containerClassName="w-full"
+                    label=""
+                    leftIcon={dollarIcon}
+                  />
+                ) : (
+                  renderField(field)
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -244,15 +339,7 @@ const FilterPanel = memo(function FilterPanel<T extends Record<string, any>>({
           )}
           <div className={gridClasses}>
             {fields.map((field) => (
-              <div key={field.name}>
-                <label
-                  className="block text-sm font-medium text-gray-700 mb-1.5"
-                  htmlFor={field.name}
-                >
-                  {field.label}
-                </label>
-                {renderField(field)}
-              </div>
+              <div key={field.name}>{renderField(field)}</div>
             ))}
           </div>
         </div>
@@ -264,30 +351,22 @@ const FilterPanel = memo(function FilterPanel<T extends Record<string, any>>({
   return (
     <div className={className}>
       {/* Toggle Button */}
-      <button
+      <Button
         onClick={handleToggle}
-        className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+        variant="secondary"
+        leftIcon={<Filter className="h-4 w-4" />}
         aria-expanded={!isCollapsed}
         aria-label={isCollapsed ? "Show filters" : "Hide filters"}
       >
-        <Filter className="h-4 w-4" />
-        <span>{title || "Filters"}</span>
-      </button>
+        {title || "Filters"}
+      </Button>
 
       {/* Collapsible Panel */}
       {!isCollapsed && (
         <div className="mt-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
           <div className={gridClasses}>
             {fields.map((field) => (
-              <div key={field.name}>
-                <label
-                  className="block text-sm font-medium text-gray-700 mb-1.5"
-                  htmlFor={field.name}
-                >
-                  {field.label}
-                </label>
-                {renderField(field)}
-              </div>
+              <div key={field.name}>{renderField(field)}</div>
             ))}
           </div>
 
@@ -295,20 +374,22 @@ const FilterPanel = memo(function FilterPanel<T extends Record<string, any>>({
           {(showApplyButton || showClearButton) && (
             <div className="flex gap-3 mt-4">
               {showApplyButton && (
-                <button
+                <Button
                   onClick={handleApply}
-                  className="bg-accent-500 text-white px-6 py-2 rounded-lg font-semibold hover:bg-accent-600 transition-colors flex items-center gap-2"
+                  variant="primary"
+                  leftIcon={<Check className="h-4 w-4" />}
                 >
                   Apply Filters
-                </button>
+                </Button>
               )}
               {showClearButton && (
-                <button
+                <Button
                   onClick={handleClear}
-                  className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:bg-gray-300 transition-colors flex items-center gap-2"
+                  variant="secondary"
+                  leftIcon={<X className="h-4 w-4" />}
                 >
                   Clear All
-                </button>
+                </Button>
               )}
             </div>
           )}

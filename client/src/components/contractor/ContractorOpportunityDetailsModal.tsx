@@ -7,7 +7,6 @@ import {
 } from "../../store/slices/investmentOpportunitySlice";
 import Loader from "../ui/Loader";
 import {
-  X,
   MapPin,
   DollarSign,
   TrendingUp,
@@ -15,12 +14,14 @@ import {
   Calendar,
   Ruler,
   Wrench,
-  Heart,
   Building2,
   FileText,
+  X,
+  HeartOff,
 } from "lucide-react";
 import { formatInvestmentPrice } from "../../utils/investmentOpportunity";
 import { useGeocoding } from "../../hooks/useGeocoding";
+import { BaseModal } from "../reusable";
 
 interface ContractorOpportunityDetailsModalProps {
   isOpen: boolean;
@@ -94,42 +95,64 @@ const ContractorOpportunityDetailsModal: React.FC<
 
   if (loading || !selectedOpportunity) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-8">
+      <BaseModal
+        isOpen={isOpen}
+        onClose={onClose}
+        title="Loading..."
+        maxWidth="sm"
+        showFooter={false}
+      >
+        <div className="flex justify-center p-8">
           <Loader size="large" color="accent" />
         </div>
-      </div>
+      </BaseModal>
     );
   }
 
   const opportunity = selectedOpportunity;
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div>
-            <h2 className="text-2xl font-bold text-primary-900">
-              {opportunity.title}
-            </h2>
-            <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
-              <MapPin className="h-4 w-4" />
-              <span>
-                {opportunity.location.city}, {opportunity.location.province}
-              </span>
-            </div>
-          </div>
-          <button
-            onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600 transition"
-          >
-            <X className="h-6 w-6" />
-          </button>
-        </div>
+  const modalFooter = [
+    {
+      label: "Close",
+      onClick: handleClose,
+      variant: "secondary" as const,
+      leftIcon: <X className="h-4 w-4" />,
+    },
+    ...(hasExpressedInterest
+      ? [
+          {
+            label: "Withdraw Interest",
+            onClick: () => {
+              onWithdrawInterest(opportunityId);
+              handleClose();
+            },
+            variant: "danger" as const,
+            leftIcon: <HeartOff className="h-4 w-4" />,
+          },
+        ]
+      : [
+          {
+            label: showMessageInput ? "Confirm Interest" : "Express Interest",
+            onClick: handleExpressInterest,
+            variant: "primary" as const,
+            leftIcon: <TrendingUp className="h-4 w-4" />,
+          },
+        ]),
+  ];
 
-        {/* Content */}
-        <div className="overflow-y-auto flex-1 p-6 space-y-6">
+  return (
+    <BaseModal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={opportunity.title}
+      subtitle={`${opportunity.location.city}, ${opportunity.location.province}`}
+      maxWidth="4xl"
+      footer={modalFooter}
+      showFooter={true}
+    >
+
+      {/* Content */}
+      <div className="space-y-6">
           {/* Photos */}
           {opportunity.photos && opportunity.photos.length > 0 && (
             <div>
@@ -413,39 +436,8 @@ const ContractorOpportunityDetailsModal: React.FC<
               />
             </div>
           )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
-          <button
-            onClick={handleClose}
-            className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition"
-          >
-            Close
-          </button>
-          {hasExpressedInterest ? (
-            <button
-              onClick={() => {
-                onWithdrawInterest(opportunityId);
-                handleClose();
-              }}
-              className="px-6 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition flex items-center gap-2"
-            >
-              <X className="h-5 w-5" />
-              Withdraw Interest
-            </button>
-          ) : (
-            <button
-              onClick={handleExpressInterest}
-              className="px-6 py-2 bg-accent-500 text-white rounded-lg font-semibold hover:bg-accent-600 transition flex items-center gap-2"
-            >
-              <Heart className="h-5 w-5" />
-              {showMessageInput ? "Confirm Interest" : "Express Interest"}
-            </button>
-          )}
-        </div>
       </div>
-    </div>
+    </BaseModal>
   );
 };
 

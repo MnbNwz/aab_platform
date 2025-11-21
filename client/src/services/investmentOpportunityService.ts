@@ -23,7 +23,12 @@ export const investmentOpportunityApi = {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined && value !== "") {
-        params.append(key, String(value));
+        // Convert maxPrice from dollars to cents before sending to backend
+        if (key === "maxPrice" && typeof value === "number") {
+          params.append(key, String(Math.round(value * 100)));
+        } else {
+          params.append(key, String(value));
+        }
       }
     });
     const queryString = params.toString();

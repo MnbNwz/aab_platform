@@ -43,7 +43,7 @@ export interface TabContentProps {
   ) => Promise<void>;
 }
 
-export interface ProfileModalProps {
+export interface ProfileEditModalProps {
   user: User;
   isOpen: boolean;
   onClose: () => void;
@@ -164,6 +164,8 @@ export interface SettingsItem {
 export interface JobCreateProps {
   properties?: PropertyFormData[];
   onClose?: () => void;
+  initialProperty?: any; // Property to pre-select
+  initialEstimate?: number | null; // Estimate to pre-fill
 }
 
 // My Properties Component Types
