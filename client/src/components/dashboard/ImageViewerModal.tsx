@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo, useCallback, useState, useRef } from "react";
 
 interface ImageViewerModalProps {
   isOpen: boolean;
@@ -7,37 +7,111 @@ interface ImageViewerModalProps {
   altText?: string;
 }
 
-const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
-  isOpen,
-  onClose,
-  imageUrl,
-  altText = "Full image",
-}) => {
-  if (!isOpen) return null;
-  return (
-    <div
-      className="fixed inset-0 z-[2000] flex items-center justify-center bg-black bg-opacity-80"
-      onClick={onClose}
-    >
+const ImageViewerModal: React.FC<ImageViewerModalProps> = memo(
+  ({ isOpen, onClose, imageUrl, altText = "Full image" }) => {
+    const [isLoading, setIsLoading] = useState(true);
+    const previousImageUrlRef = useRef<string>("");
+
+    // Reset loading state when imageUrl changes or modal opens
+    if (isOpen && previousImageUrlRef.current !== imageUrl) {
+      setIsLoading(true);
+      previousImageUrlRef.current = imageUrl;
+    }
+
+    const handleOverlayClick = useCallback(() => {
+      onClose();
+    }, [onClose]);
+
+    const handleKeyDown = useCallback(
+      (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (e.key === "Escape") {
+          onClose();
+        }
+      },
+      [onClose]
+    );
+
+    const handleImageContainerClick = useCallback(
+      (e: React.MouseEvent<HTMLDivElement>) => {
+        e.stopPropagation();
+      },
+      []
+    );
+
+    const handleCloseClick = useCallback(
+      (e: React.MouseEvent<HTMLButtonElement>) => {
+        e.stopPropagation();
+        onClose();
+      },
+      [onClose]
+    );
+
+    const handleImageLoadStart = useCallback(() => {
+      setIsLoading(true);
+    }, []);
+
+    const handleImageLoad = useCallback(() => {
+      setIsLoading(false);
+    }, []);
+
+    const handleImageError = useCallback(() => {
+      setIsLoading(false);
+    }, []);
+
+    if (!isOpen) return null;
+
+    return (
       <div
-        className="relative max-w-4xl w-full flex items-center justify-center"
-        onClick={(e) => e.stopPropagation()}
+        className="fixed inset-0 z-[2000] flex items-center justify-center bg-black bg-opacity-80"
+        onClick={handleOverlayClick}
+        onKeyDown={handleKeyDown}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Image viewer"
       >
+        {/* Close button - matches BaseModal design */}
         <button
-          className="absolute top-4 right-4 text-white text-4xl font-bold z-10 hover:text-accent-500"
-          onClick={onClose}
+          className="fixed top-4 right-4 sm:top-6 sm:right-6 text-white hover:text-accent-400 text-2xl sm:text-3xl font-bold p-2 transition-colors flex-shrink-0 z-[2001]"
+          onClick={handleCloseClick}
+          aria-label="Close image viewer"
+          type="button"
         >
           &#10005;
         </button>
-        <img
-          key={imageUrl}
-          src={imageUrl}
-          alt={altText}
-          className="max-h-[80vh] max-w-full rounded-lg shadow-2xl border-4 border-white object-contain"
-        />
+        <div
+          className="relative max-w-4xl w-full flex items-center justify-center p-4 sm:p-6"
+          onClick={handleImageContainerClick}
+        >
+          {/* Loading Spinner - same style as sign-in */}
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center z-10">
+              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white"></div>
+            </div>
+          )}
+          <img
+            key={imageUrl}
+            src={imageUrl}
+            alt={altText}
+            className={`rounded-lg shadow-2xl border-4 border-white object-contain transition-opacity duration-300 ${
+              isLoading ? "opacity-0" : "opacity-100"
+            }`}
+            style={{
+              maxHeight: "calc(100vh - 8rem)",
+              maxWidth: "calc(100vw - 8rem)",
+            }}
+            onLoadStart={handleImageLoadStart}
+            onLoad={handleImageLoad}
+            onError={handleImageError}
+            loading="eager"
+            decoding="async"
+          />
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  }
+);
+
+ImageViewerModal.displayName = "ImageViewerModal";
 
 export default ImageViewerModal;

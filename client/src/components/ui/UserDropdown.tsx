@@ -116,6 +116,7 @@ const UserDropdown: React.FC<UserDropdownProps> = ({
                   className="w-full h-full object-cover"
                   loading="eager"
                   onClick={() => {
+                    setOpen(false);
                     setImageViewerOpen(true);
                   }}
                   onError={(e) => {
