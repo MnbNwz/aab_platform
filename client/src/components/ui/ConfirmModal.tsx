@@ -51,9 +51,10 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 z-[9999] flex items-center justify-center transition-colors p-2 xs:p-4 ${
+      className={`fixed inset-0 flex items-center justify-center transition-colors p-2 xs:p-4 ${
         darkOverlay ? "bg-primary-900/60" : "bg-primary-900/40"
       }`}
+      style={{ zIndex: 20000 }}
       onClick={handleOverlayClick}
     >
       <div

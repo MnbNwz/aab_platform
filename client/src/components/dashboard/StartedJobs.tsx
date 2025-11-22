@@ -17,6 +17,7 @@ import {
   setContractorJobFilters,
   clearContractorJobError,
 } from "../../store/slices/contractorJobSlice";
+import { getServicesThunk } from "../../store/thunks/servicesThunks";
 import ContractorJobDetailsModal from "../ContractorJobDetailsModal";
 import DataTable, { TableColumn } from "../ui/DataTable";
 import type { PaginationInfo } from "../ui/DataTable";
@@ -32,6 +33,8 @@ const StartedJobs: React.FC = memo(() => {
     pagination,
     filters,
   } = useSelector((state: RootState) => state.contractorJob);
+  const { services: backendServices, isInitialized: servicesInitialized } =
+    useSelector((state: RootState) => state.services);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedJob, setSelectedJob] = useState<ContractorJobDetails | null>(
     null
@@ -40,6 +43,18 @@ const StartedJobs: React.FC = memo(() => {
   const [showJobDetails, setShowJobDetails] = useState(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hasInitializedRef = useRef(false);
+
+  // Fetch services from backend if not already loaded
+  useEffect(() => {
+    if (!servicesInitialized && backendServices.length === 0) {
+      dispatch(getServicesThunk());
+    }
+  }, [dispatch, servicesInitialized, backendServices.length]);
+
+  // Get backend services for filter dropdown
+  const availableServices = useMemo(() => {
+    return backendServices || [];
+  }, [backendServices]);
 
   useEffect(() => {
     if (!hasInitializedRef.current) {
@@ -180,23 +195,28 @@ const StartedJobs: React.FC = memo(() => {
         key: "estimate",
         header: "Price",
         render: (job) => {
-          const bidAmount = (job as any).bidAmount || job.estimate || 0;
-          const customerEstimate = (job as any).customerEstimate || null;
-          
+          // Convert from cents to dollars
+          const rawBidAmount = (job as any).bidAmount || job.estimate || 0;
+          const rawCustomerEstimate = (job as any).customerEstimate || null;
+          const bidAmount = rawBidAmount ? rawBidAmount / 100 : 0;
+          const customerEstimate = rawCustomerEstimate
+            ? rawCustomerEstimate / 100
+            : null;
+
           return (
             <div className="flex flex-col">
               <span className="text-xl font-bold text-green-700">
-                ${bidAmount.toLocaleString("en-US", {
+                $
+                {bidAmount.toLocaleString("en-US", {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}
               </span>
-              <span className="text-xs text-gray-500 mt-0.5">
-                Bid Price
-              </span>
+              <span className="text-xs text-gray-500 mt-0.5">Bid Price</span>
               {customerEstimate && customerEstimate !== bidAmount && (
                 <span className="text-xs text-gray-400 mt-1">
-                  Est: ${customerEstimate.toLocaleString("en-US", {
+                  Est: $
+                  {customerEstimate.toLocaleString("en-US", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}
@@ -207,25 +227,30 @@ const StartedJobs: React.FC = memo(() => {
         },
         mobileLabel: "Price",
         mobileRender: (job) => {
-          const bidAmount = (job as any).bidAmount || job.estimate || 0;
-          const customerEstimate = (job as any).customerEstimate || null;
-          
+          // Convert from cents to dollars
+          const rawBidAmount = (job as any).bidAmount || job.estimate || 0;
+          const rawCustomerEstimate = (job as any).customerEstimate || null;
+          const bidAmount = rawBidAmount ? rawBidAmount / 100 : 0;
+          const customerEstimate = rawCustomerEstimate
+            ? rawCustomerEstimate / 100
+            : null;
+
           return (
             <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-2">
               <span className="text-gray-600 text-sm">Price:</span>
               <div className="flex flex-col items-end sm:items-end">
                 <span className="text-xl font-bold text-green-700 text-sm">
-                  ${bidAmount.toLocaleString("en-US", {
+                  $
+                  {bidAmount.toLocaleString("en-US", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}
                 </span>
-                <span className="text-xs text-gray-500 mt-0.5">
-                  Bid Price
-                </span>
+                <span className="text-xs text-gray-500 mt-0.5">Bid Price</span>
                 {customerEstimate && customerEstimate !== bidAmount && (
                   <span className="text-xs text-gray-400 mt-1">
-                    Est: ${customerEstimate.toLocaleString("en-US", {
+                    Est: $
+                    {customerEstimate.toLocaleString("en-US", {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}
@@ -300,15 +325,20 @@ const StartedJobs: React.FC = memo(() => {
                     handleFilterChange({ service: e.target.value })
                   }
                   className="w-full px-2 sm:px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white transition-colors"
+                  disabled={availableServices.length === 0}
                 >
                   <option value="">All</option>
-                  <option value="plumbing">Plumbing</option>
-                  <option value="electrical">Electrical</option>
-                  <option value="hvac">HVAC</option>
-                  <option value="roofing">Roofing</option>
-                  <option value="painting">Painting</option>
-                  <option value="flooring">Flooring</option>
-                  <option value="general">General</option>
+                  {availableServices.length > 0 ? (
+                    availableServices.map((service) => (
+                      <option key={service} value={service}>
+                        {service.charAt(0).toUpperCase() + service.slice(1)}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="" disabled>
+                      No services available
+                    </option>
+                  )}
                 </select>
               </div>
 

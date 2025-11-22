@@ -143,18 +143,6 @@ export type PaymentTypeEnum = (typeof PAYMENT_TYPES)[number];
 // ============================================================================
 // Services
 // ============================================================================
-export const SERVICES = [
-  "plumbing",
-  "electrical",
-  "hvac",
-  "painting",
-  "cleaning",
-  "renovation",
-  "solar",
-  "other",
-] as const;
-
-export type ServiceType = (typeof SERVICES)[number];
 
 // ============================================================================
 // Membership Plan Tiers
@@ -241,13 +229,6 @@ export const useUserRoles = () => {
  */
 export const usePropertyTypes = () => {
   return useMemo(() => PROPERTY_TYPES, []);
-};
-
-/**
- * Hook to get memoized services
- */
-export const useServices = () => {
-  return useMemo(() => SERVICES, []);
 };
 
 /**

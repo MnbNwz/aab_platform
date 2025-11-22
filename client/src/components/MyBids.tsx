@@ -117,7 +117,7 @@ const MyBids: React.FC = memo(() => {
                 <span className="text-gray-600">My Bid:</span>
                 <span className="font-bold text-green-700">
                   $
-                  {bid.bidAmount.toLocaleString("en-US", {
+                  {(bid.bidAmount ? bid.bidAmount / 100 : 0).toLocaleString("en-US", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}
@@ -127,7 +127,7 @@ const MyBids: React.FC = memo(() => {
                 <span className="text-gray-600">Estimate:</span>
                 <span className="font-medium text-gray-900">
                   $
-                  {bid.jobRequest.estimate.toLocaleString("en-US", {
+                  {(bid.jobRequest.estimate ? bid.jobRequest.estimate / 100 : 0).toLocaleString("en-US", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}
@@ -156,15 +156,19 @@ const MyBids: React.FC = memo(() => {
       {
         key: "bidAmount",
         header: "Bid Amount",
-        render: (bid) => (
+        render: (bid) => {
+          // Convert from cents to dollars
+          const bidAmountInDollars = bid.bidAmount ? bid.bidAmount / 100 : 0;
+          return (
           <span className="font-semibold text-primary-700">
             $
-            {bid.bidAmount.toLocaleString("en-US", {
+              {bidAmountInDollars.toLocaleString("en-US", {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
           </span>
-        ),
+          );
+        },
         hideOnMobile: true,
       },
       {
@@ -425,7 +429,7 @@ const BidDetailsModal: React.FC<{
               </div>
               <div className="text-3xl font-bold text-gray-900">
                 $
-                {bid.bidAmount.toLocaleString("en-US", {
+                {(bid.bidAmount ? bid.bidAmount / 100 : 0).toLocaleString("en-US", {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}

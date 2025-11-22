@@ -13,6 +13,16 @@ import Loader from "../ui/Loader";
 import { formatCurrency } from "../../utils";
 import { formatJobStatusText } from "../../utils/badgeColors";
 
+// Format date helper
+const formatDate = (dateString: string) => {
+  if (!dateString) return "N/A";
+  return new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
+
 interface StatCardProps {
   title: string;
   value: number | string;
@@ -109,6 +119,25 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
       dashboardData?.contractor || dashboardData?.analytics || dashboardData;
     const isLoading = loading || contractorLoading;
 
+    // Sort items by date (newest first)
+    const sortedRecentBids = useMemo(() => {
+      const bids = analytics?.recentBids ?? [];
+      return [...bids].sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA; // Descending order (newest first)
+      });
+    }, [analytics?.recentBids]);
+
+    const sortedRecentWonJobs = useMemo(() => {
+      const jobs = analytics?.recentWonJobs ?? [];
+      return [...jobs].sort((a, b) => {
+        const dateA = a.acceptedAt ? new Date(a.acceptedAt).getTime() : 0;
+        const dateB = b.acceptedAt ? new Date(b.acceptedAt).getTime() : 0;
+        return dateB - dateA; // Descending order (newest first)
+      });
+    }, [analytics?.recentWonJobs]);
+
     // Extract specific values for memoization dependencies
     const biddingStats = analytics?.biddingStats;
     const leadStats = analytics?.leadStats;
@@ -173,10 +202,15 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
               {bid.jobTitle}
             </p>
             <p className="text-xs text-gray-500 capitalize">{bid.service}</p>
+            {bid.createdAt && (
+              <p className="text-xs text-gray-400 mt-1">
+                Submitted: {formatDate(bid.createdAt)}
+              </p>
+            )}
           </div>
           <div className="text-right ml-4">
             <p className="text-sm font-medium text-primary-700">
-              {formatCurrency(bid.bidAmount || 0)}
+              {formatCurrency(bid.bidAmount ? bid.bidAmount / 100 : 0)}
             </p>
             <span
               className={`inline-flex px-2 py-1 text-xs rounded-full font-semibold ${
@@ -187,9 +221,7 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
                   : "bg-red-100 text-red-800"
               }`}
             >
-              {bid.status
-                ? formatJobStatusText(bid.status)
-                : ""}
+              {bid.status ? formatJobStatusText(bid.status) : ""}
             </span>
           </div>
         </div>
@@ -208,13 +240,15 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
               {job.jobTitle}
             </p>
             <p className="text-xs text-gray-500 capitalize">{job.service}</p>
-            <p className="text-xs text-gray-400">
-              Accepted: {new Date(job.acceptedAt).toLocaleDateString()}
-            </p>
+            {job.acceptedAt && (
+              <p className="text-xs text-gray-400 mt-1">
+                Accepted: {formatDate(job.acceptedAt)}
+              </p>
+            )}
           </div>
           <div className="text-right ml-4">
             <p className="text-sm font-semibold text-green-600">
-              {formatCurrency(job.bidAmount || 0)}
+              {formatCurrency(job.bidAmount ? job.bidAmount / 100 : 0)}
             </p>
           </div>
         </div>
@@ -271,7 +305,7 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
           {/* Recent Bids */}
           <RecentActivityCard
             title="Recent Bids"
-            items={analytics?.recentBids ?? []}
+            items={sortedRecentBids}
             loading={isLoading}
             emptyMessage="No recent bids"
             renderItem={renderBidItem}
@@ -280,7 +314,7 @@ export const ContractorDashboardCards: React.FC<ContractorDashboardCardsProps> =
           {/* Recent Won Jobs */}
           <RecentActivityCard
             title="Recent Won Jobs"
-            items={analytics?.recentWonJobs ?? []}
+            items={sortedRecentWonJobs}
             loading={isLoading}
             emptyMessage="No won jobs yet"
             renderItem={renderWonJobItem}

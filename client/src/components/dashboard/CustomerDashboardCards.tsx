@@ -12,6 +12,16 @@ import type { RootState } from "../../store";
 import Loader from "../ui/Loader";
 import { formatCurrency } from "../../utils";
 
+// Format date helper
+const formatDate = (dateString: string) => {
+  if (!dateString) return "N/A";
+  return new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
+
 interface StatCardProps {
   title: string;
   value: number | string;
@@ -124,6 +134,25 @@ export const CustomerDashboardCards: React.FC<CustomerDashboardCardsProps> =
     const customer = dashboardData?.customer || dashboardData?.analytics;
     const isLoading = loading || customerLoading;
 
+    // Sort items by date (newest first)
+    const sortedRecentJobs = useMemo(() => {
+      const jobs = customer?.recentJobs ?? [];
+      return [...jobs].sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA; // Descending order (newest first)
+      });
+    }, [customer?.recentJobs]);
+
+    const sortedRecentPayments = useMemo(() => {
+      const payments = customer?.recentPayments ?? [];
+      return [...payments].sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA; // Descending order (newest first)
+      });
+    }, [customer?.recentPayments]);
+
     const statCards = useMemo(
       () => [
         {
@@ -235,7 +264,7 @@ export const CustomerDashboardCards: React.FC<CustomerDashboardCardsProps> =
           {/* Recent Jobs */}
           <RecentActivityCard
             title="Recent Jobs"
-            items={customer?.recentJobs ?? []}
+            items={sortedRecentJobs}
             loading={isLoading}
             emptyMessage="No recent jobs"
             renderItem={(job, index) => (
@@ -250,10 +279,15 @@ export const CustomerDashboardCards: React.FC<CustomerDashboardCardsProps> =
                   <p className="text-xs text-gray-500">
                     {job.property?.title || "N/A"} • {job.bidCount || 0} bids
                   </p>
+                  {job.createdAt && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      Created: {formatDate(job.createdAt)}
+                    </p>
+                  )}
                 </div>
                 <div className="text-right ml-4">
                   <p className="text-sm font-medium text-green-600">
-                    {formatCurrency(job.estimate)}
+                    {formatCurrency(job.estimate ? job.estimate / 100 : 0)}
                   </p>
                   <span
                     className={`inline-flex px-2 py-1 text-xs rounded-full mt-1 ${
@@ -274,7 +308,7 @@ export const CustomerDashboardCards: React.FC<CustomerDashboardCardsProps> =
           {/* Recent Payments */}
           <RecentActivityCard
             title="My Payments"
-            items={customer?.recentPayments ?? []}
+            items={sortedRecentPayments}
             loading={isLoading}
             emptyMessage="No recent payments"
             totalAmount={
@@ -303,6 +337,11 @@ export const CustomerDashboardCards: React.FC<CustomerDashboardCardsProps> =
                   <p className="text-xs text-gray-500">
                       {paymentType} • {paymentMethod}
                   </p>
+                  {payment.createdAt && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      {formatDate(payment.createdAt)}
+                    </p>
+                  )}
                 </div>
                 <span
                   className={`inline-flex px-2 py-1 text-xs rounded-full ${

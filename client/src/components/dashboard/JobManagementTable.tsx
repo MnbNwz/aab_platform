@@ -16,7 +16,8 @@ import JobCreate from "../JobCreate";
 import JobDetailViewModal from "../JobDetailViewModal";
 import JobViewEditModal from "../JobViewEditModal";
 import ConfirmModal from "../ui/ConfirmModal";
-import { JOB_STATUSES, SORT_OPTIONS, SERVICES } from "../../constants";
+import { JOB_STATUSES, SORT_OPTIONS } from "../../constants";
+import { getServicesThunk } from "../../store/thunks/servicesThunks";
 import DataTable, { TableColumn } from "../ui/DataTable";
 import type { PaginationInfo } from "../ui/DataTable";
 import {
@@ -52,6 +53,8 @@ const JobManagementTable: React.FC = memo(() => {
     filters,
   } = useSelector((state: RootState) => state.job);
   const { properties } = useSelector((state: RootState) => state.property);
+  const { services: backendServices, isInitialized: servicesInitialized } =
+    useSelector((state: RootState) => state.services);
   const user = useSelector((state: RootState) => state.auth.user);
   const [searchTerm, setSearchTerm] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -79,6 +82,13 @@ const JobManagementTable: React.FC = memo(() => {
       dispatch(getMyPropertiesThunk());
     }
   }, [user, dispatch]);
+
+  // Fetch services from backend if not already loaded
+  useEffect(() => {
+    if (!servicesInitialized && backendServices.length === 0) {
+      dispatch(getServicesThunk());
+    }
+  }, [dispatch, servicesInitialized, backendServices.length]);
 
   // Cleanup debounce timer on unmount
   useEffect(() => {
@@ -307,7 +317,7 @@ const JobManagementTable: React.FC = memo(() => {
     ];
 
     if (isAdmin) {
-      const serviceOptions = SERVICES.map((service) => ({
+      const serviceOptions = (backendServices || []).map((service) => ({
         label: service.charAt(0).toUpperCase() + service.slice(1),
         value: service,
       }));
@@ -340,7 +350,14 @@ const JobManagementTable: React.FC = memo(() => {
     );
 
     return baseFields;
-  }, [filters.status, filters.category, filters.sortBy, isAdmin, searchTerm]);
+  }, [
+    filters.status,
+    filters.category,
+    filters.sortBy,
+    isAdmin,
+    searchTerm,
+    backendServices,
+  ]);
 
   const filterValues = useMemo<JobFilterPanelValues>(() => {
     const values: JobFilterPanelValues = {

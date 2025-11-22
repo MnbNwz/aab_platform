@@ -4,23 +4,18 @@ import React, {
   useRef,
   useMemo,
   useCallback,
+  memo,
 } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState, AppDispatch } from "../store";
 import type { ContractorJobDetails } from "../types";
+import type { SubmitBidPayload } from "../services/contractorBidService";
 import { showToast } from "../utils/toast";
 import { submitBidThunk } from "../store/thunks/contractorBidsThunks";
 import { addRecentBid } from "../store/slices/dashboardSlice";
 import { useGeocoding } from "../hooks/useGeocoding";
-import {
-  formatJobStatusText,
-} from "../utils/badgeColors";
-import {
-  BaseModal,
-  InfoField,
-  Badge,
-  Text,
-} from "./reusable";
+import { formatJobStatusText } from "../utils/badgeColors";
+import { BaseModal, InfoField, Badge, Text, Button } from "./reusable";
 import ImageViewerModal from "./dashboard/ImageViewerModal";
 
 interface ContractorJobDetailsModalProps {
@@ -42,6 +37,176 @@ interface ContractorJobDetailsModalProps {
   activeTab?: "available" | "started" | "completed"; // Add activeTab prop
 }
 
+// Extracted ImageCarousel component for better structure and performance
+interface ImageCarouselProps {
+  images: string[];
+  onImageClick: (url: string) => void;
+}
+
+const ImageCarousel: React.FC<ImageCarouselProps> = memo(
+  ({ images, onImageClick }) => {
+    const [imageCarouselIndex, setImageCarouselIndex] = useState(0);
+    const imagesToShowDesktop = 3;
+    const imagesToShowTablet = 2;
+
+    // Calculate carousel limits - memoized
+    const maxCarouselIndex = useMemo(() => {
+      return images.length <= imagesToShowDesktop
+        ? 0
+        : images.length - imagesToShowDesktop;
+    }, [images.length, imagesToShowDesktop]);
+
+    // Memoized navigation states
+    const canGoPrevious = useMemo(
+      () => imageCarouselIndex > 0,
+      [imageCarouselIndex]
+    );
+    const canGoNext = useMemo(
+      () => imageCarouselIndex < maxCarouselIndex,
+      [imageCarouselIndex, maxCarouselIndex]
+    );
+
+    // Memoized navigation handlers
+    const handlePrevious = useCallback(() => {
+      setImageCarouselIndex((prev) => Math.max(0, prev - 1));
+    }, []);
+
+    const handleNext = useCallback(() => {
+      setImageCarouselIndex((prev) => Math.min(maxCarouselIndex, prev + 1));
+    }, [maxCarouselIndex]);
+
+    // Memoized image slices
+    const desktopImages = useMemo(() => {
+      return images.slice(
+        imageCarouselIndex,
+        imageCarouselIndex + imagesToShowDesktop
+      );
+    }, [images, imageCarouselIndex, imagesToShowDesktop]);
+
+    const tabletImages = useMemo(() => {
+      return images.slice(
+        imageCarouselIndex,
+        imageCarouselIndex + imagesToShowTablet
+      );
+    }, [images, imageCarouselIndex, imagesToShowTablet]);
+
+    const handleImageClick = useCallback(
+      (imageUrl: string) => {
+        onImageClick(imageUrl);
+      },
+      [onImageClick]
+    );
+
+    return (
+      <div className="mb-4">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Previous Arrow */}
+          <button
+            onClick={handlePrevious}
+            disabled={!canGoPrevious}
+            className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-primary-100 text-primary-700 rounded-full hover:bg-primary-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            aria-label="Previous image"
+          >
+            <svg
+              className="w-4 h-4 sm:w-5 sm:h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+          </button>
+
+          {/* Images Container */}
+          <div className="flex-1 flex gap-2 sm:gap-3">
+            {/* Show 1 image on small screens */}
+            <div className="flex-1 md:hidden">
+              <div
+                onClick={() =>
+                  handleImageClick(images[imageCarouselIndex] || "")
+                }
+                className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 cursor-pointer hover:opacity-90 transition-opacity"
+              >
+                <img
+                  src={images[imageCarouselIndex] || ""}
+                  alt={`Property ${imageCarouselIndex + 1}`}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+
+            {/* Show 2 images on tablet */}
+            {tabletImages.map((image, index) => (
+              <div
+                key={`tablet-${imageCarouselIndex}-${index}-${image}`}
+                onClick={() => handleImageClick(image)}
+                className="flex-1 relative aspect-square rounded-lg overflow-hidden bg-gray-100 cursor-pointer hover:opacity-90 transition-opacity hidden md:block lg:hidden"
+              >
+                <img
+                  src={image}
+                  alt={`Property ${imageCarouselIndex + index + 1}`}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ))}
+
+            {/* Show 3 images on desktop */}
+            {desktopImages.map((image, index) => (
+              <div
+                key={`desktop-${imageCarouselIndex}-${index}-${image}`}
+                onClick={() => handleImageClick(image)}
+                className="flex-1 relative aspect-square rounded-lg overflow-hidden bg-gray-100 cursor-pointer hover:opacity-90 transition-all duration-300 ease-in-out transform hover:scale-105 hidden lg:block"
+              >
+                <img
+                  src={image}
+                  alt={`Property ${imageCarouselIndex + index + 1}`}
+                  className="w-full h-full object-cover transition-transform duration-300"
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Next Arrow */}
+          <button
+            onClick={handleNext}
+            disabled={!canGoNext || images.length === 0}
+            className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-primary-100 text-primary-700 rounded-full hover:bg-primary-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            aria-label="Next image"
+          >
+            <svg
+              className="w-4 h-4 sm:w-5 sm:h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </button>
+        </div>
+
+        {/* Progress Indicator */}
+        <div className="text-center mt-2">
+          <span className="text-xs sm:text-sm text-primary-600">
+            {imageCarouselIndex + 1} of {images.length}
+          </span>
+        </div>
+      </div>
+    );
+  }
+);
+
+ImageCarousel.displayName = "ImageCarousel";
+
 const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
   job,
   isOpen,
@@ -52,6 +217,7 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
   activeTab = "available", // Default to "available"
 }) => {
   const dispatch = useDispatch<AppDispatch>();
+  const bidFormRef = useRef<HTMLFormElement>(null);
   const [showBidForm, setShowBidForm] = useState(false);
   const [bidAmount, setBidAmount] = useState("");
   const [bidMessage, setBidMessage] = useState("");
@@ -60,8 +226,21 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
   const [warranty, setWarranty] = useState("");
   const [warrantyDescription, setWarrantyDescription] = useState("");
   const [submittingBid, setSubmittingBid] = useState(false);
-  const [imageCarouselIndex, setImageCarouselIndex] = useState(0);
   const [fullSizeImage, setFullSizeImage] = useState<string | null>(null);
+
+  // Memoized images array
+  const propertyImages = useMemo(
+    () => job?.property?.images || [],
+    [job?.property?.images]
+  );
+
+  // Memoized image click handler
+  const handleImageClick = useCallback((imageUrl: string) => {
+    setFullSizeImage(imageUrl);
+  }, []);
+
+  // Memoized carousel key to force remount when job changes
+  const carouselKey = useMemo(() => `carousel-${job?._id || ""}`, [job?._id]);
 
   // Get lead stats from dashboard to check if can bid
   const { contractorData } = useSelector((state: RootState) => state.dashboard);
@@ -78,7 +257,6 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
   const alreadyBid = job?.self || false;
   const myBid = job?.myBid || null;
   const bidAccepted = job?.selfBidAccepted || false;
-  const bidInfo = (job as any)?.bidInfo || null;
 
   // Timer state for started jobs
   const [timeRemaining, setTimeRemaining] = useState<{
@@ -98,11 +276,11 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
 
   // Memoize endDate to avoid recreating on every render
   const endDate = useMemo(() => {
-    if (activeTab === "started" && bidInfo?.timeline?.endDate) {
-      return new Date(bidInfo.timeline.endDate);
+    if (activeTab === "started" && myBid?.timeline?.endDate) {
+      return new Date(myBid.timeline.endDate);
     }
     return null;
-  }, [activeTab, bidInfo?.timeline?.endDate]);
+  }, [activeTab, myBid?.timeline?.endDate]);
 
   // Memoized calculation function for time breakdown
   const calculateTimeBreakdown = useCallback(
@@ -198,7 +376,7 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
     };
   }, [endDate, calculateTimeBreakdown]);
 
-  if (!isOpen || !job) return null;
+  if (!isOpen) return null;
 
   const handleCopyLocation = () => {
     if (propertyAddress) {
@@ -232,6 +410,12 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
       return;
     }
 
+    // Validate that bid amount is a whole number (no decimals)
+    if (parseFloat(bidAmount) % 1 !== 0) {
+      showToast.error("Bid amount must be a whole number (no decimals)");
+      return;
+    }
+
     if (!bidTimeline || parseInt(bidTimeline) <= 0) {
       showToast.error("Please enter a valid timeline");
       return;
@@ -250,9 +434,9 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
       const endDate = new Date();
       endDate.setDate(endDate.getDate() + parseInt(bidTimeline));
 
-      const bidData: any = {
+      const bidDataBase: Omit<SubmitBidPayload, "materials" | "warranty"> = {
         jobRequestId: job._id,
-        bidAmount: parseFloat(bidAmount), // Send in dollars (backend expects dollars)
+        bidAmount: Math.round(parseFloat(bidAmount) * 100), // Convert dollars to cents for backend
         message: bidMessage,
         timeline: {
           startDate: startDate.toISOString().split("T")[0], // Format as YYYY-MM-DD
@@ -260,31 +444,36 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
         },
       };
 
-      // Add materials as object if provided
-      if (materials && materials.trim()) {
-        bidData.materials = {
-          included: true,
-          description: materials.trim(),
-        };
-      }
-
-      // Add warranty as object if provided
-      if (warranty && warranty.trim()) {
-        const period = parseFloat(warranty.trim());
-
-        // Only add warranty if it's a valid number greater than 0
-        if (!isNaN(period) && period > 0) {
-          bidData.warranty = {
-            period: Math.round(period), // Round to nearest whole month
-            // Use custom description if provided, otherwise auto-generate
-            description: warrantyDescription.trim()
-              ? warrantyDescription.trim()
-              : `${Math.round(period)} month${
-                  Math.round(period) !== 1 ? "s" : ""
-                } warranty`,
-          };
-        }
-      }
+      const bidData: SubmitBidPayload = {
+        ...bidDataBase,
+        ...(materials && materials.trim()
+          ? {
+              materials: {
+                included: true,
+                description: materials.trim(),
+              },
+            }
+          : {}),
+        ...(warranty && warranty.trim()
+          ? (() => {
+              const period = parseFloat(warranty.trim());
+              if (!isNaN(period) && period > 0) {
+                return {
+                  warranty: {
+                    period: Math.round(period), // Round to nearest whole month
+                    // Use custom description if provided, otherwise auto-generate
+                    description: warrantyDescription.trim()
+                      ? warrantyDescription.trim()
+                      : `${Math.round(period)} month${
+                          Math.round(period) !== 1 ? "s" : ""
+                        } warranty`,
+                  },
+                };
+              }
+              return {};
+            })()
+          : {}),
+      };
 
       const result = await dispatch(submitBidThunk(bidData));
 
@@ -299,7 +488,7 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
               bidId: bidResult._id,
               jobTitle: job.title,
               service: job.service,
-              bidAmount: bidData.bidAmount * 100, // Convert to cents for dashboard display (dashboard stores in cents)
+              bidAmount: bidData.bidAmount, // Already in cents from bidData
               status: "pending",
             })
           );
@@ -327,8 +516,10 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
       setWarrantyDescription("");
       onBidSubmitted?.();
       onClose();
-    } catch (error: any) {
-      showToast.error(error.message || "Failed to submit bid");
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to submit bid";
+      showToast.error(errorMessage);
     } finally {
       setSubmittingBid(false);
     }
@@ -371,10 +562,11 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
         showFooter={false}
         className="relative"
         headerClassName="bg-gradient-to-r from-primary-600 to-accent-600 text-white"
+        bodyClassName={loading || !job ? "min-h-[500px]" : ""}
       >
-        {/* Loading State */}
-        {loading && (
-          <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50 rounded-lg">
+        {/* Loading State - Overlay that doesn't affect layout */}
+        {(loading || !job) && (
+          <div className="absolute inset-0 bg-white bg-opacity-95 flex items-center justify-center z-50 rounded-lg backdrop-blur-sm">
             <div className="text-center">
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-accent-500"></div>
               <Text className="mt-4 text-primary-600 font-medium">
@@ -384,15 +576,11 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
           </div>
         )}
 
-        {/* Header Badges */}
+        {/* Badges */}
         {job && (
           <div className="flex flex-wrap items-center gap-2 mb-4">
-            <Badge variant="info" className="bg-white bg-opacity-20 text-white border-white">
-              {job.service}
-            </Badge>
-            <Badge variant="info" className="bg-white bg-opacity-20 text-white border-white">
-              Regular
-            </Badge>
+            <Badge variant="info">{job.service}</Badge>
+            <Badge variant="info">Regular</Badge>
             <Badge
               variant={
                 job.status === "completed"
@@ -407,337 +595,363 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
           </div>
         )}
 
-        <div className="space-y-6">
-
-          {/* Timer for Started Jobs */}
-          {activeTab === "started" && timeRemaining && bidInfo?.timeline && (
-            <div
-              className={`mx-4 sm:mx-6 mt-4 border-l-4 rounded-lg p-4 shadow-sm ${
-                timeRemaining.isExpired
-                  ? "bg-gradient-to-r from-red-50 to-rose-50 border-red-500"
-                  : "bg-gradient-to-r from-green-50 to-emerald-50 border-green-500"
-              }`}
-            >
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <div className="flex-1">
-                  <div
-                    className={`text-sm font-semibold mb-1 ${
-                      timeRemaining.isExpired
-                        ? "text-red-900"
-                        : "text-green-900"
-                    }`}
-                  >
-                    Job Started - Time Remaining
-                  </div>
-                  {timeRemaining.isExpired ? (
-                    <div>
-                      <div className="text-base font-semibold text-red-700 mb-2">
-                        Overdue by:
-                      </div>
-                      <div className="flex items-center gap-4 flex-wrap">
-                        <div className="flex items-center gap-2">
-                          <span className="text-2xl sm:text-3xl font-bold text-red-700">
-                            {timeRemaining.extraDays || 0}
-                          </span>
-                          <span className="text-sm text-red-600 font-medium">
-                            {(timeRemaining.extraDays || 0) === 1
-                              ? "Day"
-                              : "Days"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-2xl sm:text-3xl font-bold text-red-700">
-                            {String(timeRemaining.extraHours || 0).padStart(
-                              2,
-                              "0"
-                            )}
-                          </span>
-                          <span className="text-sm text-red-600 font-medium">
-                            {(timeRemaining.extraHours || 0) === 1
-                              ? "Hour"
-                              : "Hours"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-2xl sm:text-3xl font-bold text-red-700">
-                            {String(timeRemaining.extraMinutes || 0).padStart(
-                              2,
-                              "0"
-                            )}
-                          </span>
-                          <span className="text-sm text-red-600 font-medium">
-                            {(timeRemaining.extraMinutes || 0) === 1
-                              ? "Min"
-                              : "Mins"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-2xl sm:text-3xl font-bold text-red-700">
-                            {String(timeRemaining.extraSeconds || 0).padStart(
-                              2,
-                              "0"
-                            )}
-                          </span>
-                          <span className="text-sm text-red-600 font-medium">
-                            {(timeRemaining.extraSeconds || 0) === 1
-                              ? "Sec"
-                              : "Secs"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-4 flex-wrap">
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl sm:text-3xl font-bold text-green-700">
-                          {timeRemaining.days}
-                        </span>
-                        <span className="text-sm text-green-600 font-medium">
-                          {timeRemaining.days === 1 ? "Day" : "Days"}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl sm:text-3xl font-bold text-green-700">
-                          {String(timeRemaining.hours).padStart(2, "0")}
-                        </span>
-                        <span className="text-sm text-green-600 font-medium">
-                          {timeRemaining.hours === 1 ? "Hour" : "Hours"}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl sm:text-3xl font-bold text-green-700">
-                          {String(timeRemaining.minutes).padStart(2, "0")}
-                        </span>
-                        <span className="text-sm text-green-600 font-medium">
-                          {timeRemaining.minutes === 1 ? "Min" : "Mins"}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl sm:text-3xl font-bold text-green-700">
-                          {String(timeRemaining.seconds).padStart(2, "0")}
-                        </span>
-                        <span className="text-sm text-green-600 font-medium">
-                          {timeRemaining.seconds === 1 ? "Sec" : "Secs"}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                  <div
-                    className={`text-xs mt-2 ${
-                      timeRemaining.isExpired
-                        ? "text-red-700"
-                        : "text-green-700"
-                    }`}
-                  >
-                    End Date:{" "}
-                    {new Date(bidInfo.timeline.endDate).toLocaleDateString(
-                      "en-US",
-                      {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      }
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Lead Info Banner */}
-          {leadInfo && (
-            <div className="bg-blue-50 border-l-4 border-blue-500 p-3 sm:p-4 mx-4 sm:mx-6 mt-4 rounded">
-              <div className="flex items-start">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-blue-900">
-                    Lead Usage: {leadInfo.leadsUsed}/{leadInfo.leadsLimit} leads
-                    used
-                    {leadInfo.remaining !== undefined &&
-                      ` (${leadInfo.remaining} remaining)`}
-                  </p>
-                  {leadInfo.resetDate && (
-                    <p className="text-xs text-blue-700 mt-1">
-                      Resets on:{" "}
-                      {new Date(leadInfo.resetDate).toLocaleDateString()}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* My Bid Display - Show if contractor has bid (self: true) */}
-          {alreadyBid && myBid && (
-            <div
-              className={`border-l-4 p-4 sm:p-6 mx-4 sm:mx-6 mt-4 rounded-lg shadow-sm ${
-                myBid.status === "accepted"
-                  ? "bg-gradient-to-r from-green-50 to-emerald-50 border-green-500"
-                  : myBid.status === "rejected"
-                  ? "bg-gradient-to-r from-red-50 to-rose-50 border-red-500"
-                  : "bg-gradient-to-r from-amber-50 to-yellow-50 border-yellow-500"
-              }`}
-            >
-              <div className="flex items-start gap-3 mb-4">
+        {/* Content area - always rendered to maintain modal height */}
+        <div className="space-y-6 min-h-[400px]">
+          {job ? (
+            <>
+              {/* Timer for Started Jobs */}
+              {activeTab === "started" && timeRemaining && myBid?.timeline && (
                 <div
-                  className={`p-2 rounded-full ${
-                    myBid.status === "accepted"
-                      ? "bg-green-100"
-                      : myBid.status === "rejected"
-                      ? "bg-red-100"
-                      : "bg-yellow-100"
+                  className={`mx-4 sm:mx-6 mt-4 border-l-4 rounded-lg p-4 shadow-sm ${
+                    timeRemaining.isExpired
+                      ? "bg-gradient-to-r from-red-50 to-rose-50 border-red-500"
+                      : "bg-gradient-to-r from-green-50 to-emerald-50 border-green-500"
                   }`}
                 >
-                  <svg
-                    className={`w-5 h-5 ${
-                      myBid.status === "accepted"
-                        ? "text-green-600"
-                        : myBid.status === "rejected"
-                        ? "text-red-600"
-                        : "text-yellow-600"
-                    }`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d={
-                        myBid.status === "accepted"
-                          ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                          : myBid.status === "rejected"
-                          ? "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                          : "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                      }
-                    />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <p
-                    className={`text-sm font-bold ${
-                      myBid.status === "accepted"
-                        ? "text-green-900"
-                        : myBid.status === "rejected"
-                        ? "text-red-900"
-                        : "text-yellow-900"
-                    }`}
-                  >
-                    {myBid.status === "accepted"
-                      ? "🎉 Your Bid Was Accepted!"
-                      : myBid.status === "rejected"
-                      ? "Bid Rejected"
-                      : "Your Bid (Pending Review)"}
-                  </p>
-                  <p
-                    className={`text-xs mt-0.5 ${
-                      myBid.status === "accepted"
-                        ? "text-green-700"
-                        : myBid.status === "rejected"
-                        ? "text-red-700"
-                        : "text-yellow-700"
-                    }`}
-                  >
-                    {myBid.status === "accepted"
-                      ? "Congratulations! The customer has accepted your bid. Contact details are now available below."
-                      : myBid.status === "rejected"
-                      ? "Unfortunately, your bid was not selected for this job."
-                      : "Waiting for customer to review your bid."}
-                  </p>
-                </div>
-              </div>
-
-              {/* Bid Details */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                <div className="bg-white rounded-lg p-3 border border-gray-200">
-                  <div className="text-xs text-gray-600 mb-1">
-                    Your Bid Amount
-                  </div>
-                  <div className="text-lg font-bold text-primary-700">
-                    $
-                    {myBid.bidAmount.toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </div>
-                </div>
-
-                {myBid.timeline && (
-                  <div className="bg-white rounded-lg p-3 border border-gray-200">
-                    <div className="text-xs text-gray-600 mb-1">Timeline</div>
-                    <div className="text-sm font-semibold text-gray-900">
-                      {new Date(myBid.timeline.startDate).toLocaleDateString()}{" "}
-                      - {new Date(myBid.timeline.endDate).toLocaleDateString()}
-                    </div>
-                  </div>
-                )}
-
-                {myBid.materials && (
-                  <div className="bg-white rounded-lg p-3 border border-gray-200">
-                    <div className="text-xs text-gray-600 mb-1">Materials</div>
-                    <div className="text-sm font-semibold text-gray-900">
-                      {myBid.materials.included
-                        ? "✓ Included"
-                        : "✗ Not Included"}
-                    </div>
-                    {myBid.materials.description && (
-                      <div className="text-xs text-gray-600 mt-1">
-                        {myBid.materials.description}
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div className="flex-1">
+                      <div
+                        className={`text-sm font-semibold mb-1 ${
+                          timeRemaining.isExpired
+                            ? "text-red-900"
+                            : "text-green-900"
+                        }`}
+                      >
+                        Job Started - Time Remaining
                       </div>
-                    )}
-                  </div>
-                )}
-
-                {myBid.warranty && (
-                  <div className="bg-white rounded-lg p-3 border border-gray-200">
-                    <div className="text-xs text-gray-600 mb-1">Warranty</div>
-                    <div className="text-sm font-semibold text-gray-900">
-                      {myBid.warranty.period}{" "}
-                      {myBid.warranty.period === 1 ? "Month" : "Months"}
-                    </div>
-                    {myBid.warranty.description && (
-                      <div className="text-xs text-gray-600 mt-1">
-                        {myBid.warranty.description}
+                      {timeRemaining.isExpired ? (
+                        <div>
+                          <div className="text-base font-semibold text-red-700 mb-2">
+                            Overdue by:
+                          </div>
+                          <div className="flex items-center gap-4 flex-wrap">
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl sm:text-3xl font-bold text-red-700">
+                                {timeRemaining.extraDays || 0}
+                              </span>
+                              <span className="text-sm text-red-600 font-medium">
+                                {(timeRemaining.extraDays || 0) === 1
+                                  ? "Day"
+                                  : "Days"}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl sm:text-3xl font-bold text-red-700">
+                                {String(timeRemaining.extraHours || 0).padStart(
+                                  2,
+                                  "0"
+                                )}
+                              </span>
+                              <span className="text-sm text-red-600 font-medium">
+                                {(timeRemaining.extraHours || 0) === 1
+                                  ? "Hour"
+                                  : "Hours"}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl sm:text-3xl font-bold text-red-700">
+                                {String(
+                                  timeRemaining.extraMinutes || 0
+                                ).padStart(2, "0")}
+                              </span>
+                              <span className="text-sm text-red-600 font-medium">
+                                {(timeRemaining.extraMinutes || 0) === 1
+                                  ? "Min"
+                                  : "Mins"}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl sm:text-3xl font-bold text-red-700">
+                                {String(
+                                  timeRemaining.extraSeconds || 0
+                                ).padStart(2, "0")}
+                              </span>
+                              <span className="text-sm text-red-600 font-medium">
+                                {(timeRemaining.extraSeconds || 0) === 1
+                                  ? "Sec"
+                                  : "Secs"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-4 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl sm:text-3xl font-bold text-green-700">
+                              {timeRemaining.days}
+                            </span>
+                            <span className="text-sm text-green-600 font-medium">
+                              {timeRemaining.days === 1 ? "Day" : "Days"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl sm:text-3xl font-bold text-green-700">
+                              {String(timeRemaining.hours).padStart(2, "0")}
+                            </span>
+                            <span className="text-sm text-green-600 font-medium">
+                              {timeRemaining.hours === 1 ? "Hour" : "Hours"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl sm:text-3xl font-bold text-green-700">
+                              {String(timeRemaining.minutes).padStart(2, "0")}
+                            </span>
+                            <span className="text-sm text-green-600 font-medium">
+                              {timeRemaining.minutes === 1 ? "Min" : "Mins"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl sm:text-3xl font-bold text-green-700">
+                              {String(timeRemaining.seconds).padStart(2, "0")}
+                            </span>
+                            <span className="text-sm text-green-600 font-medium">
+                              {timeRemaining.seconds === 1 ? "Sec" : "Secs"}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      <div
+                        className={`text-xs mt-2 ${
+                          timeRemaining.isExpired
+                            ? "text-red-700"
+                            : "text-green-700"
+                        }`}
+                      >
+                        End Date:{" "}
+                        {myBid?.timeline?.endDate &&
+                          new Date(myBid.timeline.endDate).toLocaleDateString(
+                            "en-US",
+                            {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            }
+                          )}
                       </div>
-                    )}
+                    </div>
                   </div>
-                )}
-              </div>
-
-              {myBid.message && (
-                <div className="bg-white rounded-lg p-3 border border-gray-200 mt-3">
-                  <div className="text-xs text-gray-600 mb-1">Your Message</div>
-                  <div className="text-sm text-gray-900">{myBid.message}</div>
                 </div>
               )}
-            </div>
-          )}
 
-          {/* Description */}
-          <InfoField
-            label="Description"
-            value={job.description}
-            valueClassName="block text-primary-700 leading-relaxed text-sm sm:text-base"
-          />
+              {/* Lead Info Banner */}
+              {leadInfo && (
+                <div className="bg-blue-50 border-l-4 border-blue-500 p-3 sm:p-4 mx-4 sm:mx-6 mt-4 rounded">
+                  <div className="flex items-start">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-blue-900">
+                        Lead Usage: {leadInfo.leadsUsed}/{leadInfo.leadsLimit}{" "}
+                        leads used
+                        {leadInfo.remaining !== undefined &&
+                          ` (${leadInfo.remaining} remaining)`}
+                      </p>
+                      {leadInfo.resetDate && (
+                        <p className="text-xs text-blue-700 mt-1">
+                          Resets on:{" "}
+                          {new Date(leadInfo.resetDate).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
-          {/* Key Details Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <InfoField
-              label="Customer Estimate"
-              value={`$${job.estimate.toLocaleString("en-US", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}`}
-              valueClassName="text-3xl font-bold text-accent-700"
-            />
-            <InfoField
-              label="Timeline Required"
-              value={`${job.timeline} days`}
-              valueClassName="text-3xl font-bold text-primary-900"
-            />
-          </div>
+              {/* My Bid Display - Show if contractor has bid (self: true) */}
+              {alreadyBid && myBid && (
+                <div
+                  className={`border-l-4 p-4 sm:p-6 mx-4 sm:mx-6 mt-4 rounded-lg shadow-sm ${
+                    myBid.status === "accepted"
+                      ? "bg-gradient-to-r from-green-50 to-emerald-50 border-green-500"
+                      : myBid.status === "rejected"
+                      ? "bg-gradient-to-r from-red-50 to-rose-50 border-red-500"
+                      : "bg-gradient-to-r from-amber-50 to-yellow-50 border-yellow-500"
+                  }`}
+                >
+                  <div className="flex items-start gap-3 mb-4">
+                    <div
+                      className={`p-2 rounded-full ${
+                        myBid.status === "accepted"
+                          ? "bg-green-100"
+                          : myBid.status === "rejected"
+                          ? "bg-red-100"
+                          : "bg-yellow-100"
+                      }`}
+                    >
+                      <svg
+                        className={`w-5 h-5 ${
+                          myBid.status === "accepted"
+                            ? "text-green-600"
+                            : myBid.status === "rejected"
+                            ? "text-red-600"
+                            : "text-yellow-600"
+                        }`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d={
+                            myBid.status === "accepted"
+                              ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                              : myBid.status === "rejected"
+                              ? "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                              : "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                          }
+                        />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <p
+                        className={`text-sm font-bold ${
+                          myBid.status === "accepted"
+                            ? "text-green-900"
+                            : myBid.status === "rejected"
+                            ? "text-red-900"
+                            : "text-yellow-900"
+                        }`}
+                      >
+                        {myBid.status === "accepted"
+                          ? "🎉 Your Bid Was Accepted!"
+                          : myBid.status === "rejected"
+                          ? "Bid Rejected"
+                          : "Your Bid (Pending Review)"}
+                      </p>
+                      <p
+                        className={`text-xs mt-0.5 ${
+                          myBid.status === "accepted"
+                            ? "text-green-700"
+                            : myBid.status === "rejected"
+                            ? "text-red-700"
+                            : "text-yellow-700"
+                        }`}
+                      >
+                        {myBid.status === "accepted"
+                          ? "Congratulations! The customer has accepted your bid. Contact details are now available below."
+                          : myBid.status === "rejected"
+                          ? "Unfortunately, your bid was not selected for this job."
+                          : "Waiting for customer to review your bid."}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Bid Details */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                    <div className="bg-white rounded-lg p-3 border border-gray-200">
+                      <div className="text-xs text-gray-600 mb-1">
+                        Your Bid Amount
+                      </div>
+                      <div className="text-lg font-bold text-primary-700">
+                        $
+                        {(myBid.bidAmount
+                          ? myBid.bidAmount / 100
+                          : 0
+                        ).toLocaleString("en-US", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </div>
+                    </div>
+
+                    {myBid.timeline && (
+                      <div className="bg-white rounded-lg p-3 border border-gray-200">
+                        <div className="text-xs text-gray-600 mb-1">
+                          Timeline
+                        </div>
+                        <div className="text-sm font-semibold text-gray-900">
+                          {new Date(
+                            myBid.timeline.startDate
+                          ).toLocaleDateString()}{" "}
+                          -{" "}
+                          {new Date(
+                            myBid.timeline.endDate
+                          ).toLocaleDateString()}
+                        </div>
+                      </div>
+                    )}
+
+                    {myBid.materials && (
+                      <div className="bg-white rounded-lg p-3 border border-gray-200">
+                        <div className="text-xs text-gray-600 mb-1">
+                          Materials
+                        </div>
+                        <div className="text-sm font-semibold text-gray-900">
+                          {myBid.materials.included
+                            ? "✓ Included"
+                            : "✗ Not Included"}
+                        </div>
+                        {myBid.materials.description && (
+                          <div className="text-xs text-gray-600 mt-1">
+                            {myBid.materials.description}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {myBid.warranty && (
+                      <div className="bg-white rounded-lg p-3 border border-gray-200">
+                        <div className="text-xs text-gray-600 mb-1">
+                          Warranty
+                        </div>
+                        <div className="text-sm font-semibold text-gray-900">
+                          {myBid.warranty.period}{" "}
+                          {myBid.warranty.period === 1 ? "Month" : "Months"}
+                        </div>
+                        {myBid.warranty.description && (
+                          <div className="text-xs text-gray-600 mt-1">
+                            {myBid.warranty.description}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {myBid.message && (
+                    <div className="bg-white rounded-lg p-3 border border-gray-200 mt-3">
+                      <div className="text-xs text-gray-600 mb-1">
+                        Your Message
+                      </div>
+                      <div className="text-sm text-gray-900">
+                        {myBid.message}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Description */}
+              {job && (
+                <InfoField
+                  label="Description"
+                  value={job.description}
+                  valueClassName="block text-primary-700 leading-relaxed text-sm sm:text-base"
+                />
+              )}
+
+              {/* Key Details Grid */}
+              {job && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <InfoField
+                    label="Customer Estimate"
+                    value={`$${(job.estimate
+                      ? job.estimate / 100
+                      : 0
+                    ).toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}`}
+                    valueClassName="text-3xl font-bold text-accent-700"
+                  />
+                  <InfoField
+                    label="Timeline Required"
+                    value={`${job.timeline} days`}
+                    valueClassName="text-3xl font-bold text-primary-900"
+                  />
+                </div>
+              )}
 
               {/* Property Info */}
               {job.property && (
@@ -760,138 +974,12 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
                   </h3>
 
                   {/* Property Images */}
-                  {job.property.images && job.property.images.length > 0 && (
-                    <div className="mb-4">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        {/* Previous Arrow */}
-                        <button
-                          onClick={() =>
-                            setImageCarouselIndex(
-                              Math.max(0, imageCarouselIndex - 1)
-                            )
-                          }
-                          disabled={imageCarouselIndex === 0}
-                          className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-primary-100 text-primary-700 rounded-full hover:bg-primary-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                          aria-label="Previous image"
-                        >
-                          <svg
-                            className="w-4 h-4 sm:w-5 sm:h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M15 19l-7-7 7-7"
-                            />
-                          </svg>
-                        </button>
-
-                        {/* Images Container - Always horizontal flex */}
-                        <div className="flex-1 flex gap-2 sm:gap-3">
-                          {/* Show 1 image on small screens */}
-                          <div className="flex-1 md:hidden">
-                            <div
-                              onClick={() =>
-                                setFullSizeImage(
-                                  job.property?.images?.[imageCarouselIndex] ||
-                                    ""
-                                )
-                              }
-                              className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 cursor-pointer hover:opacity-90 transition-opacity"
-                            >
-                              <img
-                                src={
-                                  job.property?.images?.[imageCarouselIndex] ||
-                                  ""
-                                }
-                                alt={`Property ${imageCarouselIndex + 1}`}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                          </div>
-
-                          {/* Show 2 images on tablet */}
-                          {job.property?.images
-                            ?.slice(imageCarouselIndex, imageCarouselIndex + 2)
-                            .map((image, index) => (
-                              <div
-                                key={imageCarouselIndex + index}
-                                onClick={() => setFullSizeImage(image)}
-                                className="flex-1 relative aspect-square rounded-lg overflow-hidden bg-gray-100 cursor-pointer hover:opacity-90 transition-opacity hidden md:block lg:hidden"
-                              >
-                                <img
-                                  src={image}
-                                  alt={`Property ${
-                                    imageCarouselIndex + index + 1
-                                  }`}
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                            ))}
-
-                          {/* Show 3 images on desktop */}
-                          {job.property?.images
-                            ?.slice(imageCarouselIndex, imageCarouselIndex + 3)
-                            .map((image, index) => (
-                              <div
-                                key={imageCarouselIndex + index}
-                                onClick={() => setFullSizeImage(image)}
-                                className="flex-1 relative aspect-square rounded-lg overflow-hidden bg-gray-100 cursor-pointer hover:opacity-90 transition-opacity hidden lg:block"
-                              >
-                                <img
-                                  src={image}
-                                  alt={`Property ${
-                                    imageCarouselIndex + index + 1
-                                  }`}
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                            ))}
-                        </div>
-
-                        {/* Next Arrow */}
-                        <button
-                          onClick={() =>
-                            setImageCarouselIndex(
-                              Math.min(
-                                (job.property?.images?.length || 1) - 1,
-                                imageCarouselIndex + 1
-                              )
-                            )
-                          }
-                          disabled={
-                            imageCarouselIndex >=
-                            (job.property?.images?.length || 1) - 1
-                          }
-                          className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-primary-100 text-primary-700 rounded-full hover:bg-primary-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                          aria-label="Next image"
-                        >
-                          <svg
-                            className="w-4 h-4 sm:w-5 sm:h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 5l7 7-7 7"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-
-                      {/* Progress Indicator - Always below */}
-                      <div className="text-center mt-2">
-                        <span className="text-xs sm:text-sm text-primary-600">
-                          {imageCarouselIndex + 1} of{" "}
-                          {job.property?.images?.length || 0}
-                        </span>
-                      </div>
+                  {propertyImages.length > 0 && (
+                    <div key={carouselKey}>
+                      <ImageCarousel
+                        images={propertyImages}
+                        onImageClick={handleImageClick}
+                      />
                     </div>
                   )}
 
@@ -1143,6 +1231,25 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
                   </p>
                 </div>
               )}
+
+              {/* Submit Bid Button - Show when contractor can bid and hasn't bid yet */}
+              {!alreadyBid && canBid && activeTab === "available" && job && (
+                <div className="mx-4 sm:mx-6 mt-6 pb-4">
+                  <Button
+                    variant="accent"
+                    fullWidth
+                    onClick={() => setShowBidForm(true)}
+                    className="py-3 text-base font-semibold"
+                  >
+                    Submit Bid
+                  </Button>
+                </div>
+              )}
+            </>
+          ) : (
+            /* Placeholder to maintain modal height during loading */
+            <div className="h-full" />
+          )}
         </div>
       </BaseModal>
 
@@ -1156,132 +1263,173 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
         showFooter={false}
         headerClassName="bg-gradient-to-r from-primary-600 to-accent-600 text-white"
       >
-        <form onSubmit={handleSubmitBid} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-primary-700 mb-2">
-                      Bid Amount ($) *
-                    </label>
-                    <input
-                      type="number"
-                      value={bidAmount}
-                      onChange={(e) => setBidAmount(e.target.value)}
-                      placeholder="e.g., 3500"
-                      step="0.01"
-                      min="0"
-                      required
-                      className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 placeholder-gray-300"
-                    />
-                  </div>
+        <form
+          ref={bidFormRef}
+          onSubmit={handleSubmitBid}
+          className="space-y-4 pb-0"
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-primary-700 mb-2">
+                Bid Amount ($) *
+              </label>
+              <input
+                type="number"
+                value={bidAmount}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Only allow whole numbers (no decimals)
+                  if (value === "" || /^\d+$/.test(value)) {
+                    setBidAmount(value);
+                  }
+                }}
+                placeholder="e.g., 3500"
+                step="1"
+                min="1"
+                required
+                className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 placeholder-gray-300"
+              />
+            </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-primary-700 mb-2">
-                      Timeline (days) *
-                    </label>
-                    <input
-                      type="number"
-                      value={bidTimeline}
-                      onChange={(e) => setBidTimeline(e.target.value)}
-                      placeholder="e.g., 7"
-                      min="1"
-                      required
-                      className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 placeholder-gray-300"
-                    />
-                  </div>
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-primary-700 mb-2">
+                Timeline (days) *
+              </label>
+              <input
+                type="number"
+                value={bidTimeline}
+                onChange={(e) => setBidTimeline(e.target.value)}
+                placeholder="e.g., 7"
+                min="1"
+                required
+                className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 placeholder-gray-300"
+              />
+            </div>
+          </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-primary-700 mb-2">
-                    Message / Proposal *
-                  </label>
-                  <textarea
-                    value={bidMessage}
-                    onChange={(e) => setBidMessage(e.target.value)}
-                    placeholder="Describe your approach, experience, and why you're the best fit for this job..."
-                    rows={4}
-                    required
-                    className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
-                  />
-                </div>
+          <div>
+            <label className="block text-sm font-medium text-primary-700 mb-2">
+              Message / Proposal *
+            </label>
+            <textarea
+              value={bidMessage}
+              onChange={(e) => setBidMessage(e.target.value)}
+              placeholder="Describe your approach, experience, and why you're the best fit for this job..."
+              rows={4}
+              required
+              className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
+            />
+          </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-primary-700 mb-2">
-                    Materials (Optional)
-                  </label>
-                  <textarea
-                    value={materials}
-                    onChange={(e) => setMaterials(e.target.value)}
-                    placeholder="e.g., Premium fixtures and pipes included..."
-                    rows={2}
-                    className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
-                  />
-                </div>
+          <div>
+            <label className="block text-sm font-medium text-primary-700 mb-2">
+              Materials (Optional)
+            </label>
+            <textarea
+              value={materials}
+              onChange={(e) => setMaterials(e.target.value)}
+              placeholder="e.g., Premium fixtures and pipes included..."
+              rows={2}
+              className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
+            />
+          </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-primary-700 mb-2">
-                    Warranty Period in Months (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={warranty}
-                    onChange={(e) => {
-                      // Allow only numbers and decimal point
-                      const value = e.target.value;
-                      if (value === "" || /^[0-9]*\.?[0-9]*$/.test(value)) {
-                        setWarranty(value);
-                      }
-                    }}
-                    placeholder="e.g., 12"
-                    className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
-                    inputMode="decimal"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Enter warranty period in months (numbers only)
-                  </p>
-                </div>
+          <div>
+            <label className="block text-sm font-medium text-primary-700 mb-2">
+              Warranty Period in Months (Optional)
+            </label>
+            <input
+              type="text"
+              value={warranty}
+              onChange={(e) => {
+                // Allow only numbers and decimal point
+                const value = e.target.value;
+                if (value === "" || /^[0-9]*\.?[0-9]*$/.test(value)) {
+                  setWarranty(value);
+                }
+              }}
+              placeholder="e.g., 12"
+              className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
+              inputMode="decimal"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Enter warranty period in months (numbers only)
+            </p>
+          </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-primary-700 mb-2">
-                    Warranty Description (Optional)
-                  </label>
-                  <textarea
-                    value={warrantyDescription}
-                    onChange={(e) => setWarrantyDescription(e.target.value)}
-                    placeholder="e.g., 18 months warranty on all work, including labor and materials..."
-                    rows={2}
-                    className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Custom warranty description. If left empty, will
-                    auto-generate from period.
-                  </p>
-                </div>
+          <div>
+            <label className="block text-sm font-medium text-primary-700 mb-2">
+              Warranty Description (Optional)
+            </label>
+            <textarea
+              value={warrantyDescription}
+              onChange={(e) => setWarrantyDescription(e.target.value)}
+              placeholder="e.g., 18 months warranty on all work, including labor and materials..."
+              rows={2}
+              className="w-full px-4 py-2 border border-primary-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Custom warranty description. If left empty, will auto-generate
+              from period.
+            </p>
+          </div>
+        </form>
 
-                <div className="flex justify-end space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowBidForm(false)}
-                    className="px-4 py-2 text-primary-700 bg-primary-100 rounded-lg hover:bg-primary-200 transition-colors duration-200"
-                    disabled={submittingBid}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submittingBid}
-                    className="px-6 py-2 bg-accent-500 text-white rounded-lg hover:bg-accent-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-                  >
-                    {submittingBid ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        <span>Submitting...</span>
-                      </>
-                    ) : (
-                      "Submit Bid"
-                    )}
-                  </button>
-                </div>
-              </form>
+        {/* Footer */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 p-4 sm:p-6 border-t border-gray-200">
+          <button
+            type="button"
+            onClick={() => setShowBidForm(false)}
+            disabled={submittingBid}
+            className="px-4 sm:px-6 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm sm:text-base font-semibold hover:bg-gray-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (bidFormRef.current) {
+                const isValid = bidFormRef.current.checkValidity();
+                if (isValid) {
+                  const form = bidFormRef.current;
+                  const formEvent = new Event("submit", {
+                    bubbles: true,
+                    cancelable: true,
+                  });
+                  const syntheticEvent: React.FormEvent<HTMLFormElement> = {
+                    ...formEvent,
+                    preventDefault: () => formEvent.preventDefault(),
+                    stopPropagation: () => formEvent.stopPropagation(),
+                    currentTarget: form,
+                    target: form,
+                    nativeEvent: formEvent,
+                    isDefaultPrevented: () => formEvent.defaultPrevented,
+                    isPropagationStopped: () => !formEvent.bubbles,
+                    persist: () => {},
+                    timeStamp: formEvent.timeStamp,
+                    type: formEvent.type,
+                    bubbles: formEvent.bubbles,
+                    cancelable: formEvent.cancelable,
+                  } as React.FormEvent<HTMLFormElement>;
+                  handleSubmitBid(syntheticEvent);
+                } else {
+                  bidFormRef.current.reportValidity();
+                }
+              }
+            }}
+            disabled={submittingBid}
+            className="flex items-center justify-center gap-1.5 px-4 sm:px-6 py-2 bg-accent-500 text-white rounded-lg text-sm sm:text-base font-semibold hover:bg-accent-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-accent-500"
+          >
+            {submittingBid ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <span>Submitting...</span>
+              </>
+            ) : (
+              "Submit Bid"
+            )}
+          </button>
+        </div>
       </BaseModal>
 
       {/* Full-Size Image Lightbox */}

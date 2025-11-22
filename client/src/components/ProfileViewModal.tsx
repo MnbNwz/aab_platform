@@ -84,7 +84,7 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title="Profile Information"
-      maxWidth="2xl"
+      maxWidth="4xl"
       footer={modalFooter}
       showFooter={true}
     >

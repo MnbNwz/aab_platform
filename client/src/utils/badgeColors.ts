@@ -62,6 +62,14 @@ const getSemanticBadge = (status: string): BadgeConfig => {
     };
   }
 
+  if (normalizedStatus === "sold") {
+    return {
+      className: "bg-gray-100 text-gray-800",
+      label: formatStatusLabel(status),
+      borderClassName: "border-gray-200",
+    };
+  }
+
   if (
     ["rejected", "failed", "cancelled", "revoke"].includes(normalizedStatus)
   ) {

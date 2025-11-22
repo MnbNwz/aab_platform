@@ -19,7 +19,7 @@ export interface Job {
   title: string;
   description: string;
   category: string;
-  service: string; // Service type (e.g., electrical, plumbing, hvac)
+  service: string;
   estimate: number;
   type: string;
   status: "open" | "in_progress" | "completed" | "cancelled";

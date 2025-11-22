@@ -17,6 +17,7 @@ import {
   setContractorJobFilters,
   clearContractorJobError,
 } from "../../store/slices/contractorJobSlice";
+import { getServicesThunk } from "../../store/thunks/servicesThunks";
 import ContractorJobDetailsModal from "../ContractorJobDetailsModal";
 import DataTable, { TableColumn } from "../ui/DataTable";
 import type { PaginationInfo } from "../ui/DataTable";
@@ -34,6 +35,8 @@ const AvailableJobs: React.FC = memo(() => {
     membershipInfo,
     leadInfo,
   } = useSelector((state: RootState) => state.contractorJob);
+  const { services: backendServices, isInitialized: servicesInitialized } =
+    useSelector((state: RootState) => state.services);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedJob, setSelectedJob] = useState<ContractorJobDetails | null>(
     null
@@ -42,6 +45,18 @@ const AvailableJobs: React.FC = memo(() => {
   const [showJobDetails, setShowJobDetails] = useState(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hasInitializedRef = useRef(false);
+
+  // Fetch services from backend if not already loaded
+  useEffect(() => {
+    if (!servicesInitialized && backendServices.length === 0) {
+      dispatch(getServicesThunk());
+    }
+  }, [dispatch, servicesInitialized, backendServices.length]);
+
+  // Get backend services for filter dropdown
+  const availableServices = useMemo(() => {
+    return backendServices || [];
+  }, [backendServices]);
 
   // Initialize filters on mount only
   useEffect(() => {
@@ -204,28 +219,36 @@ const AvailableJobs: React.FC = memo(() => {
       {
         key: "estimate",
         header: "Estimate",
-        render: (job) => (
-          <span className="font-semibold text-primary-700">
-            $
-            {job.estimate.toLocaleString("en-US", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
-          </span>
-        ),
-        mobileLabel: "Estimate",
-        mobileRender: (job) => (
-          <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-2">
-            <span className="text-gray-600 text-sm">Estimate:</span>
-            <span className="font-semibold text-primary-700 text-sm">
+        render: (job) => {
+          // Convert from cents to dollars
+          const estimateInDollars = job.estimate ? job.estimate / 100 : 0;
+          return (
+            <span className="font-semibold text-primary-700">
               $
-              {job.estimate.toLocaleString("en-US", {
+              {estimateInDollars.toLocaleString("en-US", {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}
             </span>
-          </div>
-        ),
+          );
+        },
+        mobileLabel: "Estimate",
+        mobileRender: (job) => {
+          // Convert from cents to dollars
+          const estimateInDollars = job.estimate ? job.estimate / 100 : 0;
+          return (
+            <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-2">
+              <span className="text-gray-600 text-sm">Estimate:</span>
+              <span className="font-semibold text-primary-700 text-sm">
+                $
+                {estimateInDollars.toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </span>
+            </div>
+          );
+        },
       },
       {
         key: "timeline",
@@ -334,15 +357,20 @@ const AvailableJobs: React.FC = memo(() => {
                     handleFilterChange({ service: e.target.value })
                   }
                   className="w-full px-2 sm:px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent-500 focus:border-accent-500 bg-white transition-colors"
+                  disabled={availableServices.length === 0}
                 >
                   <option value="">All</option>
-                  <option value="plumbing">Plumbing</option>
-                  <option value="electrical">Electrical</option>
-                  <option value="hvac">HVAC</option>
-                  <option value="roofing">Roofing</option>
-                  <option value="painting">Painting</option>
-                  <option value="flooring">Flooring</option>
-                  <option value="general">General</option>
+                  {availableServices.length > 0 ? (
+                    availableServices.map((service) => (
+                      <option key={service} value={service}>
+                        {service.charAt(0).toUpperCase() + service.slice(1)}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="" disabled>
+                      No services available
+                    </option>
+                  )}
                 </select>
               </div>
 

@@ -1,4 +1,11 @@
-import React, { useEffect, useMemo, memo, useCallback, useRef } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  memo,
+  useCallback,
+  useRef,
+  useState,
+} from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { createSelector } from "@reduxjs/toolkit";
 import {
@@ -21,8 +28,19 @@ import {
 import { TrendingUp, TrendingDown, RefreshCw } from "lucide-react";
 import type { RootState, AppDispatch } from "../../store";
 import { fetchAnalyticsThunk } from "../../store/slices/analyticsSlice";
+import { fetchUserThunk } from "../../store/thunks/userManagementThunks";
 import Loader from "../ui/Loader";
 import { formatCurrency, CHART_COLORS } from "../../utils";
+import ProfileViewModal from "../ProfileViewModal";
+import type { User } from "../../types";
+import type {
+  TopContractor,
+  TopCustomer,
+  ServiceRevenue,
+  TierRevenue,
+  PaymentTypeBreakdown,
+  MonthlyLeadUsage,
+} from "../../types/analytics";
 
 const selectAnalyticsState = createSelector(
   [(state: RootState) => state.analytics],
@@ -34,7 +52,6 @@ const selectAnalyticsState = createSelector(
   })
 );
 
-// Memoized KPI Card Component
 const KPICard = memo(
   ({
     title,
@@ -69,7 +86,6 @@ const KPICard = memo(
 
 KPICard.displayName = "KPICard";
 
-// Memoized Business Intelligence Card Component
 const BusinessIntelligenceCard = memo(
   ({
     title,
@@ -93,30 +109,101 @@ const BusinessIntelligenceCard = memo(
 
 BusinessIntelligenceCard.displayName = "BusinessIntelligenceCard";
 
+interface ExtendedTopContractor extends TopContractor {
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+}
+
+interface MonthlyRevenueItem {
+  month: string;
+  jobs: number;
+  memberships: number;
+  total: number;
+}
+
+interface ServiceBreakdownItem {
+  name: string;
+  count: number;
+  revenue: number;
+}
+
+interface MembershipDistributionItem {
+  name: string;
+  members: number;
+  revenue: number;
+  [key: string]: string | number;
+}
+
+interface PaymentMethodItem {
+  name: string;
+  amount: number;
+  count: number;
+}
+
+interface ContractorPerformanceItem {
+  id: string;
+  bids: number;
+  won: number;
+  winRate: number;
+  value: number;
+}
+
+interface CustomerSpendingItem {
+  name: string;
+  jobs: number;
+  spending: number;
+}
+
+interface LeadUsageTrendItem {
+  month: string;
+  basic: number;
+  standard: number;
+  premium: number;
+}
+
+interface ChartDataLimits {
+  contractors: TopContractor[];
+  customers: TopCustomer[];
+  services: ServiceRevenue[];
+  membershipTiers: TierRevenue[];
+  paymentTypes: PaymentTypeBreakdown[];
+}
+
+interface PaginatedData<T> {
+  items: T[];
+  totalPages: number;
+  hasMore: boolean;
+  totalItems: number;
+}
+
 const Analytics: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { data, loading, error, lastFetched } =
     useSelector(selectAnalyticsState);
 
-  // State for pagination and data limits
-  const [contractorPage, setContractorPage] = React.useState(0);
-  const [customerPage, setCustomerPage] = React.useState(0);
+  const [contractorPage, setContractorPage] = useState(0);
+  const [customerPage, setCustomerPage] = useState(0);
+  const [profileViewOpen, setProfileViewOpen] = useState(false);
+  const [selectedContractor, setSelectedContractor] = useState<User | null>(
+    null
+  );
+  const [loadingContractorProfile, setLoadingContractorProfile] =
+    useState(false);
 
-  // Refs to prevent unnecessary re-renders
   const hasInitialized = useRef(false);
   const lastFetchTime = useRef<number>(0);
 
   const ITEMS_PER_PAGE = 5;
   const MAX_DISPLAY_ITEMS = 10;
 
-  // Optimized useEffect with ref to prevent multiple initial calls
   useEffect(() => {
     const now = Date.now();
     const shouldFetch =
       !data &&
       !loading &&
       !error &&
-      (!hasInitialized.current || now - lastFetchTime.current > 30000); // 30 second cooldown
+      (!hasInitialized.current || now - lastFetchTime.current > 30000);
 
     if (shouldFetch) {
       hasInitialized.current = true;
@@ -130,7 +217,6 @@ const Analytics: React.FC = () => {
     dispatch(fetchAnalyticsThunk());
   }, [dispatch]);
 
-  // Memoized pagination handlers
   const handleContractorPageChange = useCallback(
     (direction: "prev" | "next") => {
       setContractorPage((prev) => {
@@ -154,7 +240,26 @@ const Analytics: React.FC = () => {
     });
   }, []);
 
-  // Memoized computed values - must be called before any early returns
+  const handleViewContractorProfile = useCallback(
+    async (contractorId: string) => {
+      setProfileViewOpen(true);
+      setLoadingContractorProfile(true);
+      setSelectedContractor(null);
+
+      try {
+        const result = await dispatch(fetchUserThunk(contractorId));
+        if (fetchUserThunk.fulfilled.match(result)) {
+          setSelectedContractor(result.payload);
+        }
+      } catch (error) {
+        console.error("Error fetching contractor profile:", error);
+      } finally {
+        setLoadingContractorProfile(false);
+      }
+    },
+    [dispatch]
+  );
+
   const totalRevenue = useMemo(() => {
     if (!data?.revenue?.jobs?.summary || !data?.revenue?.memberships?.summary)
       return 0;
@@ -180,8 +285,7 @@ const Analytics: React.FC = () => {
     }
   }, [data]);
 
-  // Pagination logic for contractors
-  const contractorData = useMemo(() => {
+  const contractorData = useMemo((): PaginatedData<ExtendedTopContractor> => {
     if (!data?.performance?.contractors?.topContractors) {
       return { items: [], totalPages: 0, hasMore: false, totalItems: 0 };
     }
@@ -204,8 +308,7 @@ const Analytics: React.FC = () => {
     }
   }, [data, contractorPage]);
 
-  // Pagination logic for customers
-  const customerData = useMemo(() => {
+  const customerData = useMemo((): PaginatedData<TopCustomer> => {
     if (!data?.performance?.customers?.topCustomers) {
       return { items: [], totalPages: 0, hasMore: false, totalItems: 0 };
     }
@@ -228,9 +331,16 @@ const Analytics: React.FC = () => {
     }
   }, [data, customerPage]);
 
-  // Chart data with limits to prevent overflow
-  const chartDataLimits = useMemo(() => {
-    if (!data) return {};
+  const chartDataLimits = useMemo((): ChartDataLimits => {
+    if (!data) {
+      return {
+        contractors: [],
+        customers: [],
+        services: [],
+        membershipTiers: [],
+        paymentTypes: [],
+      };
+    }
 
     try {
       return {
@@ -241,24 +351,30 @@ const Analytics: React.FC = () => {
           0,
           MAX_DISPLAY_ITEMS
         ),
-        services: (data.revenue?.jobs?.serviceRevenue || []).slice(0, 8), // Limit to top 8 services
+        services: (data.revenue?.jobs?.serviceRevenue || []).slice(0, 8),
         membershipTiers: (data.revenue?.memberships?.tierRevenue || []).slice(
           0,
           6
-        ), // Limit to 6 tiers
-        paymentTypes: (data.revenue?.payments?.typeBreakdown || []).slice(0, 5), // Limit to 5 payment types
+        ),
+        paymentTypes: (data.revenue?.payments?.typeBreakdown || []).slice(0, 5),
       };
     } catch (error) {
       console.error("Error processing chart data limits:", error);
-      return {};
+      return {
+        contractors: [],
+        customers: [],
+        services: [],
+        membershipTiers: [],
+        paymentTypes: [],
+      };
     }
   }, [data]);
 
-  const monthlyRevenueData = useMemo(() => {
+  const monthlyRevenueData = useMemo((): MonthlyRevenueItem[] => {
     if (!data) return [];
 
     try {
-      const monthlyMap = new Map<string, any>();
+      const monthlyMap = new Map<string, MonthlyRevenueItem>();
 
       // Process job revenue data
       (data.revenue?.jobs?.monthlyRevenue || []).forEach((item) => {
@@ -275,7 +391,9 @@ const Analytics: React.FC = () => {
           });
         }
         const current = monthlyMap.get(key);
-        current.jobs += (item.totalValue || 0) / 100;
+        if (current) {
+          current.jobs += (item.totalValue || 0) / 100;
+        }
       });
 
       // Process membership revenue data
@@ -293,14 +411,18 @@ const Analytics: React.FC = () => {
           });
         }
         const current = monthlyMap.get(key);
-        current.memberships += (item.revenue || 0) / 100;
+        if (current) {
+          current.memberships += (item.revenue || 0) / 100;
+        }
       });
 
       return Array.from(monthlyMap.values())
-        .map((item) => ({
-          ...item,
-          total: item.jobs + item.memberships,
-        }))
+        .map(
+          (item): MonthlyRevenueItem => ({
+            ...item,
+            total: item.jobs + item.memberships,
+          })
+        )
         .sort((a, b) => a.month.localeCompare(b.month));
     } catch (error) {
       console.error("Error processing monthly revenue data:", error);
@@ -308,7 +430,7 @@ const Analytics: React.FC = () => {
     }
   }, [data]);
 
-  const serviceBreakdown = useMemo(() => {
+  const serviceBreakdown = useMemo((): ServiceBreakdownItem[] => {
     if (!data || !chartDataLimits.services) return [];
 
     try {
@@ -321,119 +443,143 @@ const Analytics: React.FC = () => {
         if (!serviceMap.has(service)) {
           serviceMap.set(service, { count: 0, revenue: 0 });
         }
-        const current = serviceMap.get(service)!;
-        current.count += item.count || 0;
-        current.revenue += (item.totalValue || 0) / 100;
+        const current = serviceMap.get(service);
+        if (current) {
+          current.count += item.count || 0;
+          current.revenue += (item.totalValue || 0) / 100;
+        } else {
+          serviceMap.set(service, {
+            count: item.count || 0,
+            revenue: (item.totalValue || 0) / 100,
+          });
+        }
       });
 
-      return Array.from(serviceMap.entries()).map(([name, data]) => ({
-        name,
-        count: data.count,
-        revenue: data.revenue,
-      }));
+      return Array.from(serviceMap.entries()).map(
+        ([name, data]): ServiceBreakdownItem => ({
+          name,
+          count: data.count,
+          revenue: data.revenue,
+        })
+      );
     } catch (error) {
       console.error("Error processing service breakdown:", error);
       return [];
     }
   }, [data, chartDataLimits]);
 
-  const membershipDistribution = useMemo(() => {
+  const membershipDistribution = useMemo((): MembershipDistributionItem[] => {
     if (!data?.revenue?.memberships?.tierRevenue) return [];
 
     try {
       return data.revenue.memberships.tierRevenue
         .filter((item) => item?.tier)
-        .map((item) => ({
-          name: item.tier.charAt(0).toUpperCase() + item.tier.slice(1),
-          members: item.count || 0,
-          revenue: (item.totalRevenue || 0) / 100,
-        }));
+        .map(
+          (item): MembershipDistributionItem => ({
+            name: item.tier.charAt(0).toUpperCase() + item.tier.slice(1),
+            members: item.count || 0,
+            revenue: (item.totalRevenue || 0) / 100,
+          })
+        );
     } catch (error) {
       console.error("Error processing membership distribution:", error);
       return [];
     }
   }, [data]);
 
-  const paymentMethodsData = useMemo(() => {
+  const paymentMethodsData = useMemo((): PaymentMethodItem[] => {
     if (!data?.revenue?.payments?.typeBreakdown) return [];
 
     try {
       return data.revenue.payments.typeBreakdown
         .filter((item) => item?.type)
-        .map((item) => ({
-          name: item.type
-            .split("_")
-            .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-            .join(" "),
-          amount: (item.totalAmount || 0) / 100,
-          count: item.count || 0,
-        }));
+        .map(
+          (item): PaymentMethodItem => ({
+            name: item.type
+              .split("_")
+              .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+              .join(" "),
+            amount: (item.totalAmount || 0) / 100,
+            count: item.count || 0,
+          })
+        );
     } catch (error) {
       console.error("Error processing payment methods data:", error);
       return [];
     }
   }, [data]);
 
-  const contractorPerformance = useMemo(() => {
+  const contractorPerformance = useMemo((): ContractorPerformanceItem[] => {
     if (!data?.performance?.contractors?.topContractors) return [];
 
     try {
-      return data.performance.contractors.topContractors
-        .slice(0, 10)
-        .map((c) => ({
+      return data.performance.contractors.topContractors.slice(0, 10).map(
+        (c): ContractorPerformanceItem => ({
           id: c._id?.slice(-6) || "unknown",
           bids: c.totalBids || 0,
           won: c.acceptedBids || 0,
           winRate: c.winRate || 0,
           value: (c.totalBidValue || 0) / 100,
-        }));
+        })
+      );
     } catch (error) {
       console.error("Error processing contractor performance:", error);
       return [];
     }
   }, [data]);
 
-  const customerSpending = useMemo(() => {
+  const customerSpending = useMemo((): CustomerSpendingItem[] => {
     if (!data?.performance?.customers?.topCustomers) return [];
 
     try {
-      return data.performance.customers.topCustomers.slice(0, 10).map((c) => ({
-        name:
-          `${c.firstName || ""} ${c.lastName || ""}`.trim() ||
-          "Unknown Customer",
-        jobs: c.totalJobs || 0,
-        spending: (c.totalSpending || 0) / 100,
-      }));
+      return data.performance.customers.topCustomers.slice(0, 10).map(
+        (c): CustomerSpendingItem => ({
+          name:
+            `${c.firstName || ""} ${c.lastName || ""}`.trim() ||
+            "Unknown Customer",
+          jobs: c.totalJobs || 0,
+          spending: (c.totalSpending || 0) / 100,
+        })
+      );
     } catch (error) {
       console.error("Error processing customer spending:", error);
       return [];
     }
   }, [data]);
 
-  const leadUsageTrend = useMemo(() => {
+  const leadUsageTrend = useMemo((): LeadUsageTrendItem[] => {
     if (!data?.performance?.leads?.monthlyLeadUsage) return [];
 
     try {
-      const tierMap = new Map<string, any>();
+      const tierMap = new Map<string, LeadUsageTrendItem>();
 
-      data.performance.leads.monthlyLeadUsage.forEach((item) => {
-        const key = `${item.year}-${String(item.month).padStart(2, "0")}`;
-        if (!tierMap.has(key)) {
-          tierMap.set(key, {
-            month: new Date(item.year, item.month - 1).toLocaleDateString(
-              "en-US",
-              { month: "short" }
-            ),
-            basic: 0,
-            standard: 0,
-            premium: 0,
-          });
+      data.performance.leads.monthlyLeadUsage.forEach(
+        (item: MonthlyLeadUsage) => {
+          const key = `${item.year}-${String(item.month).padStart(2, "0")}`;
+          if (!tierMap.has(key)) {
+            tierMap.set(key, {
+              month: new Date(item.year, item.month - 1).toLocaleDateString(
+                "en-US",
+                { month: "short" }
+              ),
+              basic: 0,
+              standard: 0,
+              premium: 0,
+            });
+          }
+          const current = tierMap.get(key);
+          if (item.tier && current) {
+            const tierKey = item.tier.toLowerCase() as keyof LeadUsageTrendItem;
+            if (
+              tierKey === "basic" ||
+              tierKey === "standard" ||
+              tierKey === "premium"
+            ) {
+              current[tierKey] = item.count || 0;
+            }
+          }
         }
-        const current = tierMap.get(key);
-        if (item.tier && current) {
-          current[item.tier.toLowerCase()] = item.count || 0;
-        }
-      });
+      );
 
       return Array.from(tierMap.values()).sort((a, b) =>
         a.month.localeCompare(b.month)
@@ -689,15 +835,15 @@ const Analytics: React.FC = () => {
       {/* Top Performers Tables */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
         {/* Top Contractors Table */}
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-4 lg:p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-4 sm:p-5 lg:p-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-5">
+            <h2 className="text-lg sm:text-xl font-semibold text-primary-900">
               Top Performing Contractors
             </h2>
-            <div className="text-sm text-gray-500">
+            <div className="text-xs sm:text-sm text-primary-600">
               {contractorData.totalItems &&
                 contractorData.totalItems > ITEMS_PER_PAGE && (
-                  <span>
+                  <span className="bg-primary-50 px-3 py-1.5 rounded-lg border border-primary-200">
                     Showing {contractorPage * ITEMS_PER_PAGE + 1}-
                     {Math.min(
                       (contractorPage + 1) * ITEMS_PER_PAGE,
@@ -708,83 +854,142 @@ const Analytics: React.FC = () => {
                 )}
             </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-2 lg:px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                    Rank
-                  </th>
-                  <th className="px-2 lg:px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                    Bids
-                  </th>
-                  <th className="px-2 lg:px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                    Won
-                  </th>
-                  <th className="px-2 lg:px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                    Win Rate
-                  </th>
-                  <th className="px-2 lg:px-3 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                    Value
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {contractorData.items.map((contractor, idx) => (
-                  <tr
-                    key={contractor._id}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-2 lg:px-3 py-3">
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary-100 text-primary-700 font-semibold text-xs">
-                        {contractorPage * ITEMS_PER_PAGE + idx + 1}
-                      </span>
-                    </td>
-                    <td className="px-2 lg:px-3 py-3 font-medium text-gray-900">
-                      {contractor.totalBids}
-                    </td>
-                    <td className="px-2 lg:px-3 py-3">
-                      <span className="text-green-600 font-semibold">
-                        {contractor.acceptedBids}
-                      </span>
-                    </td>
-                    <td className="px-2 lg:px-3 py-3">
-                      <span
-                        className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
-                          contractor.winRate >= 20
-                            ? "bg-green-100 text-green-700"
-                            : contractor.winRate >= 10
-                            ? "bg-yellow-100 text-yellow-700"
-                            : "bg-red-100 text-red-700"
-                        }`}
-                      >
-                        {contractor.winRate.toFixed(1)}%
-                      </span>
-                    </td>
-                    <td className="px-2 lg:px-3 py-3 text-right font-semibold text-primary-700">
-                      {formatCurrency(contractor.totalBidValue / 100)}
-                    </td>
+          <div className="overflow-x-auto -mx-4 sm:mx-0">
+            <div className="inline-block min-w-full align-middle">
+              <table className="w-full text-sm">
+                <thead className="bg-primary-50 border-b-2 border-primary-200">
+                  <tr>
+                    <th className="px-2 lg:px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                      Rank
+                    </th>
+                    <th className="px-2 lg:px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                      Contractor
+                    </th>
+                    <th className="px-2 lg:px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                      Bids
+                    </th>
+                    <th className="px-2 lg:px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                      Won
+                    </th>
+                    <th className="px-2 lg:px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                      Win Rate
+                    </th>
+                    <th className="px-2 lg:px-3 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                      Value
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {contractorData.items.map((contractor, idx) => {
+                    const contractorName =
+                      contractor.firstName || contractor.lastName
+                        ? `${contractor.firstName || ""} ${
+                            contractor.lastName || ""
+                          }`.trim()
+                        : contractor.name ||
+                          `Contractor ${
+                            contractorPage * ITEMS_PER_PAGE + idx + 1
+                          }`;
+
+                    return (
+                      <tr
+                        key={contractor._id}
+                        onClick={() =>
+                          handleViewContractorProfile(contractor._id)
+                        }
+                        className="hover:bg-primary-50 cursor-pointer transition-all duration-200 active:bg-primary-100 group"
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleViewContractorProfile(contractor._id);
+                          }
+                        }}
+                        aria-label={`View profile for ${contractorName}`}
+                      >
+                        <td className="px-2 sm:px-3 lg:px-4 py-3 sm:py-4">
+                          <span className="inline-flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary-100 text-primary-700 group-hover:bg-primary-200 group-hover:text-primary-800 font-semibold text-xs sm:text-sm transition-colors">
+                            {contractorPage * ITEMS_PER_PAGE + idx + 1}
+                          </span>
+                        </td>
+                        <td className="px-2 sm:px-3 lg:px-4 py-3 sm:py-4">
+                          <div className="flex items-center">
+                            <span className="text-primary-700 group-hover:text-primary-900 font-semibold text-sm sm:text-base transition-colors">
+                              {contractorName}
+                            </span>
+                            <svg
+                              className="ml-2 w-4 h-4 text-primary-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 5l7 7-7 7"
+                              />
+                            </svg>
+                          </div>
+                        </td>
+                        <td className="px-2 sm:px-3 lg:px-4 py-3 sm:py-4">
+                          <span className="font-medium text-gray-900 text-sm sm:text-base">
+                            {contractor.totalBids}
+                          </span>
+                        </td>
+                        <td className="px-2 sm:px-3 lg:px-4 py-3 sm:py-4">
+                          <span className="text-green-600 font-semibold text-sm sm:text-base">
+                            {contractor.acceptedBids}
+                          </span>
+                        </td>
+                        <td className="px-2 sm:px-3 lg:px-4 py-3 sm:py-4">
+                          <span
+                            className={`inline-flex items-center px-2 sm:px-2.5 py-1 rounded-full text-xs sm:text-sm font-semibold transition-colors ${
+                              contractor.winRate >= 20
+                                ? "bg-green-100 text-green-700 group-hover:bg-green-200"
+                                : contractor.winRate >= 10
+                                ? "bg-yellow-100 text-yellow-700 group-hover:bg-yellow-200"
+                                : "bg-red-100 text-red-700 group-hover:bg-red-200"
+                            }`}
+                          >
+                            {contractor.winRate.toFixed(1)}%
+                          </span>
+                        </td>
+                        <td className="px-2 sm:px-3 lg:px-4 py-3 sm:py-4 text-right">
+                          <span className="font-semibold text-primary-700 text-sm sm:text-base">
+                            {formatCurrency(contractor.totalBidValue / 100)}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
           {contractorData.totalPages > 1 && (
-            <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
+            <div className="flex justify-between items-center mt-4 sm:mt-5 pt-4 border-t border-gray-200">
               <button
-                onClick={() => handleContractorPageChange("prev")}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleContractorPageChange("prev");
+                }}
                 disabled={contractorPage === 0}
-                className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm font-medium bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
               >
                 Previous
               </button>
-              <span className="text-sm text-gray-600">
+              <span className="text-sm font-medium text-primary-700">
                 Page {contractorPage + 1} of {contractorData.totalPages}
               </span>
               <button
-                onClick={() => handleContractorPageChange("next")}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleContractorPageChange("next");
+                }}
                 disabled={!contractorData.hasMore}
-                className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm font-medium bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
               >
                 Next
               </button>
@@ -1055,9 +1260,10 @@ const Analytics: React.FC = () => {
                   outerRadius={120}
                   paddingAngle={5}
                   dataKey="revenue"
-                  label={(entry: any) =>
-                    `${entry.name}: ${entry.revenue.toLocaleString()}`
-                  }
+                  label={(props) => {
+                    const entry = props.payload as MembershipDistributionItem;
+                    return `${entry.name}: ${entry.revenue.toLocaleString()}`;
+                  }}
                 >
                   <Cell fill={CHART_COLORS.primary} />
                   <Cell fill={CHART_COLORS.accent} />
@@ -1069,10 +1275,15 @@ const Analytics: React.FC = () => {
                     border: "1px solid #E5E7EB",
                     borderRadius: "8px",
                   }}
-                  formatter={(value: any, _name: any, props: any) => [
-                    `$${value.toLocaleString()}`,
-                    `${props.payload.members} members`,
-                  ]}
+                  formatter={(value: number, _name: string, props) => {
+                    const entry = (
+                      props as { payload?: MembershipDistributionItem }
+                    ).payload as MembershipDistributionItem;
+                    return [
+                      `$${value.toLocaleString()}`,
+                      `${entry?.members || 0} members`,
+                    ];
+                  }}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -1254,6 +1465,33 @@ const Analytics: React.FC = () => {
           </ResponsiveContainer>
         </div>
       </div>
+
+      {/* Profile View Modal */}
+      {profileViewOpen && (
+        <ProfileViewModal
+          user={
+            selectedContractor || {
+              _id: "",
+              email: "",
+              firstName: "",
+              lastName: "",
+              role: "contractor" as const,
+              status: "active" as const,
+              approval: "approved" as const,
+              emailVerified: false,
+              createdAt: "",
+              updatedAt: "",
+            }
+          }
+          isOpen={profileViewOpen}
+          onClose={() => {
+            setProfileViewOpen(false);
+            setSelectedContractor(null);
+          }}
+          isLoading={loadingContractorProfile}
+          hideEditForAdmin={true}
+        />
+      )}
     </div>
   );
 };

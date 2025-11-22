@@ -4,7 +4,6 @@ import {
   USER_APPROVAL_STATUSES,
   INVESTMENT_STATUSES,
   PROPERTY_TYPES,
-  SERVICES,
   CONTACT_STATUSES,
   PAYMENT_STATUSES,
   PAYMENT_TYPES,
@@ -191,12 +190,6 @@ export const FilterConfigs = {
       PROPERTY_TYPES,
       value
     ),
-
-  /**
-   * Service filter
-   */
-  service: (value: any) =>
-    createSelectFieldWithAll("service", "Service", SERVICES, value),
 
   /**
    * Contact status filter

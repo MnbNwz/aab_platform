@@ -10,7 +10,7 @@ import {
 } from "../../store/slices/investmentOpportunitySlice";
 import { investmentOpportunityApi } from "../../services/investmentOpportunityService";
 import { fetchUserThunk } from "../../store/thunks/userManagementThunks";
-import type { ContactStatus, User } from "../../types";
+import type { ContactStatus, User, InvestmentInterest } from "../../types";
 import Loader from "../ui/Loader";
 import ProfileViewModal from "../ProfileViewModal";
 import {
@@ -38,10 +38,11 @@ import {
 import {
   formatInvestmentPrice,
   getContactStatusBadge,
+  getInvestmentStatusBadge,
 } from "../../utils/investmentOpportunity";
 import { showToast } from "../../utils/toast";
 import { useGeocoding } from "../../hooks/useGeocoding";
-import { BaseModal, Button, Text } from "../reusable";
+import { BaseModal, Button, Text, Badge } from "../reusable";
 import ImageViewerModal from "./ImageViewerModal";
 
 interface InvestmentOpportunityDetailsModalProps {
@@ -164,8 +165,12 @@ const InvestmentOpportunityDetailsModal: React.FC<
         dispatch(updateOpportunityStatus(updatedOpportunity));
 
         showToast.success("Interest status updated successfully");
-      } catch (error: any) {
-        showToast.error(error.message || "Failed to update interest status");
+      } catch (error: unknown) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Failed to update interest status";
+        showToast.error(errorMessage);
         // On error, refresh to get correct state
         dispatch(fetchInvestmentOpportunityByIdThunk(opportunityId));
       }
@@ -225,7 +230,7 @@ const InvestmentOpportunityDetailsModal: React.FC<
   }, [dispatch, selectedOpportunity]);
 
   const handleViewContractorProfile = useCallback(
-    async (interest: any) => {
+    async (interest: InvestmentInterest) => {
       try {
         setLoadingContractorProfile(true);
 
@@ -239,7 +244,7 @@ const InvestmentOpportunityDetailsModal: React.FC<
           setSelectedContractor(fullUserData);
           setProfileViewOpen(true);
         } else {
-          // Fallback to nested data if API call fails
+          // Fallback to nested data if API call fails - only use available properties
           const contractorUser: User = {
             _id: interest.contractorId._id,
             email: interest.contractorId.email,
@@ -248,30 +253,21 @@ const InvestmentOpportunityDetailsModal: React.FC<
             phone: interest.contractorId.phone,
             profileImage: interest.contractorId.profileImage,
             role: "contractor" as const,
-            status: interest.contractorId.status || ("active" as const),
-            approval: interest.contractorId.approval || ("approved" as const),
-            emailVerified:
-              interest.contractorId.userVerification?.isVerified || true,
-            contractor: interest.contractorId.contractor,
-            geoHome: interest.contractorId.geoHome,
-            createdAt: interest.contractorId.createdAt || "",
-            updatedAt: interest.contractorId.updatedAt || "",
-            ...(interest.contractorId.userVerification && {
-              userVerification: interest.contractorId.userVerification,
-            }),
-            ...(interest.contractorId.passwordReset && {
-              passwordReset: interest.contractorId.passwordReset,
-            }),
-            ...(interest.contractorId.stripeCustomerId && {
-              stripeCustomerId: interest.contractorId.stripeCustomerId,
-            }),
-            ...(interest.contractorId.stripeConnectAccountId && {
-              stripeConnectAccountId:
-                interest.contractorId.stripeConnectAccountId,
-            }),
-            ...(interest.contractorId.stripeConnectStatus && {
-              stripeConnectStatus: interest.contractorId.stripeConnectStatus,
-            }),
+            status: "active" as const,
+            approval: "approved" as const,
+            emailVerified: true,
+            contractor: interest.contractorId.contractor
+              ? {
+                  companyName:
+                    interest.contractorId.contractor.companyName || "",
+                  services: interest.contractorId.contractor.services || [],
+                  license: interest.contractorId.contractor.license || "",
+                  taxId: interest.contractorId.contractor.taxId || "",
+                  docs: [],
+                }
+              : undefined,
+            createdAt: "",
+            updatedAt: "",
           };
           setSelectedContractor(contractorUser);
           setProfileViewOpen(true);
@@ -416,6 +412,23 @@ const InvestmentOpportunityDetailsModal: React.FC<
         <div className="overflow-y-auto flex-1 p-6 min-h-[500px]">
           {activeTab === "details" ? (
             <div className="space-y-6 h-full">
+              {/* Status Badge */}
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-gray-700">
+                  Status:
+                </span>
+                {(() => {
+                  const statusBadge = getInvestmentStatusBadge(
+                    opportunity.status
+                  );
+                  return (
+                    <Badge className={statusBadge.className}>
+                      {statusBadge.label}
+                    </Badge>
+                  );
+                })()}
+              </div>
+
               {/* Photos Carousel */}
               {opportunity.photos && opportunity.photos.length > 0 && (
                 <div>
@@ -1007,6 +1020,35 @@ const InvestmentOpportunityDetailsModal: React.FC<
             Close
           </button>
 
+          {/* Edit Property Button - Only show in details tab */}
+          {isAdmin &&
+            onEdit &&
+            activeTab === "details" &&
+            (() => {
+              const hasAcceptedInterest = opportunity.interests.some(
+                (int) => int.contactStatus === "accepted"
+              );
+              return (
+                <button
+                  onClick={onEdit}
+                  disabled={
+                    hasAcceptedInterest || opportunity.status === "sold"
+                  }
+                  className="flex items-center justify-center gap-1.5 px-4 sm:px-6 py-2 bg-accent-500 text-white rounded-lg text-sm sm:text-base font-semibold hover:bg-accent-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-accent-500"
+                  title={
+                    hasAcceptedInterest
+                      ? "Cannot edit property after accepting an offer"
+                      : opportunity.status === "sold"
+                      ? "Cannot edit sold properties"
+                      : undefined
+                  }
+                >
+                  <Edit className="h-4 w-4" />
+                  Edit Property
+                </button>
+              );
+            })()}
+
           {/* Interest Button for Contractors */}
           {isContractor && (
             <>
@@ -1033,31 +1075,6 @@ const InvestmentOpportunityDetailsModal: React.FC<
               )}
             </>
           )}
-
-          {isAdmin &&
-            onEdit &&
-            (() => {
-              // Check if any interest has been accepted
-              const hasAcceptedInterest = opportunity.interests.some(
-                (int) => int.contactStatus === "accepted"
-              );
-
-              return (
-                <button
-                  onClick={onEdit}
-                  disabled={hasAcceptedInterest}
-                  className="flex items-center justify-center gap-1.5 px-4 sm:px-6 py-2 bg-accent-500 text-white rounded-lg text-sm sm:text-base font-semibold hover:bg-accent-600 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-accent-500"
-                  title={
-                    hasAcceptedInterest
-                      ? "Cannot edit property after accepting an offer"
-                      : undefined
-                  }
-                >
-                  <Edit className="h-4 w-4" />
-                  Edit Property
-                </button>
-              );
-            })()}
         </div>
       </BaseModal>
 

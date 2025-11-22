@@ -1,4 +1,5 @@
 import React, { memo, useCallback, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 
 interface ImageViewerModalProps {
   isOpen: boolean;
@@ -60,9 +61,18 @@ const ImageViewerModal: React.FC<ImageViewerModalProps> = memo(
 
     if (!isOpen) return null;
 
-    return (
+    const modalContent = (
       <div
-        className="fixed inset-0 z-[2000] flex items-center justify-center bg-black bg-opacity-80"
+        className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-90"
+        style={{
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: "100vw",
+          height: "100vh",
+          zIndex: 999999, // Very high z-index to ensure it's always on top
+        }}
         onClick={handleOverlayClick}
         onKeyDown={handleKeyDown}
         tabIndex={-1}
@@ -72,7 +82,8 @@ const ImageViewerModal: React.FC<ImageViewerModalProps> = memo(
       >
         {/* Close button - matches BaseModal design */}
         <button
-          className="fixed top-4 right-4 sm:top-6 sm:right-6 text-white hover:text-accent-400 text-2xl sm:text-3xl font-bold p-2 transition-colors flex-shrink-0 z-[2001]"
+          className="fixed top-4 right-4 sm:top-6 sm:right-6 text-white hover:text-accent-400 text-2xl sm:text-3xl font-bold p-2 transition-colors flex-shrink-0"
+          style={{ zIndex: 1000000 }} // Even higher for the close button
           onClick={handleCloseClick}
           aria-label="Close image viewer"
           type="button"
@@ -109,6 +120,8 @@ const ImageViewerModal: React.FC<ImageViewerModalProps> = memo(
         </div>
       </div>
     );
+
+    return createPortal(modalContent, document.body);
   }
 );
 

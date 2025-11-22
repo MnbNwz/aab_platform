@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Plus, Settings } from "lucide-react";
 import { api } from "../services/apiService";
@@ -27,7 +27,9 @@ const ServicesManagement: React.FC = () => {
     laborUnit: 0,
     comment: "",
   });
-  const [errors, setErrors] = useState<Partial<Record<keyof CreateServiceRequest, string>>>({});
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof CreateServiceRequest, string>>
+  >({});
 
   useEffect(() => {
     if (services.length === 0 && !isLoading) {
@@ -60,11 +62,7 @@ const ServicesManagement: React.FC = () => {
 
   const handleInputChange = useCallback(
     (field: keyof CreateServiceRequest) =>
-      (
-        e: React.ChangeEvent<
-          HTMLInputElement | HTMLTextAreaElement
-        >
-      ) => {
+      (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const inputValue = e.target.value;
         const value =
           field === "materialUnit" || field === "laborUnit"
@@ -192,8 +190,9 @@ const ServicesManagement: React.FC = () => {
             </h4>
             <p className="text-sm text-blue-700 mt-1">
               Services define the categories of work available on the platform.
-              Each service includes material and labor unit rates used for budget
-              calculations. Once created, services cannot be modified or removed.
+              Each service includes material and labor unit rates used for
+              budget calculations. Once created, services cannot be modified or
+              removed.
             </p>
           </div>
         </div>
@@ -213,7 +212,7 @@ const ServicesManagement: React.FC = () => {
             required
             value={formData.name}
             onChange={handleInputChange("name")}
-            placeholder="e.g., HVAC Installation"
+            placeholder="e.g., Drywall Installation"
             error={errors.name}
             helperText="Enter a descriptive name for the service"
           />

@@ -357,7 +357,9 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                       </h3>
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <p className="text-green-600 font-bold text-xl">
-                          {formatCurrency(job.estimate)}
+                          {formatCurrency(
+                            job.estimate ? job.estimate / 100 : 0
+                          )}
                         </p>
                       </div>
                     </div>
@@ -660,7 +662,9 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                                   Bid Amount:
                                 </span>
                                 <span className="text-2xl font-bold text-green-600">
-                                  {formatCurrency(bid.bidAmount)}
+                                  {formatCurrency(
+                                    bid.bidAmount ? bid.bidAmount / 100 : 0
+                                  )}
                                 </span>
                               </div>
                             </div>
