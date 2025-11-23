@@ -60,7 +60,7 @@ export const addFavoriteThunk =
         dispatch(addFavoriteSuccess(contractorId));
         showToast.success(data.message || "Added to favorites");
 
-        // Refresh the favorites list to get updated contractor profiles
+        // Refresh the favorites list to get updated contractor profiles and confirm the addition
         dispatch(fetchFavoritesThunk());
       } else {
         // Handle API error response

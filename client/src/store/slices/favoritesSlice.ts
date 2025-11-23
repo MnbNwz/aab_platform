@@ -64,6 +64,11 @@ const favoritesSlice = createSlice({
     addFavoriteSuccess(state, action: PayloadAction<string>) {
       state.adding[action.payload] = false;
       state.error = null;
+      // Optimistically add to favoriteIds if not already present
+      if (!state.favoriteIds.includes(action.payload)) {
+        state.favoriteIds.push(action.payload);
+        state.totalFavorites = state.favoriteIds.length;
+      }
     },
     addFavoriteFailure(
       state,

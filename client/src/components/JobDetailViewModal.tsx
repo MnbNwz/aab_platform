@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useSelector } from "react-redux";
 import {
   DollarSign,
@@ -88,6 +88,15 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
   }, [isOpen, job._id, shouldRefetch, fetchBids]);
 
   const hasAcceptedBid = bids.some((bid) => bid.status === "accepted");
+  const acceptedBid = bids.find((bid) => bid.status === "accepted");
+
+  const sortedBids = useMemo(() => {
+    return [...bids].sort((a, b) => {
+      if (a.status === "accepted" && b.status !== "accepted") return -1;
+      if (a.status !== "accepted" && b.status === "accepted") return 1;
+      return 0;
+    });
+  }, [bids]);
 
   const handleViewContractorProfile = useCallback(
     (contractor: Bid["contractor"]) => {
@@ -203,29 +212,30 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
       return;
     }
 
+    if (!acceptedBid._id) {
+      showToast.error("Bid ID is missing.");
+      return;
+    }
+
     try {
       showToast.loading("Creating completion payment...");
 
-      const jobPaymentId = acceptedBid.jobPaymentId || acceptedBid._id;
+      const currentUrl = window.location.origin;
+      const successUrl = `${currentUrl}/jobs/${job._id}/completion/success`;
+      const cancelUrl = `${currentUrl}/jobs/${job._id}/completion/cancel`;
 
       const response = await paymentService.createJobCompletionPayment({
-        jobPaymentId: jobPaymentId,
+        bidId: acceptedBid._id,
+        successUrl,
+        cancelUrl,
       });
 
       showToast.dismiss();
 
-      if (response && response.data && response.data.clientSecret) {
-        showToast.success(
-          "Completion payment initiated. The job will be marked as completed once payment is confirmed."
-        );
-
-        if (_onRefreshJobs) {
-          _onRefreshJobs();
-        }
-
-        setTimeout(() => {
-          onClose();
-        }, 2000);
+      if (response && response.checkoutUrl) {
+        window.location.href = response.checkoutUrl;
+      } else {
+        throw new Error("Invalid checkout response: missing checkoutUrl");
       }
     } catch (err) {
       showToast.dismiss();
@@ -238,7 +248,7 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
       }
       showToast.error(errorMessage);
     }
-  }, [bids, onClose, _onRefreshJobs]);
+  }, [bids, job._id]);
 
   const formatCurrency = (amountInDollars: number) => {
     return `$${amountInDollars.toLocaleString("en-US", {
@@ -406,12 +416,16 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                     <div>
                       <h3 className="text-lg font-semibold text-primary-900 mb-3 flex items-center gap-2">
                         <DollarSign className="h-5 w-5 text-accent-600" />
-                        Estimated Budget
+                        {hasAcceptedBid ? "Accepted Price" : "Estimated Budget"}
                       </h3>
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <p className="text-green-600 font-bold text-xl">
                           {formatCurrency(
-                            job.estimate ? job.estimate / 100 : 0
+                            hasAcceptedBid && acceptedBid?.bidAmount
+                              ? acceptedBid.bidAmount / 100
+                              : job.estimate
+                              ? job.estimate / 100
+                              : 0
                           )}
                         </p>
                       </div>
@@ -594,8 +608,8 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                   )}
 
                   {!bidsLoading &&
-                    bids.length > 0 &&
-                    bids.map((bid) => {
+                    sortedBids.length > 0 &&
+                    sortedBids.map((bid) => {
                       const isExpanded = expandedBids.has(bid._id);
 
                       return (
@@ -637,7 +651,7 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                                     handleViewContractorProfile(bid.contractor)
                                   }
                                 >
-                                  <h4 className="font-semibold text-gray-900 hover:text-primary-600 mb-1">
+                                  <h4 className="font-semibold text-accent-600 hover:text-primary-600 mb-1">
                                     {bid.contractor.firstName}{" "}
                                     {bid.contractor.lastName}
                                   </h4>

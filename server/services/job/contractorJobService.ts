@@ -981,8 +981,17 @@ export async function getContractorMyJobs(
                 _id: "$jobRequest",
                 title: "$job.title",
                 service: "$job.service",
-                estimate: "$job.estimate",
+                estimate: "$job.estimate", // Customer's suggested price
+                bidAmount: "$bidAmount", // Contractor's accepted bid price
                 timeline: "$job.timeline",
+                // status: "$status", // Bid status (pending, accepted, rejected)
+                // jobStatus: "$job.status", // Job status (open, inprogress, completed, etc.)
+                // property: "$job.property",
+                // createdBy: "$job.createdBy",
+                // depositPaid: "$depositPaid",
+                // completionPaid: "$completionPaid",
+                // createdAt: "$job.createdAt",
+                // updatedAt: "$updatedAt",
               },
             },
           ],

@@ -935,8 +935,16 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
               {job && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <InfoField
-                    label="Customer Estimate"
-                    value={`$${(job.estimate
+                    label={
+                      myBid && myBid.status === "accepted"
+                        ? "Agreed Price"
+                        : myBid
+                        ? "Contractor Suggested Price"
+                        : "Customer Estimate"
+                    }
+                    value={`$${(myBid && myBid.bidAmount
+                      ? myBid.bidAmount / 100
+                      : job.estimate
                       ? job.estimate / 100
                       : 0
                     ).toLocaleString("en-US", {
@@ -950,6 +958,19 @@ const ContractorJobDetailsModal: React.FC<ContractorJobDetailsModalProps> = ({
                     value={`${job.timeline} days`}
                     valueClassName="text-3xl font-bold text-primary-900"
                   />
+                  {myBid && myBid.bidAmount && (
+                    <InfoField
+                      label="Customer Estimate"
+                      value={`$${(job.estimate
+                        ? job.estimate / 100
+                        : 0
+                      ).toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}`}
+                      valueClassName="text-lg font-semibold text-gray-600"
+                    />
+                  )}
                 </div>
               )}
 

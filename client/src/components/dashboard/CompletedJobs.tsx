@@ -195,67 +195,57 @@ const CompletedJobs: React.FC = memo(() => {
         key: "estimate",
         header: "Price",
         render: (job) => {
-          // Convert from cents to dollars
-          const rawBidAmount = (job as any).bidAmount || job.estimate || 0;
-          const rawCustomerEstimate = (job as any).customerEstimate || null;
-          const bidAmount = rawBidAmount ? rawBidAmount / 100 : 0;
-          const customerEstimate = rawCustomerEstimate
-            ? rawCustomerEstimate / 100
-            : null;
+          const bidAmount = (job as any).bidAmount || null;
+          const estimate = job.estimate || null;
+
+          const hasAcceptedBid = !!bidAmount;
+          const displayAmount = hasAcceptedBid
+            ? bidAmount / 100
+            : estimate
+            ? estimate / 100
+            : 0;
 
           return (
             <div className="flex flex-col">
               <span className="text-xl font-bold text-green-700">
                 $
-                {bidAmount.toLocaleString("en-US", {
+                {displayAmount.toLocaleString("en-US", {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}
               </span>
-              <span className="text-xs text-gray-500 mt-0.5">Bid Price</span>
-              {customerEstimate && customerEstimate !== bidAmount && (
-                <span className="text-xs text-gray-400 mt-1">
-                  Est: $
-                  {customerEstimate.toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+              <span className="text-xs text-gray-500 mt-0.5">
+                {hasAcceptedBid ? "Accepted Price" : "Estimated Budget"}
                 </span>
-              )}
             </div>
           );
         },
         mobileLabel: "Price",
         mobileRender: (job) => {
-          // Convert from cents to dollars
-          const rawBidAmount = (job as any).bidAmount || job.estimate || 0;
-          const rawCustomerEstimate = (job as any).customerEstimate || null;
-          const bidAmount = rawBidAmount ? rawBidAmount / 100 : 0;
-          const customerEstimate = rawCustomerEstimate
-            ? rawCustomerEstimate / 100
-            : null;
+          const bidAmount = (job as any).bidAmount || null;
+          const estimate = job.estimate || null;
+
+          const hasAcceptedBid = !!bidAmount;
+          const displayAmount = hasAcceptedBid
+            ? bidAmount / 100
+            : estimate
+            ? estimate / 100
+            : 0;
 
           return (
             <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-2">
               <span className="text-gray-600 text-sm">Price:</span>
               <div className="flex flex-col items-end sm:items-end">
-                <span className="text-xl font-bold text-green-700 text-sm">
+                <span className="text-lg font-bold text-green-700">
                   $
-                  {bidAmount.toLocaleString("en-US", {
+                  {displayAmount.toLocaleString("en-US", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}
                 </span>
-                <span className="text-xs text-gray-500 mt-0.5">Bid Price</span>
-                {customerEstimate && customerEstimate !== bidAmount && (
-                  <span className="text-xs text-gray-400 mt-1">
-                    Est: $
-                    {customerEstimate.toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                <span className="text-xs text-gray-500 mt-0.5">
+                  {hasAcceptedBid ? "Accepted Price" : "Estimated Budget"}
                   </span>
-                )}
               </div>
             </div>
           );

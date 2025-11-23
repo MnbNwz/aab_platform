@@ -391,145 +391,145 @@ export const PlatformDashboardCards = memo<PlatformDashboardCardsProps>(
 
             {/* Membership Breakdown */}
             {membershipBreakdown && membershipBreakdown.length > 0 && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {membershipBreakdown.map((membership: any) => {
-                    const membershipConfig = {
-                      active: {
-                        bg: "from-blue-50 to-blue-100",
-                        border: "border-blue-200",
-                        text: "text-blue-700",
-                        icon: "text-blue-500",
-                        bgDot: "bg-blue-500",
-                        iconComponent: Shield,
-                      },
-                      upgraded: {
-                        bg: "from-green-50 to-green-100",
-                        border: "border-green-200",
-                        text: "text-green-700",
-                        icon: "text-green-500",
-                        bgDot: "bg-green-500",
-                        iconComponent: Crown,
-                      },
-                      premium: {
-                        bg: "from-purple-50 to-purple-100",
-                        border: "border-purple-200",
-                        text: "text-purple-700",
-                        icon: "text-purple-500",
-                        bgDot: "bg-purple-500",
-                        iconComponent: Star,
-                      },
-                      basic: {
-                        bg: "from-orange-50 to-orange-100",
-                        border: "border-orange-200",
-                        text: "text-orange-700",
-                        icon: "text-orange-500",
-                        bgDot: "bg-orange-500",
-                        iconComponent: Zap,
-                      },
-                    };
+                        const membershipConfig = {
+                          active: {
+                            bg: "from-blue-50 to-blue-100",
+                            border: "border-blue-200",
+                            text: "text-blue-700",
+                            icon: "text-blue-500",
+                            bgDot: "bg-blue-500",
+                            iconComponent: Shield,
+                          },
+                          upgraded: {
+                            bg: "from-green-50 to-green-100",
+                            border: "border-green-200",
+                            text: "text-green-700",
+                            icon: "text-green-500",
+                            bgDot: "bg-green-500",
+                            iconComponent: Crown,
+                          },
+                          premium: {
+                            bg: "from-purple-50 to-purple-100",
+                            border: "border-purple-200",
+                            text: "text-purple-700",
+                            icon: "text-purple-500",
+                            bgDot: "bg-purple-500",
+                            iconComponent: Star,
+                          },
+                          basic: {
+                            bg: "from-orange-50 to-orange-100",
+                            border: "border-orange-200",
+                            text: "text-orange-700",
+                            icon: "text-orange-500",
+                            bgDot: "bg-orange-500",
+                            iconComponent: Zap,
+                          },
+                        };
 
-                    const config =
-                      membershipConfig[
-                        membership.status as keyof typeof membershipConfig
-                      ] || membershipConfig.basic;
-                    const IconComponent = config.iconComponent;
+                        const config =
+                          membershipConfig[
+                            membership.status as keyof typeof membershipConfig
+                          ] || membershipConfig.basic;
+                        const IconComponent = config.iconComponent;
 
-                    return (
-                      <div
-                        key={membership.status}
-                        className={`bg-gradient-to-br ${config.bg} border ${config.border} rounded-lg p-4 sm:p-5 lg:p-6 hover:shadow-md transition-all duration-200 flex items-center space-x-3 sm:space-x-4 lg:space-x-6`}
-                      >
-                        <div
-                          className={`p-2 sm:p-3 lg:p-4 rounded-xl ${config.bgDot} bg-opacity-20 flex-shrink-0`}
-                        >
-                          <IconComponent
-                            className={`h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 ${config.icon}`}
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4
-                            className={`font-semibold ${config.text} capitalize text-base sm:text-lg mb-1 sm:mb-2`}
-                          >
-                            {membership.status}
-                          </h4>
-                          <div className="flex items-baseline space-x-1 sm:space-x-2">
-                            <span
-                              className={`text-2xl sm:text-3xl font-bold ${config.text}`}
-                            >
-                              {membership.count}
-                            </span>
-                            <span className="text-gray-500 text-xs sm:text-sm">
-                              members
-                            </span>
-                          </div>
-                        </div>
-                        <div className="text-right flex-shrink-0">
+                        return (
                           <div
-                            className={`text-xl sm:text-2xl font-bold ${config.text}`}
+                            key={membership.status}
+                            className={`bg-gradient-to-br ${config.bg} border ${config.border} rounded-lg p-4 sm:p-5 lg:p-6 hover:shadow-md transition-all duration-200 flex items-center space-x-3 sm:space-x-4 lg:space-x-6`}
                           >
-                            {(
-                              (membership.count /
+                            <div
+                              className={`p-2 sm:p-3 lg:p-4 rounded-xl ${config.bgDot} bg-opacity-20 flex-shrink-0`}
+                            >
+                              <IconComponent
+                                className={`h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 ${config.icon}`}
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4
+                                className={`font-semibold ${config.text} capitalize text-base sm:text-lg mb-1 sm:mb-2`}
+                              >
+                                {membership.status}
+                              </h4>
+                              <div className="flex items-baseline space-x-1 sm:space-x-2">
+                                <span
+                                  className={`text-2xl sm:text-3xl font-bold ${config.text}`}
+                                >
+                                  {membership.count}
+                                </span>
+                                <span className="text-gray-500 text-xs sm:text-sm">
+                                  members
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <div
+                                className={`text-xl sm:text-2xl font-bold ${config.text}`}
+                              >
+                                {(
+                                  (membership.count /
                                 memberships.totalMemberships) *
-                              100
-                            ).toFixed(1)}
-                            %
-                          </div>
+                                  100
+                                ).toFixed(1)}
+                                %
+                              </div>
                           <span className="text-xs text-gray-500">share</span>
+                            </div>
+                          </div>
+                        );
+                  })}
+                  </div>
+
+                  {/* Summary Stats */}
+                  <div className="bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-lg p-4 sm:p-6">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-4 text-center">
+                      Quick Overview
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-center">
+                      <div className="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-lg p-3 shadow-sm">
+                        <div className="text-lg sm:text-xl font-bold text-gray-800">
+                        {memberships.totalMemberships}
+                        </div>
+                        <div className="text-xs text-gray-600 uppercase tracking-wide">
+                          Total Members
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-
-                {/* Summary Stats */}
-                <div className="bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-lg p-4 sm:p-6">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-4 text-center">
-                    Quick Overview
-                  </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-center">
-                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-lg p-3 shadow-sm">
-                      <div className="text-lg sm:text-xl font-bold text-gray-800">
-                        {memberships.totalMemberships}
-                      </div>
-                      <div className="text-xs text-gray-600 uppercase tracking-wide">
-                        Total Members
-                      </div>
-                    </div>
-                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-3 shadow-sm">
-                      <div className="text-lg sm:text-xl font-bold text-blue-700">
+                      <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-3 shadow-sm">
+                        <div className="text-lg sm:text-xl font-bold text-blue-700">
                         {membershipBreakdown?.find(
-                          (m: any) => m.status === "active"
-                        )?.count || 0}
+                            (m: any) => m.status === "active"
+                          )?.count || 0}
+                        </div>
+                        <div className="text-xs text-blue-600 uppercase tracking-wide">
+                          Active
+                        </div>
                       </div>
-                      <div className="text-xs text-blue-600 uppercase tracking-wide">
-                        Active
-                      </div>
-                    </div>
-                    <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-lg p-3 shadow-sm">
-                      <div className="text-lg sm:text-xl font-bold text-green-700">
+                      <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-lg p-3 shadow-sm">
+                        <div className="text-lg sm:text-xl font-bold text-green-700">
                         {membershipBreakdown?.find(
-                          (m: any) => m.status === "upgraded"
-                        )?.count || 0}
+                            (m: any) => m.status === "upgraded"
+                          )?.count || 0}
+                        </div>
+                        <div className="text-xs text-green-600 uppercase tracking-wide">
+                          Upgraded
+                        </div>
                       </div>
-                      <div className="text-xs text-green-600 uppercase tracking-wide">
-                        Upgraded
-                      </div>
-                    </div>
-                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-lg p-3 shadow-sm">
-                      <div className="text-lg sm:text-xl font-bold text-purple-700">
+                      <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-lg p-3 shadow-sm">
+                        <div className="text-lg sm:text-xl font-bold text-purple-700">
                         {membershipBreakdown?.find(
-                          (m: any) => m.status === "premium"
-                        )?.count || 0}
-                      </div>
-                      <div className="text-xs text-purple-600 uppercase tracking-wide">
-                        Premium
+                            (m: any) => m.status === "premium"
+                          )?.count || 0}
+                        </div>
+                        <div className="text-xs text-purple-600 uppercase tracking-wide">
+                          Premium
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
           </div>
         )}
 

@@ -119,7 +119,7 @@ export const processJobPreStart = async (req: AuthenticatedRequest, res: Respons
 
 export const processJobCompletion = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { jobPaymentId, jobRequestId, bidId } = req.body;
+    const { bidId, successUrl, cancelUrl } = req.body;
     const customerId = req.user?._id;
 
     if (!customerId) {
@@ -128,28 +128,25 @@ export const processJobCompletion = async (req: AuthenticatedRequest, res: Respo
         .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
     }
 
-    if (!jobPaymentId && (!jobRequestId || !bidId)) {
+    // Validate required fields (same as checkout flow)
+    if (!bidId || !successUrl || !cancelUrl) {
       return res.status(400).json({
         success: false,
-        message: "Either jobPaymentId or both jobRequestId and bidId are required",
+        message: "Missing required fields: bidId, successUrl, cancelUrl",
       });
     }
 
-    const result = await paymentService.processJobCompletionPayment(
-      jobPaymentId,
-      customerId,
-      jobRequestId,
-      bidId,
-    );
-
-    res.status(200).json({
-      success: true,
-      data: {
-        clientSecret: result.paymentIntent.client_secret,
-        paymentIntentId: result.paymentIntent.id,
-        jobPayment: result.jobPayment,
+    const { createJobPaymentCheckout } = await import("@controllers/payment/stripeController");
+    const checkoutReq = {
+      ...req,
+      body: {
+        bidId,
+        paymentType: "job_completion",
+        successUrl,
+        cancelUrl,
       },
-    });
+    };
+    return createJobPaymentCheckout(checkoutReq as any, res);
   } catch (error) {
     console.error("Error processing job completion:", error);
     res.status(500).json({

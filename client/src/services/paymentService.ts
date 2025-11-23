@@ -200,18 +200,21 @@ export const paymentService = {
     request: JobCompletionPaymentRequest
   ): Promise<JobCompletionPaymentResponse> => {
     try {
-      const apiResponse = await post<JobCompletionPaymentResponse>(
+      const data = await post<JobCompletionPaymentResponse>(
         "/api/payment/job/completion",
         request
       );
 
-      if (apiResponse.success && apiResponse.data) {
-        const response = apiResponse.data as JobCompletionPaymentResponse;
+      if (data.success) {
+        const response = data.data;
+        if (!response || !response.checkoutUrl) {
+          throw new Error(
+            "Invalid response: checkoutUrl is missing from server response"
+          );
+        }
         return response;
       } else {
-        throw new Error(
-          apiResponse.message || "Failed to create completion payment"
-        );
+        throw new Error(data.message || "Failed to create completion payment");
       }
     } catch (err: any) {
       const errorMessage =

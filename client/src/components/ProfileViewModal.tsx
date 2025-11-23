@@ -1,10 +1,20 @@
-import React from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import { User } from "../types";
-import { CheckCircle, Edit, X } from "lucide-react";
+import { CheckCircle, Edit, X, Heart } from "lucide-react";
+import { motion } from "framer-motion";
 import { useGeocoding } from "../hooks/useGeocoding";
 import { isContractor, isCustomer, isAdmin } from "../utils";
 import { capitalizeFirst } from "../utils/badgeColors";
 import { BaseModal, Badge, Text, InfoField } from "./reusable";
+import type { RootState, AppDispatch } from "../store";
+import {
+  fetchFavoritesThunk,
+  addFavoriteThunk,
+  removeFavoriteThunk,
+} from "../store/thunks/favoritesThunks";
+import ConfirmModal from "./ui/ConfirmModal";
+import Loader from "./ui/Loader";
 
 interface ProfileViewModalProps {
   user: User;
@@ -23,6 +33,81 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
   isLoading = false,
   hideEditForAdmin = false,
 }) => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { user: currentUser } = useSelector((state: RootState) => state.auth);
+  const { favoriteIds, loading: favoritesLoading, adding, removing } =
+    useSelector((state: RootState) => state.favorites);
+
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+
+  const isViewingContractor = isContractor(user.role);
+  const isCurrentUserCustomer = currentUser?.role
+    ? isCustomer(currentUser.role)
+    : false;
+  const canFavorite = isCurrentUserCustomer && isViewingContractor;
+
+  const isFavorited = useMemo(() => {
+    if (!canFavorite || !user._id) return false;
+    return favoriteIds.includes(user._id);
+  }, [canFavorite, user._id, favoriteIds]);
+
+  useEffect(() => {
+    if (isOpen && canFavorite && user._id) {
+      dispatch(fetchFavoritesThunk());
+    }
+  }, [isOpen, canFavorite, user._id, dispatch]);
+
+  const handleFavoriteClick = useCallback(() => {
+    if (!user._id) return;
+
+    if (isFavorited) {
+      setShowRemoveConfirm(true);
+    } else {
+      dispatch(addFavoriteThunk(user._id));
+    }
+  }, [user._id, isFavorited, dispatch]);
+
+  const handleConfirmRemove = useCallback(() => {
+    if (user._id) {
+      dispatch(removeFavoriteThunk(user._id));
+      setShowRemoveConfirm(false);
+    }
+  }, [user._id, dispatch]);
+
+  const handleCancelRemove = useCallback(() => {
+    setShowRemoveConfirm(false);
+  }, []);
+
+  const isFavoriteActionLoading = adding[user._id] || removing[user._id];
+
+  // Memoized actionable email component
+  const ActionableEmail = useMemo(() => {
+    if (!user.email) return null;
+    return (
+      <a
+        href={`mailto:${user.email}`}
+        className="font-medium text-primary-900 text-sm xs:text-base truncate hover:text-primary-600 cursor-pointer transition-colors"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {user.email}
+      </a>
+    );
+  }, [user.email]);
+
+  // Memoized actionable phone component
+  const ActionablePhone = useMemo(() => {
+    if (!user.phone) return null;
+    return (
+      <a
+        href={`tel:${user.phone}`}
+        className="font-medium text-primary-900 text-sm xs:text-base hover:text-primary-600 cursor-pointer transition-colors"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {user.phone}
+      </a>
+    );
+  }, [user.phone]);
+
   // Get readable address from coordinates
   const { address: locationAddress, loading: addressLoading } = useGeocoding(
     user.geoHome?.coordinates && user.geoHome.coordinates.length === 2
@@ -102,7 +187,8 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
 
       <div className="space-y-4 xs:space-y-6">
         {/* Profile Header */}
-        <div className="flex items-center space-x-3 xs:space-x-4 p-3 xs:p-4 bg-gradient-to-r from-primary-50 to-accent-50 rounded-lg">
+        <div className="flex items-center justify-between space-x-3 xs:space-x-4 p-3 xs:p-4 bg-gradient-to-r from-primary-50 to-accent-50 rounded-lg">
+          <div className="flex items-center space-x-3 xs:space-x-4 flex-1 min-w-0">
           <div className="w-12 h-12 xs:w-14 xs:h-14 sm:w-16 sm:h-16 rounded-full shadow-lg flex-shrink-0 overflow-hidden">
             {user.profileImage ? (
               <img
@@ -146,6 +232,43 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
               )}
             </div>
           </div>
+          </div>
+          {canFavorite && (
+            <button
+              onClick={handleFavoriteClick}
+              disabled={isFavoriteActionLoading || favoritesLoading}
+              className="flex-shrink-0 p-2 hover:bg-white/50 rounded-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              title={isFavorited ? "Remove from favorites" : "Add to favorites"}
+            >
+              {isFavoriteActionLoading ? (
+                <Loader size="small" color="primary" />
+              ) : (
+                <motion.div
+                  animate={
+                    isFavorited
+                      ? {
+                          scale: [1, 1.2, 1],
+                          rotate: [0, 10, -10, 0],
+                        }
+                      : {}
+                  }
+                  transition={{
+                    duration: 0.5,
+                    repeat: isFavorited ? Infinity : 0,
+                    repeatDelay: 2,
+                  }}
+                >
+                  <Heart
+                    className={`h-6 w-6 xs:h-7 xs:w-7 sm:h-8 sm:w-8 transition-all duration-200 ${
+                      isFavorited
+                        ? "fill-red-500 text-red-500"
+                        : "text-gray-400 hover:text-red-400"
+                    }`}
+                  />
+                </motion.div>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Contact Information */}
@@ -159,18 +282,20 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
           </Text>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 xs:gap-4">
-            <InfoField
-              label="Email"
-              value={user.email}
-              containerClassName="p-2 xs:p-3 bg-primary-50 rounded-lg"
-              labelClassName="text-xs xs:text-sm text-primary-600"
-              valueClassName="font-medium text-primary-900 text-sm xs:text-base truncate"
-            />
+            {user.email && (
+              <InfoField
+                label="Email"
+                value={ActionableEmail}
+                containerClassName="p-2 xs:p-3 bg-primary-50 rounded-lg"
+                labelClassName="text-xs xs:text-sm text-primary-600"
+                valueClassName="font-medium text-primary-900 text-sm xs:text-base truncate"
+              />
+            )}
 
             {user.phone && (
               <InfoField
                 label="Phone"
-                value={user.phone}
+                value={ActionablePhone}
                 containerClassName="p-2 xs:p-3 bg-primary-50 rounded-lg"
                 labelClassName="text-xs xs:text-sm text-primary-600"
                 valueClassName="font-medium text-primary-900 text-sm xs:text-base"
@@ -341,6 +466,19 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
           </div>
         )}
       </div>
+
+      {/* Remove Favorite Confirmation Modal */}
+      {showRemoveConfirm && (
+        <ConfirmModal
+          isOpen={showRemoveConfirm}
+          onCancel={handleCancelRemove}
+          onConfirm={handleConfirmRemove}
+          title="Remove from Favorites"
+          message={`Are you sure you want to remove ${user.firstName} ${user.lastName} from your favorite contractors?`}
+          confirmText="Remove"
+          cancelText="Cancel"
+        />
+      )}
     </BaseModal>
   );
 };

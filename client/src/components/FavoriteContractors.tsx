@@ -1,64 +1,211 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import {
-  Heart,
-  Trash2,
-  User,
-  Search,
-  X,
-  Mail,
-  Phone,
-  MapPin,
-  Briefcase,
-  Award,
-  FileText,
-} from "lucide-react";
+import { Heart, User as UserIcon, Search, X, Phone, Mail } from "lucide-react";
 import type { RootState, AppDispatch } from "../store";
-import {
-  fetchFavoritesThunk,
-  removeFavoriteThunk,
-} from "../store/thunks/favoritesThunks";
+import { fetchFavoritesThunk } from "../store/thunks/favoritesThunks";
 import Loader from "./ui/Loader";
-import ConfirmModal from "./ui/ConfirmModal";
+import DataTable, { TableColumn } from "./ui/DataTable";
+import ProfileViewModal from "./ProfileViewModal";
+import type { User } from "../types";
+
+interface FavoriteContractorTable extends Record<string, unknown> {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  profileImage?: string;
+  contractor?: {
+    companyName?: string;
+    services?: string[];
+    license?: string;
+    taxId?: string;
+    docs?: any[];
+  };
+  approval?: string;
+  geoHome?: {
+    coordinates: [number, number];
+  };
+}
 
 const FavoriteContractors: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { favorites, totalFavorites, maxFavorites, loading, removing } =
-    useSelector((state: RootState) => state.favorites);
+  const { favorites, totalFavorites, maxFavorites, loading } = useSelector(
+    (state: RootState) => state.favorites
+  );
 
   useEffect(() => {
     dispatch(fetchFavoritesThunk());
   }, [dispatch]);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [confirmModal, setConfirmModal] = useState<{
-    open: boolean;
-    contractor: any | null;
-  }>({ open: false, contractor: null });
+  const [selectedContractor, setSelectedContractor] = useState<User | null>(
+    null
+  );
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
-  const handleRemoveFavorite = (contractor: any) => {
-    setConfirmModal({ open: true, contractor });
-  };
+  const handleRowClick = useCallback((contractor: FavoriteContractorTable) => {
+    const contractorUser: User = {
+      _id: contractor._id,
+      email: contractor.email,
+      firstName: contractor.firstName,
+      lastName: contractor.lastName,
+      phone: contractor.phone || undefined,
+      profileImage: contractor.profileImage || undefined,
+      role: "contractor" as const,
+      status: "active" as const,
+      approval:
+        (contractor.approval as "approved" | "pending" | "rejected") ||
+        "approved",
+      emailVerified: true,
+      createdAt: (contractor as any).createdAt || new Date().toISOString(),
+      updatedAt: (contractor as any).updatedAt || new Date().toISOString(),
+      contractor: contractor.contractor
+        ? {
+            companyName: contractor.contractor.companyName || "",
+            services: contractor.contractor.services || [],
+            license: contractor.contractor.license || "",
+            taxId: contractor.contractor?.taxId || "",
+            docs: contractor.contractor?.docs || [],
+          }
+        : undefined,
+      geoHome: contractor.geoHome
+        ? {
+            type: "Point",
+            coordinates: contractor.geoHome.coordinates,
+          }
+        : undefined,
+    };
+    setSelectedContractor(contractorUser);
+    setProfileModalOpen(true);
+  }, []);
 
-  const confirmRemoveFavorite = () => {
-    if (confirmModal.contractor) {
-      dispatch(removeFavoriteThunk(confirmModal.contractor._id));
-      setConfirmModal({ open: false, contractor: null });
-    }
-  };
-
-  const filteredFavorites = favorites.filter((contractor) => {
+  const filteredFavorites = useMemo(() => {
+    if (!searchTerm) return favorites;
     const searchLower = searchTerm.toLowerCase();
-    return (
-      contractor.firstName.toLowerCase().includes(searchLower) ||
-      contractor.lastName.toLowerCase().includes(searchLower) ||
-      contractor.email.toLowerCase().includes(searchLower) ||
-      contractor.contractor?.companyName?.toLowerCase().includes(searchLower) ||
-      contractor.contractor?.services?.some((s: string) =>
-        s.toLowerCase().includes(searchLower)
-      )
-    );
-  });
+    return favorites.filter((contractor) => {
+      return (
+        contractor.firstName.toLowerCase().includes(searchLower) ||
+        contractor.lastName.toLowerCase().includes(searchLower) ||
+        contractor.email.toLowerCase().includes(searchLower) ||
+        contractor.contractor?.companyName
+          ?.toLowerCase()
+          .includes(searchLower) ||
+        contractor.contractor?.services?.some((s: string) =>
+          s.toLowerCase().includes(searchLower)
+        )
+      );
+    });
+  }, [favorites, searchTerm]);
+
+  const columns: TableColumn<FavoriteContractorTable>[] = useMemo(
+    () => [
+      {
+        key: "contractor",
+        header: "Contractor",
+        render: (contractor) => (
+          <div className="flex items-center gap-3">
+            {contractor.profileImage ? (
+              <img
+                src={contractor.profileImage}
+                alt={`${contractor.firstName} ${contractor.lastName}`}
+                className="h-10 w-10 rounded-full object-cover flex-shrink-0"
+              />
+            ) : (
+              <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
+                <UserIcon className="h-5 w-5 text-primary-600" />
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="font-semibold text-primary-900 truncate">
+                {contractor.firstName} {contractor.lastName}
+              </div>
+              {contractor.contractor?.companyName &&
+                !contractor.contractor.companyName
+                  .toLowerCase()
+                  .startsWith(contractor.firstName.toLowerCase()) && (
+                  <div className="text-sm text-gray-500 truncate">
+                    {contractor.contractor.companyName}
+                  </div>
+                )}
+            </div>
+          </div>
+        ),
+        mobileRender: (contractor) => (
+          <div className="flex items-center gap-3">
+            {contractor.profileImage ? (
+              <img
+                src={contractor.profileImage}
+                alt={`${contractor.firstName} ${contractor.lastName}`}
+                className="h-10 w-10 rounded-full object-cover flex-shrink-0"
+              />
+            ) : (
+              <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center flex-shrink-0">
+                <UserIcon className="h-5 w-5 text-primary-600" />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-primary-900 truncate">
+                {contractor.firstName} {contractor.lastName}
+              </div>
+              {contractor.contractor?.companyName &&
+                !contractor.contractor.companyName
+                  .toLowerCase()
+                  .startsWith(contractor.firstName.toLowerCase()) && (
+                  <div className="text-sm text-gray-500 truncate">
+                    {contractor.contractor.companyName}
+                  </div>
+                )}
+            </div>
+          </div>
+        ),
+        mobileLabel: "", // Hide label in mobile view to avoid duplication
+      },
+      {
+        key: "email",
+        header: "Email",
+        render: (contractor) => (
+          <div className="flex items-center gap-2 text-sm text-gray-700 min-w-0">
+            <Mail className="h-4 w-4 text-gray-400 flex-shrink-0" />
+            <span className="truncate">{contractor.email}</span>
+          </div>
+        ),
+        mobileLabel: "Email",
+        mobileRender: (contractor) => (
+          <div className="flex items-center gap-2 text-sm text-gray-700 min-w-0 w-full">
+            <Mail className="h-4 w-4 text-gray-400 flex-shrink-0" />
+            <span className="truncate min-w-0">{contractor.email}</span>
+          </div>
+        ),
+        hideOnMobile: true,
+      },
+      {
+        key: "phone",
+        header: "Phone",
+        render: (contractor) =>
+          contractor.phone ? (
+            <div className="flex items-center gap-2 text-sm text-gray-700 min-w-0">
+              <Phone className="h-4 w-4 text-gray-400 flex-shrink-0" />
+              <span className="truncate">{contractor.phone}</span>
+            </div>
+          ) : (
+            <span className="text-gray-400 text-sm">-</span>
+          ),
+        mobileLabel: "Phone",
+        mobileRender: (contractor) =>
+          contractor.phone ? (
+            <div className="flex items-center gap-2 text-sm text-gray-700 min-w-0 w-full">
+              <Phone className="h-4 w-4 text-gray-400 flex-shrink-0" />
+              <span className="truncate min-w-0">{contractor.phone}</span>
+            </div>
+          ) : (
+            <span className="text-gray-400 text-sm">-</span>
+          ),
+        hideOnMobile: true,
+      },
+    ],
+    []
+  );
 
   return (
     <div className="bg-white rounded-lg shadow">
@@ -139,194 +286,31 @@ const FavoriteContractors: React.FC = () => {
         </div>
       )}
 
-      {/* Contractors List */}
+      {/* Contractors Table */}
       <div className="p-4 sm:p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-          {filteredFavorites.map((contractor) => (
-            <div
-              key={contractor._id}
-              className="bg-white border border-primary-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden"
-            >
-              {/* Card Header */}
-              <div className="bg-gradient-to-r from-primary-700 to-primary-800 p-3 sm:p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
-                    {contractor.profileImage ? (
-                      <img
-                        src={contractor.profileImage}
-                        alt={`${contractor.firstName} ${contractor.lastName}`}
-                        className="h-10 w-10 sm:h-12 sm:w-12 rounded-full border-2 border-white object-cover flex-shrink-0"
-                      />
-                    ) : (
-                      <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full border-2 border-white bg-white flex items-center justify-center flex-shrink-0">
-                        <User className="h-5 w-5 sm:h-6 sm:w-6 text-accent-500" />
-                      </div>
-                    )}
-                    <div className="text-white min-w-0 flex-1">
-                      <h3 className="font-semibold text-xs sm:text-sm">
-                        {contractor.firstName} {contractor.lastName}
-                      </h3>
-                      {contractor.contractor?.companyName && (
-                        <p className="text-primary-100 text-xs truncate">
-                          {contractor.contractor.companyName}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleRemoveFavorite(contractor)}
-                    disabled={removing[contractor._id]}
-                    className="p-1.5 sm:p-2 hover:bg-white/20 rounded-full transition-colors disabled:opacity-50 flex-shrink-0"
-                    title="Remove from favorites"
-                  >
-                    {removing[contractor._id] ? (
-                      <Loader size="small" color="white" />
-                    ) : (
-                      <Trash2 className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Card Body */}
-              <div className="p-3 sm:p-4 space-y-3">
-                {/* Contact Info */}
-                <div className="space-y-2">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Mail className="h-4 w-4 mr-2 text-gray-400" />
-                    <span className="truncate">{contractor.email}</span>
-                  </div>
-                  {contractor.phone && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Phone className="h-4 w-4 mr-2 text-gray-400" />
-                      <span>{contractor.phone}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* License & Tax ID */}
-                {(contractor.contractor?.license ||
-                  contractor.contractor?.taxId) && (
-                  <div className="pt-3 border-t border-gray-100 space-y-2">
-                    {contractor.contractor.license && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Award className="h-4 w-4 mr-2 text-gray-400" />
-                        <span className="text-xs">
-                          License: {contractor.contractor.license}
-                        </span>
-                      </div>
-                    )}
-                    {contractor.contractor.taxId && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Briefcase className="h-4 w-4 mr-2 text-gray-400" />
-                        <span className="text-xs">
-                          Tax ID: {contractor.contractor.taxId}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Services */}
-                {contractor.contractor?.services &&
-                  contractor.contractor.services.length > 0 && (
-                    <div className="pt-3 border-t border-gray-100">
-                      <h4 className="text-xs font-medium text-gray-700 mb-2">
-                        Services:
-                      </h4>
-                      <div className="flex flex-wrap gap-1">
-                        {contractor.contractor.services.map(
-                          (service: string, idx: number) => (
-                            <span
-                              key={idx}
-                              className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700"
-                            >
-                              {service}
-                            </span>
-                          )
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                {/* Documents */}
-                {contractor.contractor?.docs &&
-                  contractor.contractor.docs.length > 0 && (
-                    <div className="pt-3 border-t border-gray-100">
-                      <h4 className="text-xs font-medium text-gray-700 mb-2">
-                        Documents:
-                      </h4>
-                      <div className="space-y-1">
-                        {contractor.contractor.docs.map(
-                          (doc: any, idx: number) => (
-                            <a
-                              key={idx}
-                              href={doc.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center text-xs text-blue-600 hover:text-blue-800 transition-colors"
-                            >
-                              <FileText className="h-3 w-3 mr-1" />
-                              <span className="truncate">{doc.name}</span>
-                            </a>
-                          )
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                {/* Location */}
-                {contractor.geoHome && (
-                  <div className="pt-3 border-t border-gray-100">
-                    <div className="flex items-center text-sm text-gray-600">
-                      <MapPin className="h-4 w-4 mr-2 text-gray-400" />
-                      <span className="text-xs">
-                        {contractor.geoHome.coordinates[1].toFixed(4)},{" "}
-                        {contractor.geoHome.coordinates[0].toFixed(4)}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Approval Status */}
-                <div className="pt-3 border-t border-gray-100">
-                  <span
-                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      contractor.approval === "approved"
-                        ? "bg-green-50 text-green-700"
-                        : contractor.approval === "pending"
-                        ? "bg-yellow-50 text-yellow-700"
-                        : "bg-red-50 text-red-700"
-                    }`}
-                  >
-                    {contractor.approval}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <DataTable<FavoriteContractorTable>
+          data={filteredFavorites as FavoriteContractorTable[]}
+          columns={columns}
+          loading={loading}
+          emptyMessage="No favorite contractors found"
+          emptyIcon={<Heart className="h-16 w-16 text-gray-300 mx-auto" />}
+          onRowClick={handleRowClick}
+          hoverable
+          getRowKey={(contractor) => contractor._id}
+        />
       </div>
 
-      {/* Confirm Remove Modal */}
-      <ConfirmModal
-        isOpen={confirmModal.open}
-        title="Remove from Favorites"
-        message={
-          confirmModal.contractor
-            ? `Are you sure you want to remove ${confirmModal.contractor.firstName} ${confirmModal.contractor.lastName} from your favorites?`
-            : ""
-        }
-        confirmText="Yes, Remove"
-        cancelText="Cancel"
-        onConfirm={confirmRemoveFavorite}
-        onCancel={() => setConfirmModal({ open: false, contractor: null })}
-        loading={
-          confirmModal.contractor
-            ? removing[confirmModal.contractor._id]
-            : false
-        }
-      />
+      {/* Profile View Modal */}
+      {selectedContractor && (
+        <ProfileViewModal
+          user={selectedContractor}
+          isOpen={profileModalOpen}
+          onClose={() => {
+            setProfileModalOpen(false);
+            setSelectedContractor(null);
+          }}
+        />
+      )}
     </div>
   );
 };
