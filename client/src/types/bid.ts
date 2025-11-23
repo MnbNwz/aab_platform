@@ -35,6 +35,7 @@ export interface Bid {
   contractor: BidContractor;
   depositPaid?: boolean;
   completionPaid?: boolean;
+  jobPaymentId?: string;
   createdAt: string;
   updatedAt: string;
 }

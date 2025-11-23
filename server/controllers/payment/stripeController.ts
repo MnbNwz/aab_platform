@@ -194,8 +194,7 @@ export const createJobPaymentCheckout = async (req: Request, res: Response) => {
     }
 
     // Optimized payment calculation using constants
-    // Convert bidAmount from dollars to cents first
-    const bidAmountCents = Math.round(bid.bidAmount * 100);
+    const bidAmountCents = Math.round(bid.bidAmount);
     const amountCents =
       paymentType === "bid_acceptance"
         ? Math.round(bidAmountCents * (DEPOSIT_PERCENTAGE / 100)) // 15% in cents

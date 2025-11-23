@@ -119,7 +119,7 @@ export const processJobPreStart = async (req: AuthenticatedRequest, res: Respons
 
 export const processJobCompletion = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { jobPaymentId } = req.body;
+    const { jobPaymentId, jobRequestId, bidId } = req.body;
     const customerId = req.user?._id;
 
     if (!customerId) {
@@ -128,14 +128,19 @@ export const processJobCompletion = async (req: AuthenticatedRequest, res: Respo
         .json({ success: false, message: CONTROLLER_ERROR_MESSAGES.AUTHENTICATION_REQUIRED });
     }
 
-    if (!jobPaymentId) {
+    if (!jobPaymentId && (!jobRequestId || !bidId)) {
       return res.status(400).json({
         success: false,
-        message: "Job payment ID is required",
+        message: "Either jobPaymentId or both jobRequestId and bidId are required",
       });
     }
 
-    const result = await paymentService.processJobCompletionPayment(jobPaymentId, customerId);
+    const result = await paymentService.processJobCompletionPayment(
+      jobPaymentId,
+      customerId,
+      jobRequestId,
+      bidId,
+    );
 
     res.status(200).json({
       success: true,

@@ -43,7 +43,15 @@ export interface CustomerDashboardResponse {
         _id: string;
         amount: number;
         status: string;
-        paymentMethod: string;
+        paymentMethod?: string;
+        paymentType?:
+          | "job_deposit"
+          | "job_completion"
+          | "job"
+          | "membership"
+          | "unknown";
+        type?: "job" | "membership" | string;
+        billingPeriod?: "monthly" | "yearly";
         job?: {
           title: string;
           service: string;

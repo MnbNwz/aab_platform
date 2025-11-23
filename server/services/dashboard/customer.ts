@@ -139,7 +139,6 @@ export const getCustomerAnalytics = async (customerId: string) => {
         },
       },
 
-      // Get customer's payments
       {
         $lookup: {
           from: "payments",
@@ -147,18 +146,79 @@ export const getCustomerAnalytics = async (customerId: string) => {
           foreignField: "userId",
           as: "payments",
           pipeline: [
+            // OPTIMIZATION: Sort first (needed for both stats and recentPayments)
+            { $sort: { createdAt: -1 } },
+            // Extract paymentType early for conditional job lookup
+            {
+              $addFields: {
+                // Extract paymentType from metadata or determine from other fields
+                paymentType: {
+                  $cond: {
+                    // If metadata.paymentType exists, use it (e.g., "job_deposit", "job_completion")
+                    if: { $ne: ["$metadata.paymentType", null] },
+                    then: "$metadata.paymentType",
+                    else: {
+                      // Fallback: determine type from other fields
+                      $cond: {
+                        // Check if it's a job payment (has jobRequestId or jobId in metadata)
+                        if: {
+                          $or: [
+                            { $ne: ["$metadata.jobRequestId", null] },
+                            { $ne: ["$metadata.jobId", null] },
+                          ],
+                        },
+                        then: "job", // Generic job payment (if specific type not in metadata)
+                        else: {
+                          // Check if it's a membership payment (has planId or billingPeriod)
+                          $cond: {
+                            if: {
+                              $or: [{ $ne: ["$planId", null] }, { $ne: ["$billingPeriod", null] }],
+                            },
+                            then: "membership",
+                            else: "unknown",
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            // OPTIMIZATION: Only lookup job if it's a job payment
             {
               $lookup: {
                 from: "jobrequests",
-                localField: "jobRequestId",
-                foreignField: "_id",
+                let: { jobRequestId: "$metadata.jobRequestId" },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: { $eq: ["$_id", "$$jobRequestId"] },
+                    },
+                  },
+                  { $project: { title: 1, service: 1 } },
+                ],
                 as: "job",
-                pipeline: [{ $project: { title: 1, service: 1 } }],
               },
             },
             {
               $addFields: {
                 job: { $arrayElemAt: ["$job", 0] },
+              },
+            },
+            // OPTIMIZATION: Project only needed fields (exclude full metadata)
+            {
+              $project: {
+                _id: 1,
+                amount: 1,
+                currency: 1,
+                status: 1,
+                createdAt: 1,
+                updatedAt: 1,
+                job: 1,
+                paymentType: 1,
+                // Only include specific metadata fields if needed, not full object
+                "metadata.jobRequestId": 1,
+                "metadata.bidId": 1,
               },
             },
           ],

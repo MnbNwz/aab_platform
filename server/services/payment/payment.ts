@@ -369,12 +369,136 @@ export const processJobPreStartPayment = async (jobPaymentId: string, customerId
   }
 };
 
-export const processJobCompletionPayment = async (jobPaymentId: string, customerId: string) => {
+export const processJobCompletionPayment = async (
+  jobPaymentId: string | undefined,
+  customerId: string,
+  jobRequestId?: string,
+  bidId?: string,
+) => {
   try {
-    const result = await processCompletionPayment(jobPaymentId, customerId);
+    let jobPayment: any = null;
+
+    // If jobPaymentId is provided, use it
+    if (jobPaymentId) {
+      jobPayment = await JobPayment.findById(jobPaymentId);
+    }
+
+    // If not found and we have jobRequestId + bidId, try to find by those
+    if (!jobPayment && jobRequestId && bidId) {
+      jobPayment = await JobPayment.findOne({
+        jobRequestId: new Types.ObjectId(jobRequestId),
+        bidId: new Types.ObjectId(bidId),
+        customerId: new Types.ObjectId(customerId),
+      });
+    }
+
+    // If still not found, check if we can work with Bid/JobRequest data
+    if (!jobPayment && jobRequestId && bidId) {
+      const { Bid } = await import("@models/job");
+      const { JobRequest } = await import("@models/job");
+      const { getCurrentMembership } = await import("@services/membership/membership");
+
+      const bid = await Bid.findById(bidId).lean();
+      const jobRequest = await JobRequest.findById(jobRequestId).lean();
+
+      if (!bid || !jobRequest) {
+        throw new Error("Bid or JobRequest not found");
+      }
+
+      // Verify customer owns the job
+      if (jobRequest.createdBy.toString() !== customerId) {
+        throw new Error("You can only complete your own jobs");
+      }
+
+      // Check if deposit is paid
+      if (!bid.depositPaid) {
+        throw new Error("Deposit must be paid before completion payment");
+      }
+
+      // Check if there's an existing JobPayment (might have different customerId if created differently)
+      const existingJobPayment = await JobPayment.findOne({
+        jobRequestId: new Types.ObjectId(jobRequestId),
+        bidId: new Types.ObjectId(bidId),
+      });
+
+      // If existing JobPayment found, use it if pre-start is paid
+      if (existingJobPayment) {
+        const preStartPaid =
+          existingJobPayment.preStartStatus === "paid" ||
+          existingJobPayment.preStartPaidAt !== undefined;
+
+        if (!preStartPaid) {
+          throw new Error("Pre-start payment must be completed before completion payment");
+        }
+
+        // Update preStartStatus to "paid" if it's not already (in case preStartPaidAt exists but status wasn't updated)
+        if (existingJobPayment.preStartStatus !== "paid" && existingJobPayment.preStartPaidAt) {
+          existingJobPayment.preStartStatus = "paid";
+        }
+
+        // Use existing JobPayment (update customerId if different)
+        if (existingJobPayment.customerId.toString() !== customerId) {
+          existingJobPayment.customerId = new Types.ObjectId(customerId);
+        }
+
+        // Save if we made any updates
+        if (existingJobPayment.isModified()) {
+          await existingJobPayment.save();
+        }
+        jobPayment = existingJobPayment;
+      } else {
+        // No JobPayment exists, check if pre-start was paid via other means
+        // Check JobRequest paymentStatus as fallback
+        const preStartPaidViaStatus =
+          jobRequest.paymentStatus === "prestart_paid" || jobRequest.paymentStatus === "completed";
+
+        if (!preStartPaidViaStatus) {
+          throw new Error("Pre-start payment must be completed before completion payment");
+        }
+
+        // Get customer membership for platform fee calculation
+        const membership = await getCurrentMembership(customerId);
+        let platformFeePercentage = 0.01; // Default 1%
+        if (membership) {
+          const effectiveFee = membership.effectivePlatformFeePercentage;
+          if (effectiveFee !== undefined && effectiveFee !== null) {
+            platformFeePercentage = effectiveFee / 100;
+          } else if ((membership.planId as any)?.platformFeePercentage !== undefined) {
+            platformFeePercentage = ((membership.planId as any).platformFeePercentage || 0) / 100;
+          }
+        }
+
+        // Calculate amounts (bidAmount is already in cents, use directly)
+        const totalAmountCents = Math.round(bid.bidAmount);
+
+        // Create JobPayment record
+        const { createJobPayment } = await import("@services/payment/stripe");
+        jobPayment = await createJobPayment(
+          jobRequestId,
+          customerId,
+          bid.contractor.toString(),
+          bidId,
+          totalAmountCents,
+        );
+
+        // Update JobPayment with pre-start and deposit paid status
+        jobPayment.preStartStatus = "paid";
+        jobPayment.preStartPaidAt = new Date();
+        jobPayment.depositStatus = "paid";
+        jobPayment.depositPaidAt = bid.depositPaidAt || new Date();
+        await jobPayment.save();
+      }
+    }
+
+    if (!jobPayment) {
+      const { SERVICE_ERROR_MESSAGES } = await import("@services/constants/validation");
+      throw new Error(SERVICE_ERROR_MESSAGES.JOB_PAYMENT_NOT_FOUND);
+    }
+
+    const result = await processCompletionPayment(jobPayment._id.toString(), customerId);
 
     // Update job status
-    await JobPayment.findByIdAndUpdate(jobPaymentId, {
+    await JobPayment.findByIdAndUpdate(jobPayment._id, {
       jobStatus: "in_progress",
       completionPaidAt: new Date(),
     });

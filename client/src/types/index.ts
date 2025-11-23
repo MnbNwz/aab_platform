@@ -588,6 +588,37 @@ export interface JobPaymentCheckoutError {
   message: string;
 }
 
+export interface JobCompletionPaymentRequest {
+  jobPaymentId: string;
+}
+
+export interface JobCompletionPaymentResponse {
+  success: boolean;
+  data: {
+    clientSecret: string;
+    paymentIntentId: string;
+    jobPayment: {
+      _id: string;
+      jobRequestId: string;
+      customerId: string;
+      contractorId: string;
+      bidId: string;
+      totalAmount: number;
+      depositAmount: number;
+      preStartAmount: number;
+      completionAmount: number;
+      depositStatus: string;
+      preStartStatus: string;
+      completionStatus: string;
+      completionPaymentIntentId: string;
+      jobStatus: string;
+      completionPaidAt?: string;
+      createdAt: string;
+      updatedAt: string;
+    };
+  };
+}
+
 // Re-export all types from centralized type files
 export * from "./component";
 export * from "./job";

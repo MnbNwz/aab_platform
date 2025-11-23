@@ -8,6 +8,8 @@ import type { ApiError } from "../types/api";
 import type {
   JobPaymentCheckoutRequest,
   JobPaymentCheckoutResponse,
+  JobCompletionPaymentRequest,
+  JobCompletionPaymentResponse,
 } from "../types";
 import showToast from "../utils/toast";
 
@@ -188,6 +190,32 @@ export const paymentService = {
     } catch (err: any) {
       const errorMessage =
         err?.message || "Failed to create payment checkout session";
+      showToast.error(errorMessage);
+      throw new Error(errorMessage);
+    }
+  },
+
+  // Create completion payment for job
+  createJobCompletionPayment: async (
+    request: JobCompletionPaymentRequest
+  ): Promise<JobCompletionPaymentResponse> => {
+    try {
+      const apiResponse = await post<JobCompletionPaymentResponse>(
+        "/api/payment/job/completion",
+        request
+      );
+
+      if (apiResponse.success && apiResponse.data) {
+        const response = apiResponse.data as JobCompletionPaymentResponse;
+        return response;
+      } else {
+        throw new Error(
+          apiResponse.message || "Failed to create completion payment"
+        );
+      }
+    } catch (err: any) {
+      const errorMessage =
+        err?.message || "Failed to create completion payment";
       showToast.error(errorMessage);
       throw new Error(errorMessage);
     }

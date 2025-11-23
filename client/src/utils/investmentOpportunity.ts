@@ -47,23 +47,6 @@ export const getPropertyTypeIcon = (type: InvestmentPropertyType) => {
   return icons[type] || Building2;
 };
 
-// Canadian provinces list
-export const CANADIAN_PROVINCES = [
-  "Alberta",
-  "British Columbia",
-  "Manitoba",
-  "New Brunswick",
-  "Newfoundland and Labrador",
-  "Northwest Territories",
-  "Nova Scotia",
-  "Nunavut",
-  "Ontario",
-  "Prince Edward Island",
-  "Quebec",
-  "Saskatchewan",
-  "Yukon",
-] as const;
-
 // Validate investment opportunity form data
 export const validateInvestmentOpportunityForm = (
   formData: any,

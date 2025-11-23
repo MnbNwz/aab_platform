@@ -22,7 +22,7 @@ export interface Job {
   service: string;
   estimate: number;
   type: string;
-  status: "open" | "in_progress" | "completed" | "cancelled";
+  status: "open" | "in_progress" | "inprogress" | "completed" | "cancelled";
   bids: Bid[];
   bidCount?: number;
   acceptedBid: string | null;
@@ -89,7 +89,7 @@ export interface JobFormInputs {
   estimate: string;
   property: string;
   timeline: string;
-  status?: "open" | "in_progress" | "completed" | "cancelled";
+  status?: "open" | "in_progress" | "inprogress" | "completed" | "cancelled";
 }
 
 export interface JobUpdateData {

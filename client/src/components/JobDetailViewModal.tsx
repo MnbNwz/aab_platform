@@ -39,6 +39,8 @@ import {
 } from "../utils/badgeColors";
 import { BaseModal, Button, Badge, Text } from "./reusable";
 
+const JOB_STATUS_IN_PROGRESS = "inprogress";
+
 const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
   isOpen,
   onClose,
@@ -50,7 +52,10 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
   const lastFetchedJobId = React.useRef<string | null>(null);
 
   const { user } = useSelector((state: RootState) => state.auth);
+  const { updateLoading } = useSelector((state: RootState) => state.job);
   const isAdmin = user?.role === "admin";
+  const isCustomer = user?.role === "customer";
+  const isContractor = user?.role === "contractor";
 
   const [activeTab, setActiveTab] = useState<"details" | "bids">("details");
   const [bids, setBids] = useState<Bid[]>([]);
@@ -86,7 +91,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
 
   const handleViewContractorProfile = useCallback(
     (contractor: Bid["contractor"]) => {
-      // Convert BidContractor to User format for ProfileViewModal
       const contractorUser: User = {
         _id: contractor._id,
         email: contractor.email,
@@ -107,8 +111,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
               docs: [],
             }
           : undefined,
-        // Note: BidContractor doesn't include geoHome, so location won't be shown
-        // This is expected behavior for job bids
         createdAt: "",
         updatedAt: "",
       };
@@ -149,12 +151,13 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
           throw new Error("Invalid checkout response: missing checkoutUrl");
         }
 
-        // Redirect to Stripe checkout
         window.location.href = response.checkoutUrl;
-      } catch (err: any) {
+      } catch (err) {
         showToast.dismiss();
         const errorMessage =
-          err?.message || "Failed to create payment checkout session";
+          err instanceof Error
+            ? err.message
+            : "Failed to create payment checkout session";
         showToast.error(errorMessage);
       }
     },
@@ -192,9 +195,51 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
     setSelectedContractor(null);
   }, []);
 
-  // Format currency for display
-  // IMPORTANT: This expects amounts in DOLLARS (not cents)
-  // For database amounts in cents, divide by 100 before calling this
+  const handleMarkJobAsComplete = useCallback(async () => {
+    const acceptedBid = bids.find((bid) => bid.status === "accepted");
+
+    if (!acceptedBid) {
+      showToast.error("No accepted bid found.");
+      return;
+    }
+
+    try {
+      showToast.loading("Creating completion payment...");
+
+      const jobPaymentId = acceptedBid.jobPaymentId || acceptedBid._id;
+
+      const response = await paymentService.createJobCompletionPayment({
+        jobPaymentId: jobPaymentId,
+      });
+
+      showToast.dismiss();
+
+      if (response && response.data && response.data.clientSecret) {
+        showToast.success(
+          "Completion payment initiated. The job will be marked as completed once payment is confirmed."
+        );
+
+        if (_onRefreshJobs) {
+          _onRefreshJobs();
+        }
+
+        setTimeout(() => {
+          onClose();
+        }, 2000);
+      }
+    } catch (err) {
+      showToast.dismiss();
+      let errorMessage = "Failed to create completion payment";
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === "object" && err !== null && "response" in err) {
+        const apiError = err as { response?: { data?: { message?: string } } };
+        errorMessage = apiError.response?.data?.message || errorMessage;
+      }
+      showToast.error(errorMessage);
+    }
+  }, [bids, onClose, _onRefreshJobs]);
+
   const formatCurrency = (amountInDollars: number) => {
     return `$${amountInDollars.toLocaleString("en-US", {
       minimumFractionDigits: 2,
@@ -210,14 +255,11 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
     });
   };
 
-  // Use centralized badge utilities with border support
   const getStatusBadge = (status: string) =>
     getBidStatusBadgeWithBorder(status);
 
-  // Format status text with capital first character
   const formatStatusText = (status: string) => formatJobStatusText(status);
 
-  // Type guard to check if property is populated
   const isPropertyPopulated = (
     property: string | PropertyInJob | undefined
   ): property is PropertyInJob => {
@@ -230,6 +272,12 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
 
   if (!isOpen) return null;
 
+  const shouldShowCompleteJob =
+    !isContractor &&
+    (isAdmin ||
+      (isCustomer &&
+        (job.status === JOB_STATUS_IN_PROGRESS ||
+          job.status === "in_progress")));
   const modalFooter = (
     <div className="flex justify-end items-center gap-3">
       <Button
@@ -248,6 +296,18 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
           Edit Job
         </Button>
       )}
+      {shouldShowCompleteJob && (
+        <Button
+          variant="primary"
+          onClick={handleMarkJobAsComplete}
+          leftIcon={<CheckCircle className="h-4 w-4" />}
+          loading={updateLoading}
+          disabled={updateLoading}
+          className="bg-green-600 hover:bg-green-700"
+        >
+          Complete Job
+        </Button>
+      )}
     </div>
   );
 
@@ -263,7 +323,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
         showFooter={true}
         closeOnOverlayClick={!profileViewOpen}
       >
-        {/* Loading State for Initial Data Fetch */}
         {bidsLoading && bids.length === 0 ? (
           <div className="flex items-center justify-center p-12">
             <div className="text-center">
@@ -275,13 +334,13 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
           </div>
         ) : (
           <>
-            {/* Status Badges */}
             <div className="px-6 py-3 bg-gray-50 border-b border-gray-200 flex flex-wrap items-center gap-2 -mx-6 -mt-6 mb-6">
               <Badge
                 variant={
                   job.status === "open"
                     ? "success"
-                    : job.status === "in_progress"
+                    : job.status === JOB_STATUS_IN_PROGRESS ||
+                      job.status === "in_progress"
                     ? "warning"
                     : "info"
                 }
@@ -293,7 +352,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
               </Badge>
             </div>
 
-            {/* Tabs */}
             <div className="flex border-b border-gray-200">
               <button
                 onClick={() => setActiveTab("details")}
@@ -317,11 +375,9 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
               </button>
             </div>
 
-            {/* Content */}
             <div className="space-y-6">
               {activeTab === "details" ? (
                 <div className="space-y-6">
-                  {/* Description */}
                   <div>
                     <h3 className="text-lg font-semibold text-primary-900 mb-3 flex items-center gap-2">
                       <FileText className="h-5 w-5 text-accent-600" />
@@ -334,9 +390,7 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Job Info Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Category */}
                     <div>
                       <h3 className="text-lg font-semibold text-primary-900 mb-3 flex items-center gap-2">
                         <Briefcase className="h-5 w-5 text-accent-600" />
@@ -349,7 +403,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                       </div>
                     </div>
 
-                    {/* Budget */}
                     <div>
                       <h3 className="text-lg font-semibold text-primary-900 mb-3 flex items-center gap-2">
                         <DollarSign className="h-5 w-5 text-accent-600" />
@@ -364,7 +417,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                       </div>
                     </div>
 
-                    {/* Timeline */}
                     <div>
                       <h3 className="text-lg font-semibold text-primary-900 mb-3 flex items-center gap-2">
                         <Calendar className="h-5 w-5 text-accent-600" />
@@ -378,7 +430,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Property Details Section */}
                   {propertyData && (
                     <div className="border-t border-gray-200 pt-6">
                       <h3 className="text-xl font-bold text-primary-900 mb-4 flex items-center gap-2">
@@ -386,7 +437,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                         Property Details
                       </h3>
 
-                      {/* Property Images */}
                       {propertyData.images &&
                         propertyData.images.length > 0 && (
                           <div className="mb-6">
@@ -414,9 +464,7 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                           </div>
                         )}
 
-                      {/* Property Info Grid */}
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {/* Property Title */}
                         <div className="bg-gray-50 p-4 rounded-lg">
                           <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
                             <Home className="h-4 w-4" />
@@ -427,7 +475,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                           </p>
                         </div>
 
-                        {/* Area */}
                         <div className="bg-gray-50 p-4 rounded-lg">
                           <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
                             <Maximize className="h-4 w-4" />
@@ -438,7 +485,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                           </p>
                         </div>
 
-                        {/* Bedrooms */}
                         <div className="bg-gray-50 p-4 rounded-lg">
                           <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
                             <Bed className="h-4 w-4" />
@@ -449,7 +495,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                           </p>
                         </div>
 
-                        {/* Bathrooms */}
                         <div className="bg-gray-50 p-4 rounded-lg">
                           <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
                             <Bath className="h-4 w-4" />
@@ -460,7 +505,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                           </p>
                         </div>
 
-                        {/* Kitchens */}
                         <div className="bg-gray-50 p-4 rounded-lg">
                           <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
                             <UtensilsCrossed className="h-4 w-4" />
@@ -471,7 +515,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                           </p>
                         </div>
 
-                        {/* Total Rooms */}
                         <div className="bg-gray-50 p-4 rounded-lg">
                           <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
                             <Grid3x3 className="h-4 w-4" />
@@ -482,7 +525,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                           </p>
                         </div>
 
-                        {/* Location */}
                         <div className="bg-gray-50 p-4 rounded-lg md:col-span-2">
                           <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
                             <MapPin className="h-4 w-4" />
@@ -495,7 +537,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                         </div>
                       </div>
 
-                      {/* Property Description */}
                       {propertyData.description && (
                         <div className="mt-4">
                           <h4 className="text-sm font-semibold text-gray-900 mb-2">
@@ -513,7 +554,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {/* Accepted Bid Warning */}
                   {hasAcceptedBid && (
                     <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                       <div className="flex items-start gap-3">
@@ -531,7 +571,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                     </div>
                   )}
 
-                  {/* Loading Bids */}
                   {bidsLoading && (
                     <div className="bg-gray-50 rounded-lg p-12 text-center">
                       <div className="flex justify-center items-center mb-4">
@@ -541,7 +580,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                     </div>
                   )}
 
-                  {/* No Bids */}
                   {!bidsLoading && bids.length === 0 && (
                     <div className="bg-gray-50 rounded-lg p-12 text-center">
                       <AlertCircle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
@@ -555,10 +593,9 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                     </div>
                   )}
 
-                  {/* Bids List */}
                   {!bidsLoading &&
                     bids.length > 0 &&
-                    bids.map((bid: any) => {
+                    bids.map((bid) => {
                       const isExpanded = expandedBids.has(bid._id);
 
                       return (
@@ -573,10 +610,8 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                           }`}
                         >
                           <div className="p-6 space-y-4">
-                            {/* Header with Contractor Info and Toggle */}
                             <div className="flex items-center justify-between gap-4">
                               <div className="flex items-center gap-4 flex-1 min-w-0">
-                                {/* Profile Picture - Opens Profile */}
                                 <div
                                   onClick={() =>
                                     handleViewContractorProfile(bid.contractor)
@@ -596,7 +631,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                                   )}
                                 </div>
 
-                                {/* Contact Info - Opens Profile */}
                                 <div
                                   className="flex-1 min-w-0 cursor-pointer"
                                   onClick={() =>
@@ -624,7 +658,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                                 </div>
                               </div>
 
-                              {/* Status Badge and Toggle Button */}
                               <div className="flex items-center gap-2 flex-shrink-0">
                                 <span
                                   className={`px-3 py-1 rounded-full text-sm font-semibold border whitespace-nowrap ${getStatusBadge(
@@ -633,7 +666,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                                 >
                                   {formatStatusText(bid.status)}
                                 </span>
-                                {/* Toggle Button */}
                                 <button
                                   onClick={() => toggleBidExpanded(bid._id)}
                                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -652,7 +684,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                               </div>
                             </div>
 
-                            {/* Bid Amount - Always Visible */}
                             <div
                               className="bg-white p-4 rounded-lg border border-gray-200 cursor-pointer hover:border-gray-300 transition-colors"
                               onClick={() => toggleBidExpanded(bid._id)}
@@ -669,10 +700,8 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                               </div>
                             </div>
 
-                            {/* Collapsible Details */}
                             {isExpanded && (
                               <div className="space-y-4">
-                                {/* Timeline */}
                                 {bid.timeline && (
                                   <div className="bg-white p-4 rounded-lg border border-gray-200">
                                     <h5 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
@@ -701,7 +730,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                                   </div>
                                 )}
 
-                                {/* Message */}
                                 {bid.message && (
                                   <div>
                                     <h5 className="text-sm font-semibold text-gray-900 mb-2">
@@ -713,7 +741,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                                   </div>
                                 )}
 
-                                {/* Materials */}
                                 {bid.materials && (
                                   <div>
                                     <h5 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
@@ -735,7 +762,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                                   </div>
                                 )}
 
-                                {/* Warranty */}
                                 {bid.warranty && (
                                   <div>
                                     <h5 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2">
@@ -760,7 +786,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                                   </div>
                                 )}
 
-                                {/* Submitted Date */}
                                 <div className="flex items-center gap-2 text-xs text-gray-500 pt-2 border-t border-gray-200">
                                   <Clock className="h-3.5 w-3.5" />
                                   <span>
@@ -768,7 +793,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                                   </span>
                                 </div>
 
-                                {/* Action Buttons */}
                                 {bid.status === "pending" &&
                                   job.status === "open" &&
                                   !hasAcceptedBid && (
@@ -784,7 +808,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                                     </div>
                                   )}
 
-                                {/* Complete Job Button (if bid is accepted and deposit is paid) */}
                                 {bid.status === "accepted" &&
                                   bid.depositPaid &&
                                   !bid.completionPaid && (
@@ -815,7 +838,6 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
         )}
       </BaseModal>
 
-      {/* Profile View Modal */}
       {profileViewOpen && selectedContractor && (
         <ProfileViewModal
           user={selectedContractor}
