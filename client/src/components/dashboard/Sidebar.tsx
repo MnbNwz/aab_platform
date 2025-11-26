@@ -110,7 +110,7 @@ export const Sidebar: React.FC<ExtendedSidebarProps> = ({
         id: "reviews",
         label: "Reviews",
         icon: Star,
-        description: "Manage reviews",
+        description: "View reviews",
       },
       {
         id: "billing-history",
@@ -164,9 +164,9 @@ export const Sidebar: React.FC<ExtendedSidebarProps> = ({
       },
       {
         id: "reviews",
-        label: "Reviews & Feedback",
+        label: "Reviews",
         icon: Star,
-        description: "Manage reviews",
+        description: "View reviews",
       },
       {
         id: "settings",

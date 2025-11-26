@@ -283,13 +283,13 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 xs:gap-4">
             {user.email && (
-              <InfoField
-                label="Email"
+            <InfoField
+              label="Email"
                 value={ActionableEmail}
-                containerClassName="p-2 xs:p-3 bg-primary-50 rounded-lg"
-                labelClassName="text-xs xs:text-sm text-primary-600"
-                valueClassName="font-medium text-primary-900 text-sm xs:text-base truncate"
-              />
+              containerClassName="p-2 xs:p-3 bg-primary-50 rounded-lg"
+              labelClassName="text-xs xs:text-sm text-primary-600"
+              valueClassName="font-medium text-primary-900 text-sm xs:text-base truncate"
+            />
             )}
 
             {user.phone && (

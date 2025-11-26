@@ -25,6 +25,7 @@ import {
   ChevronDown,
   X,
   ChevronUp,
+  MessageSquare,
 } from "lucide-react";
 import ProfileViewModal from "./ProfileViewModal";
 import { jobApi } from "../services/jobService";
@@ -44,10 +45,14 @@ const JOB_STATUS_IN_PROGRESS = "inprogress";
 const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
   isOpen,
   onClose,
-  job,
+  job: jobProp,
+  jobId: jobIdProp,
   onRefreshJobs: _onRefreshJobs,
   onEditJob,
   shouldRefetch = true,
+  showFeedbackButton = false,
+  onFeedbackClick,
+  hideBidsTab = false,
 }) => {
   const lastFetchedJobId = React.useRef<string | null>(null);
 
@@ -65,27 +70,59 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
     null
   );
   const [expandedBids, setExpandedBids] = useState<Set<string>>(new Set());
+  const [jobLoading, setJobLoading] = useState(false);
+  const [internalJob, setInternalJob] = useState<typeof jobProp>(null);
+
+  // Use internal job if fetched, otherwise use prop
+  const job = internalJob || jobProp;
+  const effectiveJobId = jobIdProp || job?._id;
+
+  // Fetch job by ID if only jobId is provided
+  useEffect(() => {
+    if (isOpen && jobIdProp && !jobProp) {
+      setJobLoading(true);
+      jobApi
+        .getJobById(jobIdProp)
+        .then((response) => {
+          const jobData =
+            (response as any).data?.job ||
+            (response as any).data?.data ||
+            (response as any).data ||
+            response;
+          setInternalJob(jobData);
+        })
+        .catch(() => {
+          setInternalJob(null);
+        })
+        .finally(() => {
+          setJobLoading(false);
+        });
+    } else if (jobProp) {
+      setInternalJob(null); // Clear internal job when prop is provided
+    }
+  }, [isOpen, jobIdProp, jobProp]);
 
   const fetchBids = useCallback(async () => {
+    if (!effectiveJobId || hideBidsTab) return;
     setBidsLoading(true);
     try {
-      const response = await jobApi.getBidsForJob(job._id);
+      const response = await jobApi.getBidsForJob(effectiveJobId);
       setBids(response.data || []);
     } catch (_err) {
       setBids([]);
     } finally {
       setBidsLoading(false);
     }
-  }, [job._id]);
+  }, [effectiveJobId, hideBidsTab]);
 
   useEffect(() => {
-    if (isOpen && job._id) {
-      if (lastFetchedJobId.current !== job._id || shouldRefetch) {
+    if (isOpen && effectiveJobId && !hideBidsTab) {
+      if (lastFetchedJobId.current !== effectiveJobId || shouldRefetch) {
         fetchBids();
-        lastFetchedJobId.current = job._id;
+        lastFetchedJobId.current = effectiveJobId;
       }
     }
-  }, [isOpen, job._id, shouldRefetch, fetchBids]);
+  }, [isOpen, effectiveJobId, shouldRefetch, fetchBids, hideBidsTab]);
 
   const hasAcceptedBid = bids.some((bid) => bid.status === "accepted");
   const acceptedBid = bids.find((bid) => bid.status === "accepted");
@@ -131,6 +168,7 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
 
   const handlePaymentCheckout = useCallback(
     async (bidId: string, paymentType: PaymentType) => {
+      if (!job) return;
       try {
         const currentUrl = window.location.origin;
         const jobId = job._id;
@@ -170,7 +208,7 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
         showToast.error(errorMessage);
       }
     },
-    [job._id]
+    [job]
   );
 
   const handleAcceptBid = useCallback(
@@ -217,6 +255,8 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
       return;
     }
 
+    if (!job) return;
+
     try {
       showToast.loading("Creating completion payment...");
 
@@ -248,7 +288,7 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
       }
       showToast.error(errorMessage);
     }
-  }, [bids, job._id]);
+  }, [bids, job]);
 
   const formatCurrency = (amountInDollars: number) => {
     return `$${amountInDollars.toLocaleString("en-US", {
@@ -266,9 +306,10 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
   };
 
   const getStatusBadge = (status: string) =>
-    getBidStatusBadgeWithBorder(status);
+    getBidStatusBadgeWithBorder(status || "unknown");
 
-  const formatStatusText = (status: string) => formatJobStatusText(status);
+  const formatStatusText = (status: string) =>
+    formatJobStatusText(status || "unknown");
 
   const isPropertyPopulated = (
     property: string | PropertyInJob | undefined
@@ -278,9 +319,45 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
     );
   };
 
-  const propertyData = isPropertyPopulated(job.property) ? job.property : null;
+  const propertyData = job
+    ? isPropertyPopulated(job.property)
+      ? job.property
+      : null
+    : null;
+
+  // Get reviewee name from accepted bid for feedback
+  const revieweeName = useMemo(() => {
+    if (!showFeedbackButton) return undefined;
+    const accepted = bids.find((b) => b.status === "accepted");
+    if (accepted?.contractor) {
+      return `${accepted.contractor.firstName} ${accepted.contractor.lastName}`;
+    }
+    return undefined;
+  }, [bids, showFeedbackButton]);
 
   if (!isOpen) return null;
+
+  // Show loading if fetching job by ID
+  if (jobLoading || !job) {
+    return (
+      <BaseModal
+        isOpen={isOpen}
+        onClose={onClose}
+        title="Loading..."
+        maxWidth="6xl"
+        showFooter={false}
+      >
+        <div className="flex items-center justify-center p-12">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-accent-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <Text size="base" weight="medium" color="gray">
+              Loading job details...
+            </Text>
+          </div>
+        </div>
+      </BaseModal>
+    );
+  }
 
   const shouldShowCompleteJob =
     !isContractor &&
@@ -316,6 +393,15 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
           className="bg-green-600 hover:bg-green-700"
         >
           Complete Job
+        </Button>
+      )}
+      {showFeedbackButton && job.status === "completed" && (
+        <Button
+          variant="accent"
+          onClick={() => onFeedbackClick?.(job._id, revieweeName)}
+          leftIcon={<MessageSquare className="h-4 w-4" />}
+        >
+          Leave Feedback
         </Button>
       )}
     </div>
@@ -357,33 +443,37 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
               >
                 {formatStatusText(job.status)}
               </Badge>
-              <Badge variant="primary">
-                {bids.length} {bids.length === 1 ? "Bid" : "Bids"}
-              </Badge>
+              {!hideBidsTab && (
+                <Badge variant="primary">
+                  {bids.length} {bids.length === 1 ? "Bid" : "Bids"}
+                </Badge>
+              )}
             </div>
 
-            <div className="flex border-b border-gray-200">
-              <button
-                onClick={() => setActiveTab("details")}
-                className={`flex-1 px-6 py-3 font-medium transition ${
-                  activeTab === "details"
-                    ? "text-accent-500 border-b-2 border-accent-500"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                Job Details
-              </button>
-              <button
-                onClick={() => setActiveTab("bids")}
-                className={`flex-1 px-6 py-3 font-medium transition ${
-                  activeTab === "bids"
-                    ? "text-accent-500 border-b-2 border-accent-500"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                Bids ({bids.length})
-              </button>
-            </div>
+            {!hideBidsTab && (
+              <div className="flex border-b border-gray-200">
+                <button
+                  onClick={() => setActiveTab("details")}
+                  className={`flex-1 px-6 py-3 font-medium transition ${
+                    activeTab === "details"
+                      ? "text-accent-500 border-b-2 border-accent-500"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
+                >
+                  Job Details
+                </button>
+                <button
+                  onClick={() => setActiveTab("bids")}
+                  className={`flex-1 px-6 py-3 font-medium transition ${
+                    activeTab === "bids"
+                      ? "text-accent-500 border-b-2 border-accent-500"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
+                >
+                  Bids ({bids.length})
+                </button>
+              </div>
+            )}
 
             <div className="space-y-6">
               {activeTab === "details" ? (

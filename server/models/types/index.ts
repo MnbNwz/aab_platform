@@ -6,3 +6,4 @@ export * from "./membership";
 export * from "./property";
 export * from "./system";
 export * from "./investment";
+export * from "./feedback";

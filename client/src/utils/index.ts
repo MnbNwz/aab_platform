@@ -4,3 +4,4 @@ export * from "./roleHelpers";
 export * from "./types";
 export * from "./budgetCalculation";
 export * from "./string";
+export * from "./date";

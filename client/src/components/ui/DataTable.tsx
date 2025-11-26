@@ -417,9 +417,9 @@ const DataTable = memo(
                           className="flex flex-col gap-1 min-w-0 w-full overflow-hidden"
                         >
                           {label && (
-                            <span className="text-xs font-medium text-primary-600 uppercase">
-                              {label}
-                            </span>
+                          <span className="text-xs font-medium text-primary-600 uppercase">
+                            {label}
+                          </span>
                           )}
                           <div
                             className="text-sm text-primary-900 min-w-0 w-full break-words"

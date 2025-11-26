@@ -48,6 +48,7 @@ import ContractorOffMarketOpportunities from "./contractor/ContractorOffMarketOp
 import InterestedProperties from "./contractor/InterestedProperties";
 import Analytics from "./dashboard/Analytics";
 import BillingHistoryTable from "./dashboard/BillingHistoryTable";
+import Reviews from "./reviews/Reviews";
 import type { User, DashboardCardProps } from "../types";
 import { handleApiError } from "../services/apiService";
 import {
@@ -447,6 +448,12 @@ const DashboardContent = memo<DashboardContentProps>(
           title: "Favorite Contractors",
           subtitle: "Favorite contractors",
           children: <FavoriteContractors />,
+        },
+        reviews: (isCustomerRole || isContractorRole) && {
+          ...baseProps,
+          title: "Reviews",
+          subtitle: "View reviews",
+          children: <Reviews />,
         },
         "billing-history": isCustomerOrContractorRole && {
           ...baseProps,

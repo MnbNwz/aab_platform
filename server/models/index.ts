@@ -5,6 +5,7 @@ export * from "./job";
 export * from "./property";
 export * from "./system";
 export * from "./investment";
+export * from "./feedback";
 export * from "./utils";
 export * from "./types";
 export * from "./constants";

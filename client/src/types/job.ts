@@ -75,10 +75,14 @@ export interface JobViewEditModalProps {
 export interface JobDetailViewModalProps {
   isOpen: boolean;
   onClose: () => void;
-  job: Job;
+  job: Job | null;
+  jobId?: string; // Pass jobId to let modal fetch job internally
   onRefreshJobs: () => void;
   onEditJob?: () => void;
   shouldRefetch?: boolean;
+  showFeedbackButton?: boolean;
+  onFeedbackClick?: (jobId: string, revieweeName?: string) => void;
+  hideBidsTab?: boolean; // Hide bids tab for feedback context
 }
 
 // Job Form Types

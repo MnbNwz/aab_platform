@@ -8,6 +8,7 @@ import propertyRoutes from "@routes/property";
 import paymentRoutes from "@routes/payment";
 import dashboardRoutes from "@routes/dashboard";
 import investmentRoutes from "@routes/investment";
+import feedbackRoutes from "@routes/feedback";
 import analyticsRoutes from "@routes/analytics";
 import { authenticate } from "@middlewares/auth";
 import serviceRoutes from "@routes/admin/service";
@@ -75,5 +76,6 @@ router.use("/property", propertyRoutes);
 router.use("/investment", investmentRoutes); // Investment opportunities with role-based access
 router.use("/dashboard", dashboardRoutes); // Quick health check dashboard
 router.use("/analytics", analyticsRoutes); // Comprehensive business analytics (admin only)
+router.use("/feedback", feedbackRoutes); // Job feedback (customer, contractor, admin)
 
 export default router;
