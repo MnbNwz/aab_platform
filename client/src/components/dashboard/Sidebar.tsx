@@ -107,16 +107,16 @@ export const Sidebar: React.FC<ExtendedSidebarProps> = ({
         description: "Your trusted contractors",
       },
       {
-        id: "reviews",
-        label: "Reviews",
-        icon: Star,
-        description: "View reviews",
-      },
-      {
         id: "billing-history",
         label: "Billing History",
         icon: CreditCard,
         description: "Payment history and receipts",
+      },
+      {
+        id: "reviews",
+        label: "Reviews",
+        icon: Star,
+        description: "View reviews",
       },
       {
         id: "settings",
