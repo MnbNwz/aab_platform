@@ -3,6 +3,7 @@ export { default as ReviewDisplay } from "./ReviewDisplay";
 export { default as ReviewList } from "./ReviewList";
 export { default as ReviewStats } from "./ReviewStats";
 export { default as Reviews } from "./Reviews";
+export { default as UserFeedbackModal } from "./UserFeedbackModal";
 export type { ReviewSubmissionModalProps } from "./ReviewSubmissionModal";
 export type { ReviewDisplayProps } from "./ReviewDisplay";
 export type { ReviewListProps } from "./ReviewList";

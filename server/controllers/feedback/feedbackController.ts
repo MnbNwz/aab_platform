@@ -137,12 +137,18 @@ export const getUserFeedback = async (req: AuthenticatedRequest, res: Response) 
     }
 
     const { userId } = req.params;
+    const { page, limit } = req.query;
 
-    const feedbacks = await getFeedbackForUser(userId);
+    const paginationParams = {
+      page: page ? parseInt(page as string, 10) : undefined,
+      limit: limit ? parseInt(limit as string, 10) : undefined,
+    };
+
+    const result = await getFeedbackForUser(userId, paginationParams);
 
     return res.status(HTTP_STATUS.OK).json({
       success: true,
-      data: feedbacks,
+      ...result,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to fetch feedback";
@@ -173,11 +179,22 @@ export const getPendingFeedbackJobs = async (req: AuthenticatedRequest, res: Res
       });
     }
 
-    const jobs = await getPendingFeedbackJobsForCurrentUser(user._id, user.role);
+    const { page, limit } = req.query;
+
+    const paginationParams = {
+      page: page ? parseInt(page as string, 10) : undefined,
+      limit: limit ? parseInt(limit as string, 10) : undefined,
+    };
+
+    const result = await getPendingFeedbackJobsForCurrentUser(
+      user._id,
+      user.role,
+      paginationParams,
+    );
 
     return res.status(HTTP_STATUS.OK).json({
       success: true,
-      data: jobs,
+      ...result,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to fetch pending jobs";

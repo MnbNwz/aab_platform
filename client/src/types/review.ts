@@ -1,7 +1,9 @@
+import type { User } from "./index";
+
 export interface Review {
   _id: string;
   jobRequest: string;
-  fromUser: string;
+  fromUser: User;
   toUser: string;
   fromRole: "customer" | "contractor";
   rating: number; // 1 to 5

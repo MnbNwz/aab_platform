@@ -23,6 +23,21 @@ export interface PendingJobSummary {
   updatedAt: Date;
 }
 
+export interface PaginationParams {
+  page?: number;
+  limit?: number;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 export async function createFeedbackForJob(input: CreateFeedbackInput): Promise<IFeedback> {
   const { jobRequestId, fromUserId, fromRole, rating, comment } = input;
 
@@ -85,13 +100,45 @@ export async function createFeedbackForJob(input: CreateFeedbackInput): Promise<
   return feedback;
 }
 
-export async function getFeedbackForUser(userId: string): Promise<IFeedback[]> {
+export async function getFeedbackForUser(
+  userId: string,
+  paginationParams?: PaginationParams,
+): Promise<PaginatedResponse<IFeedback>> {
   const targetUserId = toObjectId(userId);
+  const page = paginationParams?.page && paginationParams.page > 0 ? paginationParams.page : 1;
+  const limit = paginationParams?.limit && paginationParams.limit > 0 ? paginationParams.limit : 10;
+  const skip = (page - 1) * limit;
 
-  const feedbacks = await Feedback.aggregate([
+  const pipeline: any[] = [
     {
       $match: {
         toUser: targetUserId,
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "fromUser",
+        foreignField: "_id",
+        as: "fromUserDetails",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              firstName: 1,
+              lastName: 1,
+              role: 1,
+              email: 1,
+              phone: 1,
+              status: 1,
+              geoHome: 1,
+              customer: 1,
+              contractor: 1,
+              approval: 1,
+              profileImage: 1,
+            },
+          },
+        ],
       },
     },
     {
@@ -115,49 +162,108 @@ export async function getFeedbackForUser(userId: string): Promise<IFeedback[]> {
     },
     {
       $addFields: {
+        fromUser: { $arrayElemAt: ["$fromUserDetails", 0] },
         job: { $arrayElemAt: ["$job", 0] },
       },
     },
-  ]);
+    {
+      $project: {
+        fromUserDetails: 0,
+      },
+    },
+    {
+      $sort: {
+        createdAt: -1,
+      },
+    },
+  ];
 
-  return feedbacks as IFeedback[];
+  // Get total count
+  const countPipeline = [
+    {
+      $match: {
+        toUser: targetUserId,
+      },
+    },
+    {
+      $count: "total",
+    },
+  ];
+
+  const [countResult] = await Feedback.aggregate(countPipeline);
+  const total = countResult?.total || 0;
+
+  // Add pagination
+  pipeline.push({ $skip: skip });
+  pipeline.push({ $limit: limit });
+
+  const feedbacks = await Feedback.aggregate(pipeline);
+
+  return {
+    data: feedbacks as IFeedback[],
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 }
 
-async function getPendingFeedbackJobsForCustomer(userId: string): Promise<PendingJobSummary[]> {
+async function getPendingFeedbackJobsForCustomer(
+  userId: string,
+  paginationParams?: PaginationParams,
+): Promise<PaginatedResponse<PendingJobSummary>> {
   const customerId = toObjectId(userId);
+  const page = paginationParams?.page && paginationParams.page > 0 ? paginationParams.page : 1;
+  const limit = paginationParams?.limit && paginationParams.limit > 0 ? paginationParams.limit : 10;
+  const skip = (page - 1) * limit;
 
-  const pipeline = [
-    {
-      $match: {
-        createdBy: customerId,
-        status: "completed",
-      },
+  const matchStage = {
+    $match: {
+      createdBy: customerId,
+      status: "completed",
     },
-    {
-      $lookup: {
-        from: "feedbacks",
-        let: {
-          jobId: "$_id",
-          fromUserId: customerId,
-        },
-        pipeline: [
-          {
-            $match: {
-              $expr: {
-                $and: [{ $eq: ["$jobRequest", "$$jobId"] }, { $eq: ["$fromUser", "$$fromUserId"] }],
-              },
+  };
+
+  const lookupStage = {
+    $lookup: {
+      from: "feedbacks",
+      let: {
+        jobId: "$_id",
+        fromUserId: customerId,
+      },
+      pipeline: [
+        {
+          $match: {
+            $expr: {
+              $and: [{ $eq: ["$jobRequest", "$$jobId"] }, { $eq: ["$fromUser", "$$fromUserId"] }],
             },
           },
-          { $limit: 1 },
-        ],
-        as: "existingFeedback",
-      },
+        },
+        { $limit: 1 },
+      ],
+      as: "existingFeedback",
     },
-    {
-      $match: {
-        existingFeedback: { $size: 0 },
-      },
+  };
+
+  const filterStage = {
+    $match: {
+      existingFeedback: { $size: 0 },
     },
+  };
+
+  // Count pipeline
+  const countPipeline = [matchStage, lookupStage, filterStage, { $count: "total" }];
+
+  const [countResult] = await JobRequest.aggregate(countPipeline as any[]);
+  const total = countResult?.total || 0;
+
+  // Data pipeline
+  const pipeline = [
+    matchStage,
+    lookupStage,
+    filterStage,
     {
       $project: {
         _id: 1,
@@ -174,73 +280,116 @@ async function getPendingFeedbackJobsForCustomer(userId: string): Promise<Pendin
         createdAt: -1,
       },
     },
+    { $skip: skip },
+    { $limit: limit },
   ];
 
   const jobs = await JobRequest.aggregate(pipeline as any[]);
 
-  return jobs as PendingJobSummary[];
+  return {
+    data: jobs as PendingJobSummary[],
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 }
 
-async function getPendingFeedbackJobsForContractor(userId: string): Promise<PendingJobSummary[]> {
+async function getPendingFeedbackJobsForContractor(
+  userId: string,
+  paginationParams?: PaginationParams,
+): Promise<PaginatedResponse<PendingJobSummary>> {
   const contractorId = toObjectId(userId);
+  const page = paginationParams?.page && paginationParams.page > 0 ? paginationParams.page : 1;
+  const limit = paginationParams?.limit && paginationParams.limit > 0 ? paginationParams.limit : 10;
+  const skip = (page - 1) * limit;
 
-  const pipeline = [
-    {
-      $match: {
-        contractor: contractorId,
-        status: "accepted",
-      },
+  const matchBidStage = {
+    $match: {
+      contractor: contractorId,
+      status: "accepted",
     },
-    {
-      $lookup: {
-        from: "jobrequests",
-        localField: "jobRequest",
-        foreignField: "_id",
-        as: "job",
-        pipeline: [
-          {
-            $match: {
-              status: "completed",
-            },
+  };
+
+  const lookupJobStage = {
+    $lookup: {
+      from: "jobrequests",
+      localField: "jobRequest",
+      foreignField: "_id",
+      as: "job",
+      pipeline: [
+        {
+          $match: {
+            status: "completed",
           },
-        ],
-      },
-    },
-    {
-      $match: {
-        job: { $ne: [] },
-      },
-    },
-    {
-      $addFields: {
-        job: { $arrayElemAt: ["$job", 0] },
-      },
-    },
-    {
-      $lookup: {
-        from: "feedbacks",
-        let: {
-          jobId: "$job._id",
-          fromUserId: contractorId,
         },
-        pipeline: [
-          {
-            $match: {
-              $expr: {
-                $and: [{ $eq: ["$jobRequest", "$$jobId"] }, { $eq: ["$fromUser", "$$fromUserId"] }],
-              },
+      ],
+    },
+  };
+
+  const matchJobExistsStage = {
+    $match: {
+      job: { $ne: [] },
+    },
+  };
+
+  const addJobFieldStage = {
+    $addFields: {
+      job: { $arrayElemAt: ["$job", 0] },
+    },
+  };
+
+  const lookupFeedbackStage = {
+    $lookup: {
+      from: "feedbacks",
+      let: {
+        jobId: "$job._id",
+        fromUserId: contractorId,
+      },
+      pipeline: [
+        {
+          $match: {
+            $expr: {
+              $and: [{ $eq: ["$jobRequest", "$$jobId"] }, { $eq: ["$fromUser", "$$fromUserId"] }],
             },
           },
-          { $limit: 1 },
-        ],
-        as: "existingFeedback",
-      },
+        },
+        { $limit: 1 },
+      ],
+      as: "existingFeedback",
     },
-    {
-      $match: {
-        existingFeedback: { $size: 0 },
-      },
+  };
+
+  const matchNoFeedbackStage = {
+    $match: {
+      existingFeedback: { $size: 0 },
     },
+  };
+
+  // Count pipeline
+  const countPipeline = [
+    matchBidStage,
+    lookupJobStage,
+    matchJobExistsStage,
+    addJobFieldStage,
+    lookupFeedbackStage,
+    matchNoFeedbackStage,
+    { $count: "total" },
+  ];
+
+  const [countResult] = await Bid.aggregate(countPipeline as any[]);
+  const total = countResult?.total || 0;
+
+  // Data pipeline
+  const pipeline = [
+    matchBidStage,
+    lookupJobStage,
+    matchJobExistsStage,
+    addJobFieldStage,
+    lookupFeedbackStage,
+    matchNoFeedbackStage,
     {
       $project: {
         _id: "$job._id",
@@ -257,20 +406,31 @@ async function getPendingFeedbackJobsForContractor(userId: string): Promise<Pend
         createdAt: -1,
       },
     },
+    { $skip: skip },
+    { $limit: limit },
   ];
 
   const jobs = await Bid.aggregate(pipeline as any[]);
 
-  return jobs as PendingJobSummary[];
+  return {
+    data: jobs as PendingJobSummary[],
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 }
 
 export async function getPendingFeedbackJobsForCurrentUser(
   userId: string,
   role: "customer" | "contractor",
-): Promise<PendingJobSummary[]> {
+  paginationParams?: PaginationParams,
+): Promise<PaginatedResponse<PendingJobSummary>> {
   if (role === "customer") {
-    return getPendingFeedbackJobsForCustomer(userId);
+    return getPendingFeedbackJobsForCustomer(userId, paginationParams);
   }
 
-  return getPendingFeedbackJobsForContractor(userId);
+  return getPendingFeedbackJobsForContractor(userId, paginationParams);
 }

@@ -1,8 +1,8 @@
 {
   "info": {
     "name": "AAS Platform API",
-    "description": "Complete API collection for AAS Platform with authentication, user management, services management, investment opportunities, and intelligent caching system.\n\n🆕 **Updated Features (v2.6.0):**\n• Analytics API - Comprehensive business intelligence (GET /api/analytics)\n• Services API - Public services list and admin management\n• Favorites API - Customer favorite contractors management\n• Property soft delete with isActive toggle (PATCH /property/:id/status)\n• Bid accept/reject unified endpoint (PUT /bids/:bidId/status)\n• Job editing locked after bid acceptance (customer security)\n• Premium contractor immediate job access (0 hour delay fixed)\n• Optimized contractor job listings (removed heavy fields)\n• Customer contact info protected until bid acceptance\n• Contractor job detail with self/myBid/selfBidAccepted flags\n• Property bidCount in job statistics\n• Investment opportunities with contractor interest management\n• Simplified membership system - always starts as one-time payment\n• Auto-renewal toggle feature for existing memberships\n• Membership upgrade functionality\n• Enhanced webhook handling for membership payments\n• Complete OTP verification system (verify, resend, state check)\n• Password reset flow with OTP verification\n• Lead management system for contractors\n• firstName & lastName required for all user registrations\n• User-level approval system (moved from role-specific)\n• Redis caching with memory fallback for production reliability\n\n📊 **Analytics & Dashboard:**\n• Dashboard API (/api/dashboard) - Quick health metrics by role\n• Analytics API (/api/analytics) - Full business intelligence (admin only)\n• Revenue breakdown (jobs, memberships, payments)\n• Monthly trends and growth metrics\n• Service/type revenue analysis\n• Top performers (contractors, customers)\n• Lead conversion analytics\n• 5-minute cache for optimal performance\n\n⚡ **Performance Features:**\n• Mega MongoDB aggregation pipeline (6+ queries → 1)\n• Analytics caching (500-800ms first call, <5ms cached)\n• Optimized contractor job pipeline (60-70% less memory)\n• Early time-based filtering reduces query load\n• Conditional property lookup for radius filtering\n• Single-pass radius filtering with property removal\n• Authentication middleware caching (50-80% boost)\n• Membership plans caching (1-hour TTL)\n• User profile caching with intelligent invalidation\n\n🔐 **Security Features:**\n• Customer contact hidden until bid acceptance\n• Property validation prevents inactive property use\n• Job editing locked after bid acceptance\n• Bid status validation (accept/reject)\n• Complete OTP verification workflow\n• JWT-based authentication with HttpOnly cookies\n• Role-based access control (RBAC)\n• Enhanced payment security middleware\n• Admin-only analytics endpoint\n\n💼 **Lead Management:**\n• Contractor lead access system with tier-based limits\n• Lead usage tracking and statistics\n• Job request access with credit deduction\n• Filtering by service type, property type, and budget\n• Monthly/yearly lead reset automation\n\n💰 **Investment Opportunities:**\n• Admin-managed investment opportunities\n• Contractor interest expression\n• Interest status tracking (pending/accepted/rejected)\n• Multi-file uploads for photos and documents\n• Investment statistics and analytics\n\n📋 **API Highlights:**\n• Comprehensive admin user management with filtering\n• Simplified membership plan management\n• Advanced payment processing with Stripe\n• Property management with soft delete\n• Job request and bidding system with security\n• Services management with versioning\n• Role-based dashboard analytics\n• Business intelligence analytics\n• Customer favorites system",
-    "version": "2.6.0",
+    "description": "Complete API collection for AAS Platform with authentication, user management, services management, investment opportunities, feedback system, and intelligent caching system.\n\n🆕 **Updated Features (v2.7.0):**\n• Feedback API - Customer and contractor reviews with pagination\n• User details in feedback (name, photo, ID)\n• Analytics API - Comprehensive business intelligence (GET /api/analytics)\n• Services API - Public services list and admin management\n• Favorites API - Customer favorite contractors management\n• Property soft delete with isActive toggle (PATCH /property/:id/status)\n• Bid accept/reject unified endpoint (PUT /bids/:bidId/status)\n• Job editing locked after bid acceptance (customer security)\n• Premium contractor immediate job access (0 hour delay fixed)\n• Optimized contractor job listings (removed heavy fields)\n• Customer contact info protected until bid acceptance\n• Contractor job detail with self/myBid/selfBidAccepted flags\n• Property bidCount in job statistics\n• Investment opportunities with contractor interest management\n• Simplified membership system - always starts as one-time payment\n• Auto-renewal toggle feature for existing memberships\n• Membership upgrade functionality\n• Enhanced webhook handling for membership payments\n• Complete OTP verification system (verify, resend, state check)\n• Password reset flow with OTP verification\n• Lead management system for contractors\n• firstName & lastName required for all user registrations\n• User-level approval system (moved from role-specific)\n• Redis caching with memory fallback for production reliability\n\n📊 **Feedback System:**\n• Create feedback for completed jobs\n• Get user feedback with pagination (page, limit)\n• Get pending feedback jobs with pagination\n• Complete user profile in feedback (name, role, email, phone, status, location, company details, services, approval, photo)\n• Job details in feedback responses\n• Customer ↔ Contractor mutual reviews\n• Role-specific data (customer/contractor objects) populated\n\n📊 **Analytics & Dashboard:**\n• Dashboard API (/api/dashboard) - Quick health metrics by role\n• Analytics API (/api/analytics) - Full business intelligence (admin only)\n• Revenue breakdown (jobs, memberships, payments)\n• Monthly trends and growth metrics\n• Service/type revenue analysis\n• Top performers (contractors, customers)\n• Lead conversion analytics\n• 5-minute cache for optimal performance\n\n⚡ **Performance Features:**\n• Mega MongoDB aggregation pipeline (6+ queries → 1)\n• Analytics caching (500-800ms first call, <5ms cached)\n• Optimized contractor job pipeline (60-70% less memory)\n• Early time-based filtering reduces query load\n• Conditional property lookup for radius filtering\n• Single-pass radius filtering with property removal\n• Authentication middleware caching (50-80% boost)\n• Membership plans caching (1-hour TTL)\n• User profile caching with intelligent invalidation\n\n🔐 **Security Features:**\n• Customer contact hidden until bid acceptance\n• Property validation prevents inactive property use\n• Job editing locked after bid acceptance\n• Bid status validation (accept/reject)\n• Complete OTP verification workflow\n• JWT-based authentication with HttpOnly cookies\n• Role-based access control (RBAC)\n• Enhanced payment security middleware\n• Admin-only analytics endpoint\n\n💼 **Lead Management:**\n• Contractor lead access system with tier-based limits\n• Lead usage tracking and statistics\n• Job request access with credit deduction\n• Filtering by service type, property type, and budget\n• Monthly/yearly lead reset automation\n\n💰 **Investment Opportunities:**\n• Admin-managed investment opportunities\n• Contractor interest expression\n• Interest status tracking (pending/accepted/rejected)\n• Multi-file uploads for photos and documents\n• Investment statistics and analytics\n\n📋 **API Highlights:**\n• Comprehensive admin user management with filtering\n• Simplified membership plan management\n• Advanced payment processing with Stripe\n• Property management with soft delete\n• Job request and bidding system with security\n• Services management with versioning\n• Role-based dashboard analytics\n• Business intelligence analytics\n• Customer favorites system\n• Job feedback and review system",
+    "version": "2.7.0",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -230,6 +230,191 @@
             },
             "description": "Logout user and invalidate authentication tokens. Clears HttpOnly cookies and removes user from cache."
           }
+        }
+      ]
+    },
+    {
+      "name": "Feedback & Reviews",
+      "item": [
+        {
+          "name": "Create Feedback",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jobRequestId\": \"JOB_REQUEST_ID_HERE\",\n  \"rating\": 5,\n  \"comment\": \"Excellent work! Very professional and completed on time.\"\n}\n\n// Required: jobRequestId, rating (1-5)\n// Optional: comment\n// Only for completed jobs\n// Customer reviews contractor, contractor reviews customer"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/feedback",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "feedback"]
+            },
+            "description": "Create feedback for a completed job. Customers can review contractors and contractors can review customers. Rating must be between 1-5. Only one feedback allowed per user per job."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"jobRequestId\": \"507f1f77bcf86cd799439011\",\n  \"rating\": 5,\n  \"comment\": \"Great service!\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/feedback",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "feedback"]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"_id\": \"507f1f77bcf86cd799439012\",\n    \"jobRequest\": \"507f1f77bcf86cd799439011\",\n    \"fromUser\": \"507f1f77bcf86cd799439013\",\n    \"toUser\": \"507f1f77bcf86cd799439014\",\n    \"fromRole\": \"customer\",\n    \"rating\": 5,\n    \"comment\": \"Great service!\",\n    \"createdAt\": \"2025-11-27T10:00:00.000Z\",\n    \"updatedAt\": \"2025-11-27T10:00:00.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get User Feedback (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/feedback/user/:userId?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "feedback", "user", ":userId"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page (default: 10)"
+                }
+              ],
+              "variable": [
+                {
+                  "key": "userId",
+                  "value": "USER_ID_HERE",
+                  "description": "ID of user to get feedback for"
+                }
+              ]
+            },
+            "description": "Get all feedback for a specific user with pagination. Returns feedback with complete populated user details including:\n- Basic info: _id, firstName, lastName, role, email, phone, status, profileImage\n- Location: geoHome (coordinates)\n- Role-specific: customer or contractor object with full details (companyName, services, license, taxId, docs)\n- Approval status\n- Associated job information\n\nSorted by creation date (newest first)."
+          },
+          "response": [
+            {
+              "name": "Success Response with Pagination",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/feedback/user/507f1f77bcf86cd799439011?page=1&limit=10",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "feedback", "user", "507f1f77bcf86cd799439011"],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"_id\": \"507f1f77bcf86cd799439012\",\n      \"fromUser\": {\n        \"_id\": \"507f1f77bcf86cd799439013\",\n        \"firstName\": \"John\",\n        \"lastName\": \"Doe\",\n        \"role\": \"contractor\",\n        \"email\": \"contractor@example.com\",\n        \"phone\": \"+1234567890\",\n        \"status\": \"active\",\n        \"geoHome\": {\n          \"type\": \"Point\",\n          \"coordinates\": [-73.97740541957833, 40.750510431877785]\n        },\n        \"contractor\": {\n          \"companyName\": \"ABC Contracting LLC\",\n          \"services\": [\"plumbing\", \"electrical\", \"hvac\"],\n          \"license\": \"LIC-12345\",\n          \"taxId\": \"TAX-12345\",\n          \"docs\": []\n        },\n        \"approval\": \"approved\",\n        \"profileImage\": \"https://example.com/profile.jpg\"\n      },\n      \"toUser\": \"507f1f77bcf86cd799439011\",\n      \"fromRole\": \"contractor\",\n      \"rating\": 5,\n      \"comment\": \"Excellent work! Very professional.\",\n      \"job\": {\n        \"_id\": \"507f1f77bcf86cd799439010\",\n        \"title\": \"Kitchen Renovation\",\n        \"service\": \"plumbing\",\n        \"estimate\": 15000,\n        \"status\": \"completed\"\n      },\n      \"createdAt\": \"2025-11-27T10:00:00.000Z\",\n      \"updatedAt\": \"2025-11-27T10:00:00.000Z\"\n    }\n  ],\n  \"pagination\": {\n    \"page\": 1,\n    \"limit\": 10,\n    \"total\": 45,\n    \"totalPages\": 5\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Pending Feedback Jobs (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/feedback/pending?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "feedback", "pending"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page (default: 10)"
+                }
+              ]
+            },
+            "description": "Get completed jobs that need feedback from the current user (customer or contractor). Returns paginated list of jobs where user hasn't left feedback yet. Sorted by creation date (newest first)."
+          },
+          "response": [
+            {
+              "name": "Success Response",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/feedback/pending?page=1&limit=10",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "feedback", "pending"],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"_id\": \"507f1f77bcf86cd799439010\",\n      \"title\": \"Kitchen Renovation\",\n      \"service\": \"plumbing\",\n      \"estimate\": 15000,\n      \"status\": \"completed\",\n      \"createdAt\": \"2025-11-20T10:00:00.000Z\",\n      \"updatedAt\": \"2025-11-27T10:00:00.000Z\"\n    },\n    {\n      \"_id\": \"507f1f77bcf86cd799439011\",\n      \"title\": \"Bathroom Remodel\",\n      \"service\": \"general\",\n      \"estimate\": 8000,\n      \"status\": \"completed\",\n      \"createdAt\": \"2025-11-15T10:00:00.000Z\",\n      \"updatedAt\": \"2025-11-25T10:00:00.000Z\"\n    }\n  ],\n  \"pagination\": {\n    \"page\": 1,\n    \"limit\": 10,\n    \"total\": 3,\n    \"totalPages\": 1\n  }\n}"
+            }
+          ]
         }
       ]
     },

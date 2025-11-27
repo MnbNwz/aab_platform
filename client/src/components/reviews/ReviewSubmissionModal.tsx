@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, memo } from "react";
-import { X, Star, Briefcase } from "lucide-react";
+import { X, Star, Briefcase, Send } from "lucide-react";
 import { BaseModal, Text, TextareaInput } from "../reusable";
 import type { ReviewSubmission } from "../../types/review";
 
@@ -107,6 +107,7 @@ const ReviewSubmissionModal: React.FC<ReviewSubmissionModalProps> = memo(
           label: existingReview ? "Update Review" : "Submit Review",
           onClick: handleSubmit,
           variant: "primary" as const,
+          leftIcon: <Send className="h-4 w-4" />,
           loading,
           disabled: loading,
         },

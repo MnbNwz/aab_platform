@@ -1,13 +1,14 @@
 import React, { useMemo, memo } from "react";
-import { Star, User } from "lucide-react";
+import { Star, User as UserIcon, Briefcase } from "lucide-react";
 import { Text, Badge } from "../reusable";
 import type { Review } from "../../types/review";
+import type { User } from "../../types";
 import { formatDate } from "../../utils/date";
 
 export interface ReviewDisplayProps {
   review: Review;
-  reviewerName?: string;
-  reviewerAvatar?: string;
+  onProfileClick?: (user: User) => void;
+  onJobClick?: (jobId: string) => void;
   showJobTitle?: boolean;
   className?: string;
 }
@@ -15,8 +16,8 @@ export interface ReviewDisplayProps {
 const ReviewDisplay: React.FC<ReviewDisplayProps> = memo(
   ({
     review,
-    reviewerName,
-    reviewerAvatar,
+    onProfileClick,
+    onJobClick,
     showJobTitle = false,
     className = "",
   }) => {
@@ -26,24 +27,36 @@ const ReviewDisplay: React.FC<ReviewDisplayProps> = memo(
       return formatDate(review.createdAt);
     }, [review.createdAt]);
 
+    const reviewerName = useMemo(() => {
+      return `${review.fromUser.firstName} ${review.fromUser.lastName}`;
+    }, [review.fromUser]);
+
+    const reviewerAvatar = review.fromUser.profileImage;
+
     return (
       <div
         className={`p-4 bg-white border border-primary-200 rounded-lg ${className}`}
       >
         <div className="flex items-start gap-3">
-          {/* Reviewer Avatar */}
+          {/* Reviewer Avatar - Clickable */}
           <div className="flex-shrink-0">
-            {reviewerAvatar ? (
-              <img
-                src={reviewerAvatar}
-                alt={reviewerName || "Reviewer"}
-                className="h-10 w-10 rounded-full object-cover"
-              />
-            ) : (
-              <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
-                <User className="h-5 w-5 text-primary-600" />
-              </div>
-            )}
+            <button
+              onClick={() => onProfileClick?.(review.fromUser)}
+              className="focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-full transition-all hover:opacity-80 cursor-pointer disabled:cursor-default"
+              disabled={!onProfileClick}
+            >
+              {reviewerAvatar ? (
+                <img
+                  src={reviewerAvatar}
+                  alt={reviewerName}
+                  className="h-10 w-10 rounded-full object-cover"
+                />
+              ) : (
+                <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
+                  <UserIcon className="h-5 w-5 text-primary-600" />
+                </div>
+              )}
+            </button>
           </div>
 
           {/* Review Content */}
@@ -51,17 +64,33 @@ const ReviewDisplay: React.FC<ReviewDisplayProps> = memo(
             {/* Header */}
             <div className="flex items-start justify-between gap-2 mb-2">
               <div className="min-w-0 flex-1">
-                <Text
-                  size="sm"
-                  weight="semibold"
-                  className="text-primary-900 truncate"
+                <button
+                  onClick={() => onProfileClick?.(review.fromUser)}
+                  className="text-left focus:outline-none hover:opacity-80 transition-opacity cursor-pointer disabled:cursor-default"
+                  disabled={!onProfileClick}
                 >
-                  {reviewerName || "Anonymous"}
-                </Text>
-                {showJobTitle && review.job?.title && (
-                  <Text size="xs" className="text-gray-500 mt-0.5">
-                    {review.job.title}
+                  <Text
+                    size="sm"
+                    weight="semibold"
+                    className="text-primary-900 truncate"
+                  >
+                    {reviewerName}
                   </Text>
+                </button>
+                {showJobTitle && review.job?.title && (
+                  <button
+                    onClick={() => review.job && onJobClick?.(review.job._id)}
+                    className="flex items-center gap-1 mt-1 text-left focus:outline-none hover:opacity-80 transition-opacity cursor-pointer disabled:cursor-default"
+                    disabled={!onJobClick || !review.job}
+                  >
+                    <Briefcase className="h-3 w-3 text-primary-500" />
+                    <Text
+                      size="xs"
+                      className="text-primary-600 hover:text-primary-700"
+                    >
+                      {review.job.title}
+                    </Text>
+                  </button>
                 )}
               </div>
               <div className="flex-shrink-0 flex items-center gap-1">

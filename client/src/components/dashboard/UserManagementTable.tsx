@@ -689,6 +689,7 @@ const UserManagementTable = memo(() => {
           onEdit={handleSwitchToEdit}
           isLoading={loadingUserProfile}
           hideEditForAdmin={true}
+          showFeedbackButton={true}
         />
       )}
     </div>

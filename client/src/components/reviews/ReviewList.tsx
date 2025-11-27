@@ -2,25 +2,29 @@ import React, { useMemo, memo } from "react";
 import { Text } from "../reusable";
 import ReviewDisplay from "./ReviewDisplay";
 import type { Review } from "../../types/review";
+import type { User } from "../../types";
 
 export interface ReviewListProps {
-  reviews: Review[];
-  reviewerNames?: Record<string, string>;
-  reviewerAvatars?: Record<string, string>;
+  reviews?: Review[];
+  onProfileClick?: (user: User) => void;
+  onJobClick?: (jobId: string) => void;
   showJobTitle?: boolean;
   emptyMessage?: string;
   className?: string;
 }
 
 const ReviewList: React.FC<ReviewListProps> = memo(({
-  reviews,
-  reviewerNames = {},
-  reviewerAvatars = {},
+  reviews = [],
+  onProfileClick,
+  onJobClick,
   showJobTitle = false,
   emptyMessage = "No reviews yet",
   className = "",
 }) => {
   const sortedReviews = useMemo(() => {
+    if (!reviews || !Array.isArray(reviews)) {
+      return [];
+    }
     return [...reviews].sort((a, b) => {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
@@ -42,8 +46,8 @@ const ReviewList: React.FC<ReviewListProps> = memo(({
         <ReviewDisplay
           key={review._id}
           review={review}
-          reviewerName={reviewerNames[review.reviewerId]}
-          reviewerAvatar={reviewerAvatars[review.reviewerId]}
+          onProfileClick={onProfileClick}
+          onJobClick={onJobClick}
           showJobTitle={showJobTitle}
         />
       ))}

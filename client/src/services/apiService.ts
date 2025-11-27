@@ -185,13 +185,19 @@ const makeRequest = async <T = any>(
 
       // Handle different HTTP status codes
       if (response.status === 401) {
-        // Unauthorized - let the component handle the error
-        throw createApiError(ERROR_MESSAGES.UNAUTHORIZED, 401);
+        // Unauthorized - use actual error message from API
+        throw createApiError(
+          data?.message || data?.error || ERROR_MESSAGES.UNAUTHORIZED,
+          401
+        );
       }
 
       if (response.status === 403) {
-        // Forbidden - no permission
-        throw createApiError(ERROR_MESSAGES.UNAUTHORIZED, 403);
+        // Forbidden - use actual error message from API
+        throw createApiError(
+          data?.message || data?.error || ERROR_MESSAGES.UNAUTHORIZED,
+          403
+        );
       }
 
       if (!response.ok) {

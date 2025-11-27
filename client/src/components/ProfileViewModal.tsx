@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { User } from "../types";
-import { CheckCircle, Edit, X, Heart } from "lucide-react";
+import { CheckCircle, Edit, X, Heart, MessageSquare } from "lucide-react";
 import { motion } from "framer-motion";
 import { useGeocoding } from "../hooks/useGeocoding";
 import { isContractor, isCustomer, isAdmin } from "../utils";
@@ -15,6 +15,7 @@ import {
 } from "../store/thunks/favoritesThunks";
 import ConfirmModal from "./ui/ConfirmModal";
 import Loader from "./ui/Loader";
+import UserFeedbackModal from "./reviews/UserFeedbackModal";
 
 interface ProfileViewModalProps {
   user: User;
@@ -23,6 +24,7 @@ interface ProfileViewModalProps {
   onEdit?: () => void;
   isLoading?: boolean;
   hideEditForAdmin?: boolean; // New prop to hide edit button for admin users
+  showFeedbackButton?: boolean; // Show feedback button for specific scenarios
 }
 
 const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
@@ -32,13 +34,19 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
   onEdit,
   isLoading = false,
   hideEditForAdmin = false,
+  showFeedbackButton = false,
 }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { user: currentUser } = useSelector((state: RootState) => state.auth);
-  const { favoriteIds, loading: favoritesLoading, adding, removing } =
-    useSelector((state: RootState) => state.favorites);
+  const {
+    favoriteIds,
+    loading: favoritesLoading,
+    adding,
+    removing,
+  } = useSelector((state: RootState) => state.favorites);
 
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
 
   const isViewingContractor = isContractor(user.role);
   const isCurrentUserCustomer = currentUser?.role
@@ -162,6 +170,16 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
           },
         ]
       : []),
+    ...(showFeedbackButton
+      ? [
+          {
+            label: "View Feedback",
+            onClick: () => setFeedbackModalOpen(true),
+            variant: "primary" as const,
+            leftIcon: <MessageSquare className="h-4 w-4" />,
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -189,49 +207,53 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
         {/* Profile Header */}
         <div className="flex items-center justify-between space-x-3 xs:space-x-4 p-3 xs:p-4 bg-gradient-to-r from-primary-50 to-accent-50 rounded-lg">
           <div className="flex items-center space-x-3 xs:space-x-4 flex-1 min-w-0">
-          <div className="w-12 h-12 xs:w-14 xs:h-14 sm:w-16 sm:h-16 rounded-full shadow-lg flex-shrink-0 overflow-hidden">
-            {user.profileImage ? (
-              <img
-                src={user.profileImage}
-                alt={`${user.firstName} ${user.lastName}`}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                  e.currentTarget.nextElementSibling?.classList.remove(
-                    "hidden"
-                  );
-                }}
-              />
-            ) : null}
-            <div
-              className={`w-full h-full bg-gradient-to-br from-primary-500 to-accent-500 rounded-full flex items-center justify-center ${
-                user.profileImage ? "hidden" : ""
-              }`}
-            >
-              <span className="text-white text-sm xs:text-base sm:text-xl font-bold">
-                {user.firstName?.charAt(0)}
-                {user.lastName?.charAt(0)}
-              </span>
+            <div className="w-12 h-12 xs:w-14 xs:h-14 sm:w-16 sm:h-16 rounded-full shadow-lg flex-shrink-0 overflow-hidden">
+              {user.profileImage ? (
+                <img
+                  src={user.profileImage}
+                  alt={`${user.firstName} ${user.lastName}`}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                    e.currentTarget.nextElementSibling?.classList.remove(
+                      "hidden"
+                    );
+                  }}
+                />
+              ) : null}
+              <div
+                className={`w-full h-full bg-gradient-to-br from-primary-500 to-accent-500 rounded-full flex items-center justify-center ${
+                  user.profileImage ? "hidden" : ""
+                }`}
+              >
+                <span className="text-white text-sm xs:text-base sm:text-xl font-bold">
+                  {user.firstName?.charAt(0)}
+                  {user.lastName?.charAt(0)}
+                </span>
+              </div>
             </div>
-          </div>
-          <div className="flex-1 min-w-0">
-            <Text size="lg" weight="bold" className="text-primary-900 truncate">
-              {user.firstName} {user.lastName}
-            </Text>
-            <div className="flex items-center space-x-2 mt-1 flex-wrap">
-              <Badge variant={getRoleVariant(user.role)} size="sm">
-                {user.role?.charAt(0).toUpperCase() + user.role?.slice(1)}
-              </Badge>
-              {user.status === "active" && (
-                <div className="flex items-center text-green-600">
-                  <CheckCircle className="h-3 w-3 xs:h-4 xs:w-4 mr-1" />
-                  <Text size="sm" weight="medium">
-                    Active
-                  </Text>
-                </div>
-              )}
+            <div className="flex-1 min-w-0">
+              <Text
+                size="lg"
+                weight="bold"
+                className="text-primary-900 truncate"
+              >
+                {user.firstName} {user.lastName}
+              </Text>
+              <div className="flex items-center space-x-2 mt-1 flex-wrap">
+                <Badge variant={getRoleVariant(user.role)} size="sm">
+                  {user.role?.charAt(0).toUpperCase() + user.role?.slice(1)}
+                </Badge>
+                {user.status === "active" && (
+                  <div className="flex items-center text-green-600">
+                    <CheckCircle className="h-3 w-3 xs:h-4 xs:w-4 mr-1" />
+                    <Text size="sm" weight="medium">
+                      Active
+                    </Text>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
           </div>
           {canFavorite && (
             <button
@@ -283,13 +305,13 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 xs:gap-4">
             {user.email && (
-            <InfoField
-              label="Email"
+              <InfoField
+                label="Email"
                 value={ActionableEmail}
-              containerClassName="p-2 xs:p-3 bg-primary-50 rounded-lg"
-              labelClassName="text-xs xs:text-sm text-primary-600"
-              valueClassName="font-medium text-primary-900 text-sm xs:text-base truncate"
-            />
+                containerClassName="p-2 xs:p-3 bg-primary-50 rounded-lg"
+                labelClassName="text-xs xs:text-sm text-primary-600"
+                valueClassName="font-medium text-primary-900 text-sm xs:text-base truncate"
+              />
             )}
 
             {user.phone && (
@@ -477,6 +499,16 @@ const ProfileViewModal: React.FC<ProfileViewModalProps> = ({
           message={`Are you sure you want to remove ${user.firstName} ${user.lastName} from your favorite contractors?`}
           confirmText="Remove"
           cancelText="Cancel"
+        />
+      )}
+
+      {/* User Feedback Modal */}
+      {feedbackModalOpen && (
+        <UserFeedbackModal
+          isOpen={feedbackModalOpen}
+          onClose={() => setFeedbackModalOpen(false)}
+          userId={user._id}
+          userName={`${user.firstName} ${user.lastName}`}
         />
       )}
     </BaseModal>

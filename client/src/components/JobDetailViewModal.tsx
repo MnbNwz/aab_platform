@@ -947,6 +947,7 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
           user={selectedContractor}
           isOpen={profileViewOpen}
           onClose={handleCloseProfileView}
+          showFeedbackButton={isCustomer}
         />
       )}
     </>
