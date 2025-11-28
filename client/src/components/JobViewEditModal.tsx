@@ -36,7 +36,8 @@ const formatJobDataForForm = (job: Job): JobFormInputs => ({
 const prepareJobUpdateData = (
   data: JobFormInputs,
   jobType: string,
-  userId: string
+  userId: string,
+  isAdmin: boolean = false
 ): JobUpdateData => {
   const jobData: JobUpdateData = {
     title: data.title,
@@ -54,7 +55,8 @@ const prepareJobUpdateData = (
     jobData.estimate = Math.round(parseFloat(data.estimate) * 100);
   }
 
-  if (data.property?.trim()) {
+  // Admin cannot change property
+  if (!isAdmin && data.property?.trim()) {
     jobData.property = data.property;
   }
 
@@ -163,7 +165,8 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
       const jobData = prepareJobUpdateData(
         data,
         jobType,
-        user?._id || user?.id || ""
+        user?._id || user?.id || "",
+        isAdmin
       );
 
       const result = await dispatch(
@@ -434,16 +437,44 @@ const JobViewEditModal: React.FC<JobViewEditModalProps> = ({
                 render={({ field }) => (
                   <SelectInput
                     {...field}
-                    placeholder="Select property (optional)"
+                    disabled={isAdmin}
+                    placeholder={
+                      isAdmin
+                        ? "Admin cannot change user property"
+                        : "Select property (optional)"
+                    }
                     options={properties
                       .filter((p) => p.isActive)
                       .map((property) => ({
                         value: property._id || "",
                         label: property.title,
                       }))}
+                    onFocus={(e) => {
+                      if (isAdmin) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        showToast.error(
+                          "Admin cannot change user property from job"
+                        );
+                      }
+                    }}
+                    onMouseDown={(e) => {
+                      if (isAdmin) {
+                        e.preventDefault();
+                        showToast.error(
+                          "Admin cannot change user property from job"
+                        );
+                      }
+                    }}
                   />
                 )}
               />
+              {isAdmin && (
+                <p className="text-xs text-primary-500 mt-1">
+                  Property is managed by the job owner and cannot be changed by
+                  admin
+                </p>
+              )}
             </div>
           </div>
 

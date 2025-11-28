@@ -39,6 +39,7 @@ import {
   formatJobStatusText,
 } from "../utils/badgeColors";
 import { BaseModal, Button, Badge, Text } from "./reusable";
+import { useGeocoding } from "../hooks/useGeocoding";
 
 const JOB_STATUS_IN_PROGRESS = "inprogress";
 
@@ -324,6 +325,13 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
       ? job.property
       : null
     : null;
+
+  const propertyCoordinates = propertyData?.location?.coordinates
+    ? (propertyData.location.coordinates as [number, number])
+    : null;
+
+  const { address: propertyAddress, loading: addressLoading } =
+    useGeocoding(propertyCoordinates);
 
   // Get reviewee name from accepted bid for feedback
   const revieweeName = useMemo(() => {
@@ -634,10 +642,27 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
                             <MapPin className="h-4 w-4" />
                             <span className="font-medium">Location</span>
                           </div>
-                          <p className="text-gray-900 font-semibold text-sm">
-                            {propertyData.location.coordinates[1].toFixed(6)},{" "}
-                            {propertyData.location.coordinates[0].toFixed(6)}
-                          </p>
+                          {addressLoading ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+                              <p className="text-gray-600 text-sm">
+                                Loading address...
+                              </p>
+                            </div>
+                          ) : propertyAddress ? (
+                            <p className="text-gray-900 font-semibold text-sm">
+                              {propertyAddress}
+                            </p>
+                          ) : propertyData.location.coordinates ? (
+                            <p className="text-gray-900 font-semibold text-sm">
+                              {propertyData.location.coordinates[1].toFixed(6)},{" "}
+                              {propertyData.location.coordinates[0].toFixed(6)}
+                            </p>
+                          ) : (
+                            <p className="text-gray-500 text-sm">
+                              Location not available
+                            </p>
+                          )}
                         </div>
                       </div>
 
