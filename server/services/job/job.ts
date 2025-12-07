@@ -4,6 +4,12 @@ import { FilterQuery } from "mongoose";
 import { validateJobRequestCreation } from "@services/property/typeEnforcement";
 import { VALID_SORT_FIELDS, ALLOWED_JOB_UPDATE_FIELDS } from "@services/constants/validation";
 import { toObjectId } from "@utils/core";
+import {
+  normalizeService,
+  createServiceOrQuery,
+  createServiceRegexQuery,
+  isValidService,
+} from "@utils/validation";
 
 // Helper function to get available services from database
 export const getAvailableServices = async (): Promise<string[]> => {
@@ -18,10 +24,10 @@ export const getAvailableServices = async (): Promise<string[]> => {
   }
 };
 
-// Helper function to validate service against available services
+// Helper function to validate service against available services (case-insensitive)
 export const validateService = async (service: string): Promise<boolean> => {
   const availableServices = await getAvailableServices();
-  return availableServices.includes(service);
+  return isValidService(service, availableServices);
 };
 
 // Create a new job request
@@ -39,11 +45,22 @@ export const createJobRequest = async (jobData: any) => {
     }
   }
 
-  // Validate service
+  // Validate and normalize service (case-insensitive)
   const availableServices = await getAvailableServices();
-  if (!jobData.service || !availableServices.includes(jobData.service)) {
+  if (!jobData.service) {
+    throw new Error(`Service is required. Available services: ${availableServices.join(", ")}`);
+  }
+
+  // Normalize service to lowercase for consistency (services are stored in lowercase)
+  const normalizedService = normalizeService(jobData.service);
+
+  // Check if normalized service exists in available services (optimized with Set)
+  if (!isValidService(normalizedService, availableServices)) {
     throw new Error(`Invalid service. Available services: ${availableServices.join(", ")}`);
   }
+
+  // Use normalized service
+  jobData.service = normalizedService;
 
   // Validate estimate
   if (!jobData.estimate || typeof jobData.estimate !== "number" || jobData.estimate <= 0) {
@@ -113,14 +130,13 @@ export const getJobRequests = async (filters: any, user: any) => {
     query.createdBy = toObjectId(user._id);
   }
 
-  // Contractor: filter by their services (use database services for validation)
+  // Contractor: filter by their services - MongoDB handles validation via regex
   if (user.role === "contractor" && user.contractor && user.contractor.services) {
     const contractorServices = user.contractor.services as string[];
-    const validContractorServices = contractorServices.filter((service) =>
-      availableServices.includes(service),
-    );
-    if (validContractorServices.length > 0) {
-      query.service = { $in: validContractorServices };
+    // Let MongoDB filter - build query directly without pre-filtering
+    const serviceOrQuery = createServiceOrQuery(contractorServices);
+    if (serviceOrQuery) {
+      query.$or = serviceOrQuery.$or;
     } else {
       query.service = { $in: [] };
     }
@@ -133,15 +149,35 @@ export const getJobRequests = async (filters: any, user: any) => {
       { description: { $regex: search, $options: "i" } },
     ];
 
-    // Only search in service field if the search term matches a valid service
-    const matchingServices = availableServices.filter((s) =>
-      s.toLowerCase().includes(search.toLowerCase()),
-    );
-    if (matchingServices.length > 0) {
-      searchConditions.push({ service: { $in: matchingServices } });
+    // Only search in service field if the search term matches a valid service (case-insensitive)
+    const normalizedSearch = normalizeService(search);
+    const matchingServices: string[] = [];
+    // Use optimized loop instead of filter + forEach
+    for (let i = 0; i < availableServices.length; i++) {
+      const service = availableServices[i];
+      if (normalizeService(service).includes(normalizedSearch)) {
+        matchingServices.push(service);
+      }
     }
 
-    query.$or = searchConditions;
+    if (matchingServices.length > 0) {
+      // Use optimized utility for service matching
+      const serviceOrQuery = createServiceOrQuery(matchingServices);
+      if (serviceOrQuery) {
+        searchConditions.push(...serviceOrQuery.$or);
+      }
+    }
+
+    // If query already has $or (from contractor services), combine with $and
+    if (query.$or) {
+      query.$and = [
+        { $or: query.$or }, // Service matching
+        { $or: searchConditions }, // Search matching
+      ];
+      delete query.$or;
+    } else {
+      query.$or = searchConditions;
+    }
   }
 
   // Status filtering
@@ -153,25 +189,19 @@ export const getJobRequests = async (filters: any, user: any) => {
     }
   }
 
-  // Service filtering - validate against available services
+  // Service filtering - MongoDB handles validation via regex
   if (service) {
     if (Array.isArray(service)) {
-      // Filter to only include valid services
-      const validServices = service.filter((s) => availableServices.includes(s));
-      if (validServices.length > 0) {
-        query.service = { $in: validServices };
+      // Let MongoDB filter - build query directly
+      const serviceOrQuery = createServiceOrQuery(service);
+      if (serviceOrQuery) {
+        query.$or = serviceOrQuery.$or;
       } else {
-        // If no valid services, return empty result
         query.service = { $in: [] };
       }
     } else {
-      // Single service - validate it exists
-      if (availableServices.includes(service)) {
-        query.service = service;
-      } else {
-        // Invalid service, return empty result
-        query.service = { $in: [] };
-      }
+      // Single service - MongoDB validates via regex
+      query.service = createServiceRegexQuery(service);
     }
   }
 

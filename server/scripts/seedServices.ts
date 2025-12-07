@@ -7,13 +7,13 @@ import { User } from "@models/user";
 
 // Default contractor services
 const defaultServices = [
+  "Plumbing rough-in",
+  "Electrical rough-in",
   "Demolition",
   "Drywall",
   "Insulation",
   "Painting",
   "Flooring",
-  "Plumbing rough-in",
-  "Electrical rough-in",
   "Finishing (trim & doors)",
   "Excavation",
   "Concrete",
@@ -25,6 +25,18 @@ const defaultServices = [
 
 // Service extended data from Excel table
 const serviceExtendedData = [
+  {
+    name: "Plumbing rough-in",
+    materialUnit: 1.5,
+    laborUnit: 3,
+    comment: "Average per",
+  },
+  {
+    name: "Electrical rough-in",
+    materialUnit: 1.2,
+    laborUnit: 2.8,
+    comment: "Average per",
+  },
   {
     name: "Demolition",
     materialUnit: 2.5,
@@ -54,18 +66,6 @@ const serviceExtendedData = [
     materialUnit: 3,
     laborUnit: 1.5,
     comment: "Vinyl plank",
-  },
-  {
-    name: "Plumbing rough-in",
-    materialUnit: 1.5,
-    laborUnit: 3,
-    comment: "Average per",
-  },
-  {
-    name: "Electrical rough-in",
-    materialUnit: 1.2,
-    laborUnit: 2.8,
-    comment: "Average per",
   },
   {
     name: "Finishing (trim & doors)",

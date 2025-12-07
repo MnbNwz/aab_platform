@@ -5,4 +5,5 @@ export { default as Select } from "./Select";
 export { default as FormField } from "./FormField";
 export { default as Button } from "./Button";
 export type { SelectOption } from "./Select";
+export { ServiceCheckbox } from "./ServiceCheckbox";
 

@@ -26,6 +26,12 @@ import {
 } from "../../schemas/authSchemas";
 import { useGeocoding, useCurrentLocation } from "../../hooks/useGeocoding";
 import FilePreview from "../ui/FilePreview";
+import {
+  updateServiceSelection,
+  countValidSelectedServices,
+  isServiceSelected,
+} from "../../utils";
+import { ServiceCheckbox } from "../common";
 
 type FormData = CustomerRegistrationData | ContractorRegistrationData;
 
@@ -305,11 +311,11 @@ const SignUpForm: React.FC = () => {
 
   const handleServiceChange = useCallback(
     (service: string, checked: boolean) => {
-      const currentServices = watchedServices || [];
-      const newServices = checked
-        ? [...currentServices, service]
-        : currentServices.filter((s: string) => s !== service);
-
+      const newServices = updateServiceSelection(
+        service,
+        (watchedServices as string[]) || [],
+        checked
+      );
       setValue("services", newServices);
     },
     [watchedServices, setValue]
@@ -745,7 +751,12 @@ const SignUpForm: React.FC = () => {
                     Service Types (Select all that apply) *
                     {watchedServices && watchedServices.length > 0 && (
                       <span className="ml-2 text-accent-400 text-xs">
-                        ({watchedServices.length}/{services.length} selected)
+                        (
+                        {countValidSelectedServices(
+                          (watchedServices as string[]) || [],
+                          services
+                        )}
+                        /{services.length} selected)
                       </span>
                     )}
                   </label>
@@ -759,33 +770,25 @@ const SignUpForm: React.FC = () => {
                   ) : (
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                       {services.map((service: string) => {
-                        const isChecked = (
-                          (watchedServices as string[]) || []
-                        ).includes(service);
+                        const selectedCount =
+                          (watchedServices as string[])?.length || 0;
                         const isDisabled =
-                          !isChecked &&
-                          (watchedServices as string[])?.length >= 10;
+                          !isServiceSelected(
+                            service,
+                            (watchedServices as string[]) || []
+                          ) && selectedCount >= 10;
                         return (
-                          <label
+                          <ServiceCheckbox
                             key={service}
-                            className={`flex items-center ${
-                              isDisabled ? "opacity-50 cursor-not-allowed" : ""
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              disabled={isDisabled}
-                              onChange={(e) =>
-                                handleServiceChange(service, e.target.checked)
-                              }
-                              className="h-4 w-4 text-accent-500 border-white/20 rounded focus:ring-accent-500 disabled:cursor-not-allowed"
-                            />
-                            <span className="ml-2 text-white text-sm">
-                              {service.charAt(0).toUpperCase() +
-                                service.slice(1).replace("_", " ")}
-                            </span>
-                          </label>
+                            service={service}
+                            selectedServices={
+                              (watchedServices as string[]) || []
+                            }
+                            onChange={handleServiceChange}
+                            disabled={isDisabled}
+                            variant="dark"
+                            size="sm"
+                          />
                         );
                       })}
                     </div>

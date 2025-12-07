@@ -28,6 +28,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import ProfileViewModal from "./ProfileViewModal";
+import ConfirmModal from "./ui/ConfirmModal";
 import { jobApi } from "../services/jobService";
 import { paymentService } from "../services/paymentService";
 import type { RootState } from "../store";
@@ -73,6 +74,11 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
   const [expandedBids, setExpandedBids] = useState<Set<string>>(new Set());
   const [jobLoading, setJobLoading] = useState(false);
   const [internalJob, setInternalJob] = useState<typeof jobProp>(null);
+  const [showCompletionConfirmModal, setShowCompletionConfirmModal] =
+    useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [selectedBidForCompletion, setSelectedBidForCompletion] =
+    useState<Bid | null>(null);
 
   // Use internal job if fetched, otherwise use prop
   const job = internalJob || jobProp;
@@ -221,9 +227,19 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
 
   const handleCompleteJob = useCallback(
     (bidId: string) => {
-      handlePaymentCheckout(bidId, "job_completion");
+      const bid = bids.find((b) => b._id === bidId);
+      if (!bid) {
+        showToast.error("Bid not found.");
+        return;
+      }
+
+      if (!job) return;
+
+      // Set the bid for completion and show confirmation modal
+      setSelectedBidForCompletion(bid);
+      setShowCompletionConfirmModal(true);
     },
-    [handlePaymentCheckout]
+    [bids, job]
   );
 
   const toggleBidExpanded = useCallback((bidId: string) => {
@@ -243,7 +259,7 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
     setSelectedContractor(null);
   }, []);
 
-  const handleMarkJobAsComplete = useCallback(async () => {
+  const handleMarkJobAsComplete = useCallback(() => {
     const acceptedBid = bids.find((bid) => bid.status === "accepted");
 
     if (!acceptedBid) {
@@ -258,6 +274,23 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
 
     if (!job) return;
 
+    // Set the bid for completion and show confirmation modal
+    setSelectedBidForCompletion(acceptedBid);
+    setShowCompletionConfirmModal(true);
+  }, [bids, job]);
+
+  const handleConfirmCompletion = useCallback(async () => {
+    const bidToComplete = selectedBidForCompletion;
+
+    if (!bidToComplete || !bidToComplete._id || !job) {
+      showToast.error("Unable to process completion payment.");
+      setShowCompletionConfirmModal(false);
+      setSelectedBidForCompletion(null);
+      return;
+    }
+
+    setProcessingPayment(true);
+
     try {
       showToast.loading("Creating completion payment...");
 
@@ -266,12 +299,15 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
       const cancelUrl = `${currentUrl}/jobs/${job._id}/completion/cancel`;
 
       const response = await paymentService.createJobCompletionPayment({
-        bidId: acceptedBid._id,
+        bidId: bidToComplete._id,
         successUrl,
         cancelUrl,
       });
 
       showToast.dismiss();
+      setShowCompletionConfirmModal(false);
+      setProcessingPayment(false);
+      setSelectedBidForCompletion(null);
 
       if (response && response.checkoutUrl) {
         window.location.href = response.checkoutUrl;
@@ -280,6 +316,7 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
       }
     } catch (err) {
       showToast.dismiss();
+      setProcessingPayment(false);
       let errorMessage = "Failed to create completion payment";
       if (err instanceof Error) {
         errorMessage = err.message;
@@ -289,7 +326,7 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
       }
       showToast.error(errorMessage);
     }
-  }, [bids, job]);
+  }, [selectedBidForCompletion, job]);
 
   const formatCurrency = (amountInDollars: number) => {
     return `$${amountInDollars.toLocaleString("en-US", {
@@ -973,6 +1010,27 @@ const JobDetailViewModal: React.FC<JobDetailViewModalProps> = ({
           isOpen={profileViewOpen}
           onClose={handleCloseProfileView}
           showFeedbackButton={isCustomer}
+        />
+      )}
+
+      {showCompletionConfirmModal && selectedBidForCompletion && job && (
+        <ConfirmModal
+          isOpen={showCompletionConfirmModal}
+          title="Complete Job"
+          message={`Are you sure you want to complete this job? This will process the final payment of ${formatCurrency(
+            selectedBidForCompletion.bidAmount
+              ? (selectedBidForCompletion.bidAmount * 0.85) / 100
+              : 0
+          )} (85% remaining).`}
+          confirmText="Confirm"
+          cancelText="Cancel"
+          onConfirm={handleConfirmCompletion}
+          onCancel={() => {
+            setShowCompletionConfirmModal(false);
+            setProcessingPayment(false);
+            setSelectedBidForCompletion(null);
+          }}
+          loading={processingPayment}
         />
       )}
     </>

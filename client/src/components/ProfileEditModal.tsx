@@ -10,7 +10,14 @@ import LocationSelector from "./LocationSelector";
 import { ProfileFormState } from "../store/slices/userSlice";
 import { useGeocoding } from "../hooks/useGeocoding";
 import Loader from "./ui/Loader";
-import { isAdmin, isCustomer, isContractor } from "../utils";
+import {
+  isAdmin,
+  isCustomer,
+  isContractor,
+  updateServiceSelection,
+  countValidSelectedServices,
+} from "../utils";
+import { ServiceCheckbox } from "./common";
 import { BaseModal, TextInput, SelectInput, Button, Text } from "./reusable";
 
 // ProfileEditModalProps to include showAllFields property
@@ -497,8 +504,12 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                 <label className="block text-primary-700 font-medium mb-3 text-sm sm:text-base">
                   Services *
                   <span className="ml-2 text-primary-600 text-xs font-normal">
-                    ({form.contractor?.services?.length || 0}/{services.length}{" "}
-                    selected)
+                    (
+                    {countValidSelectedServices(
+                      form.contractor?.services || [],
+                      services
+                    )}
+                    /{services.length} selected)
                   </span>
                 </label>
                 {servicesLoading ? (
@@ -516,80 +527,29 @@ const ProfileEditModal: React.FC<ProfileEditModalProps> = ({
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {services.map((service: string) => {
-                      const isSelected = (
-                        form.contractor?.services || []
-                      ).includes(service);
-
-                      return (
-                        <label
-                          key={service}
-                          className={`relative flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
-                            isSelected
-                              ? "border-primary-500 bg-primary-50 shadow-sm"
-                              : "border-primary-200 bg-white hover:border-primary-400 hover:bg-primary-50/50 hover:shadow-sm"
-                          }`}
-                        >
-                          <div
-                            className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                              isSelected
-                                ? "border-primary-500 bg-primary-500"
-                                : "border-primary-300 bg-white"
-                            }`}
-                          >
-                            {isSelected && (
-                              <svg
-                                className="w-3 h-3 text-white"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth="3"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M5 13l4 4L19 7"
-                                />
-                              </svg>
-                            )}
-                          </div>
-
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={(e) => {
-                              const newServices = e.target.checked
-                                ? [
-                                    ...(form.contractor?.services || []),
-                                    service,
-                                  ]
-                                : (form.contractor?.services || []).filter(
-                                    (s) => s !== service
-                                  );
-
-                              setForm({
-                                ...form,
-                                contractor: {
-                                  ...form.contractor!,
-                                  services: newServices,
-                                },
-                              });
-                            }}
-                            className="sr-only"
-                          />
-
-                          <span
-                            className={`text-sm font-medium capitalize ${
-                              isSelected
-                                ? "text-primary-700"
-                                : "text-primary-600"
-                            }`}
-                          >
-                            {service}
-                          </span>
-                        </label>
-                      );
-                    })}
+                    {services.map((service: string) => (
+                      <ServiceCheckbox
+                        key={service}
+                        service={service}
+                        selectedServices={form.contractor?.services || []}
+                        onChange={(service, checked) => {
+                          const newServices = updateServiceSelection(
+                            service,
+                            form.contractor?.services || [],
+                            checked
+                          );
+                          setForm({
+                            ...form,
+                            contractor: {
+                              ...form.contractor!,
+                              services: newServices,
+                            },
+                          });
+                        }}
+                        variant="light"
+                        size="md"
+                      />
+                    ))}
                   </div>
                 )}
                 {form.contractor?.services?.length === 0 && (

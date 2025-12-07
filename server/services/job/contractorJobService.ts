@@ -7,6 +7,12 @@ import { LeadAccess } from "@models/job/leadAccess";
 import { IUserMembership, IMembershipPlan } from "@models/types/membership";
 import { toObjectId } from "@utils/core";
 import { JOB_STATUSES } from "@models/constants";
+import {
+  normalizeService,
+  normalizeServices,
+  createServiceOrQuery,
+  createServiceRegexQuery,
+} from "@utils/validation";
 
 // Default contractor membership for users without active membership
 const DEFAULT_CONTRACTOR_MEMBERSHIP = {
@@ -575,7 +581,11 @@ export async function getJobsForContractor(
     }
 
     if (contractor?.contractor?.services?.length > 0) {
-      query.service = { $in: contractor.contractor.services };
+      // Use optimized utility for case-insensitive service matching
+      const serviceOrQuery = createServiceOrQuery(contractor.contractor.services);
+      if (serviceOrQuery) {
+        query.$or = serviceOrQuery.$or;
+      }
     } else {
       return {
         jobs: [],
@@ -592,10 +602,15 @@ export async function getJobsForContractor(
 
     // Apply additional filters
     if (filters.service) {
-      // If specific service filter is provided, further filter within contractor's services
-      const contractorServices = contractor.contractor.services;
-      if (contractorServices.includes(filters.service)) {
-        query.service = filters.service;
+      // If specific service filter is provided, check if it's in contractor's services
+      const normalizedFilterService = normalizeService(filters.service);
+      const normalizedContractorServices = normalizeServices(contractor.contractor.services);
+      // Use Set for O(1) lookup
+      const contractorServicesSet = new Set(normalizedContractorServices);
+      if (contractorServicesSet.has(normalizedFilterService)) {
+        // Replace $or with specific service filter (case-insensitive regex)
+        query.service = createServiceRegexQuery(filters.service);
+        delete query.$or; // Remove $or when specific service is filtered
       } else {
         // Service not in contractor's services, return empty result
         return {
@@ -613,10 +628,23 @@ export async function getJobsForContractor(
     }
 
     if (filters.search) {
-      query.$or = [
+      // If search is provided, combine with service $or if it exists
+      const searchConditions = [
         { title: new RegExp(filters.search, "i") },
         { description: new RegExp(filters.search, "i") },
       ];
+
+      if (query.$or) {
+        // Merge search with existing service $or
+        query.$and = [
+          { $or: query.$or }, // Service matching
+          { $or: searchConditions }, // Search matching
+        ];
+        delete query.$or;
+      } else {
+        // No service $or, just use search $or
+        query.$or = searchConditions;
+      }
     }
 
     // Pagination
@@ -850,7 +878,11 @@ export async function getContractorMyJobs(
       jobMatchQuery.status = statusFilter;
     }
     if (contractor?.contractor?.services?.length > 0) {
-      jobMatchQuery.service = { $in: contractor.contractor.services };
+      // Use optimized utility for case-insensitive service matching
+      const serviceOrQuery = createServiceOrQuery(contractor.contractor.services);
+      if (serviceOrQuery) {
+        jobMatchQuery.$or = serviceOrQuery.$or;
+      }
     }
     if (filters.search) {
       jobMatchQuery.$or = [

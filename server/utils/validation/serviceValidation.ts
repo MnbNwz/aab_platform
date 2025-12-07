@@ -1,4 +1,5 @@
 import { ContractorServices } from "@models/system";
+import { normalizeServices, filterValidServicesWithNormalized } from "./serviceUtils";
 
 /**
  * Validates that the provided services exist in the current services table
@@ -31,21 +32,17 @@ export async function validateContractorServices(services: string[]): Promise<{
     };
   }
 
-  // Normalize both arrays for comparison
-  const normalizedInput = services.map((service) => service.trim().toLowerCase());
-  const availableServices = latestServices.services.map((service) => service.toLowerCase());
+  // Normalize both arrays for comparison (optimized utility)
+  const normalizedInput = normalizeServices(services);
+  const normalizedAvailable = normalizeServices(latestServices.services);
 
-  // Check which services are valid/invalid
-  const validServices: string[] = [];
-  const invalidServices: string[] = [];
+  // Use optimized utility to filter valid services (avoid double normalization)
+  const validServices = filterValidServicesWithNormalized(normalizedInput, normalizedAvailable);
 
-  normalizedInput.forEach((service) => {
-    if (availableServices.includes(service)) {
-      validServices.push(service);
-    } else {
-      invalidServices.push(service);
-    }
-  });
+  // Calculate invalid services using Set difference - no iteration
+  const validSet = new Set(validServices);
+  const inputSet = new Set(normalizedInput);
+  const invalidServices = Array.from(inputSet).filter((service) => !validSet.has(service));
 
   return {
     isValid: invalidServices.length === 0,

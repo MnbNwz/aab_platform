@@ -37,6 +37,7 @@ const AvailableJobs: React.FC = memo(() => {
   } = useSelector((state: RootState) => state.contractorJob);
   const { services: backendServices, isInitialized: servicesInitialized } =
     useSelector((state: RootState) => state.services);
+  const { user } = useSelector((state: RootState) => state.auth);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedJob, setSelectedJob] = useState<ContractorJobDetails | null>(
     null
@@ -53,10 +54,23 @@ const AvailableJobs: React.FC = memo(() => {
     }
   }, [dispatch, servicesInitialized, backendServices.length]);
 
-  // Get backend services for filter dropdown
+  // Get contractor's services and filter available services
   const availableServices = useMemo(() => {
+    const contractorServices =
+      user?.role === "contractor" && user?.contractor?.services
+        ? user.contractor.services
+        : [];
+
+    // If contractor has services, filter backend services to only show contractor's services
+    if (contractorServices.length > 0) {
+      return backendServices.filter((service) =>
+        contractorServices.includes(service)
+      );
+    }
+
+    // Otherwise return all services (fallback)
     return backendServices || [];
-  }, [backendServices]);
+  }, [backendServices, user]);
 
   // Initialize filters on mount only
   useEffect(() => {
