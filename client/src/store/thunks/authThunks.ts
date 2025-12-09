@@ -85,6 +85,8 @@ export const logoutThunk = createAsyncThunk<
     // Even if logout fails, we still want to clear local state
     showToast.success("Logged out successfully. See you soon!");
     return rejectWithValue(handleApiError(error));
+  } finally {
+    window.location.href = "https://aasquebec.com/";
   }
 });
 

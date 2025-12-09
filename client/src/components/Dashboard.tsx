@@ -592,9 +592,7 @@ const Dashboard: React.FC = () => {
   }, [dispatch, user, activeTab, unifiedData]);
 
   const handleLogout = useCallback(() => {
-    dispatch(logoutThunk()).then(() => {
-      window.history.replaceState(null, "", "/login");
-    });
+    dispatch(logoutThunk());
   }, [dispatch]);
 
   const handleMobileToggle = useCallback(() => {
