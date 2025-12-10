@@ -76,18 +76,14 @@ export const logoutThunk = createAsyncThunk<
   void,
   void,
   { rejectValue: string }
->("auth/logout", async (_, { rejectWithValue }) => {
-  try {
-    // Call logout API to invalidate token on server
-    await api.auth.logout();
+>("auth/logout", async (_, { rejectWithValue: _rejectWithValue }) => {
+  localStorage.clear();
+  sessionStorage.clear();
+
+  api.auth.logout().finally(() => {
     showToast.success("Logged out successfully. See you soon!");
-  } catch (error) {
-    // Even if logout fails, we still want to clear local state
-    showToast.success("Logged out successfully. See you soon!");
-    return rejectWithValue(handleApiError(error));
-  } finally {
-    window.location.href = "https://aasquebec.com/";
-  }
+    window.location.replace("https://aasquebec.com/");
+  });
 });
 
 export const getProfileThunk = createAsyncThunk<
